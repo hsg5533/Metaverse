@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($p = @\\(\"C:\\\\Program Files\\\\Unity\\\\Hub\\\\Editor\",\"C:\\\\Program Files\\\\Unity\\\\Editor\",\"D:\\\\Unity\\\\Hub\\\\Editor\"\\); foreach\\($d in $p\\){ if\\(Test-Path $d\\){ Write-Output \"== $d\"; Get-ChildItem $d -Directory | Select-Object -ExpandProperty Name } }; if\\(Test-Path \"C:\\\\Program Files\\\\Unity Hub\\\\Unity Hub.exe\"\\){ Write-Output \"HUB: installed\" })",
+      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\UNITY03\\\\Desktop\\\\work\\\\My project\\\\Assets\" -Recurse -File | Where-Object { $_.Extension -ne '.meta' } | Select-Object -First 60 FullName)",
+      "PowerShell($r = Invoke-RestMethod \"https://packages.unity.com/com.unity.netcode.gameobjects\"; $r.versions.PSObject.Properties.Name | Select-Object -Last 12; Write-Output \"LATEST: $\\($r.'dist-tags'.latest\\)\")",
+      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\UNITY03\\\\Desktop\\\\work\\\\My project\\\\Library\\\\PackageCache\" -Directory -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name | Where-Object { $_ -match 'netcode|transport|multiplayer' })",
+      "PowerShell(Get-Process Unity,\"Unity Hub\" -ErrorAction SilentlyContinue)",
+      "PowerShell($log = \"C:\\\\Users\\\\UNITY03\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-UNITY03-Desktop-work-My-project\\\\1ef41717-69c1-4ca2-bb08-86584f8a0b8b\\\\scratchpad\\\\unity_resolve.log\"; & \"C:\\\\Program Files\\\\Unity\\\\Hub\\\\Editor\\\\6000.4.11f1\\\\Editor\\\\Unity.exe\" -batchmode -quit -nographics -projectPath \"c:\\\\Users\\\\UNITY03\\\\Desktop\\\\work\\\\My project\" -logFile $log; Write-Output \"EXIT=$LASTEXITCODE\")",
+      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\UNITY03\\\\Desktop\\\\work\\\\My project\\\\Library\\\\PackageCache\" -Directory | Select-Object -ExpandProperty Name | Where-Object { $_ -match 'netcode|transport' }; Write-Output \"--- errors in log ---\"; Select-String -Path \"C:\\\\Users\\\\UNITY03\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-UNITY03-Desktop-work-My-project\\\\1ef41717-69c1-4ca2-bb08-86584f8a0b8b\\\\scratchpad\\\\unity_resolve.log\" -Pattern \"error CS|Failed to resolve|Compilation failed\" | Select-Object -First 10)",
+      "PowerShell($log = \"C:\\\\Users\\\\UNITY03\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-UNITY03-Desktop-work-My-project\\\\1ef41717-69c1-4ca2-bb08-86584f8a0b8b\\\\scratchpad\\\\unity_build.log\"; & \"C:\\\\Program Files\\\\Unity\\\\Hub\\\\Editor\\\\6000.4.11f1\\\\Editor\\\\Unity.exe\" -batchmode -quit -nographics -projectPath \"c:\\\\Users\\\\UNITY03\\\\Desktop\\\\work\\\\My project\" -executeMethod MetaverseSceneBuilder.Build -logFile $log; Write-Output \"EXIT=$LASTEXITCODE\")"
+    ]
+  }
+}
