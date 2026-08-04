@@ -153,28 +153,31 @@ public static class MetaverseSceneBuilder
 
         CreatePrimitive(PrimitiveType.Cylinder, "Monument", world.transform, new Vector3(0f, 3f, 0f), new Vector3(1.6f, 3f, 1.6f), accentMaterial);
 
-        BuildShop(world.transform, buildingMaterial, accentMaterial);
+        BuildShopNpc(world.transform);
         BuildWarpPad(world.transform, "WarpPadVillage", VillagePad, "Hunting Field", FieldArrival, accentMaterial, buildingMaterial);
     }
 
-    /// <summary>Shop counter plus the NPC standing behind it.</summary>
-    static void BuildShop(Transform parent, Material buildingMaterial, Material accentMaterial)
+    /// <summary>Shopkeeper: the same humanoid the players use, standing on the plaza.</summary>
+    static void BuildShopNpc(Transform parent)
     {
-        Material npcCoat = CreateMaterial("NpcCoat", new Color(0.35f, 0.45f, 0.72f));
-        Material npcSkin = CreateMaterial("PlayerSkin", new Color(0.95f, 0.79f, 0.66f));
-
-        var shop = new GameObject("Shop");
-        shop.transform.SetParent(parent, false);
-        shop.transform.localPosition = new Vector3(-9f, 0f, 7f);
-
-        CreatePrimitive(PrimitiveType.Cube, "Counter", shop.transform, new Vector3(0f, 0.5f, -0.9f), new Vector3(3.4f, 1f, 0.7f), buildingMaterial);
-        CreatePrimitive(PrimitiveType.Cube, "Sign", shop.transform, new Vector3(0f, 2.4f, -0.9f), new Vector3(3f, 0.7f, 0.2f), accentMaterial);
+        Material coatMaterial = CreateMaterial("NpcCoat", new Color(0.35f, 0.45f, 0.72f));
+        Material skinMaterial = CreateMaterial("PlayerSkin", new Color(0.95f, 0.79f, 0.66f));
+        Material pantsMaterial = CreateMaterial("NpcPants", new Color(0.26f, 0.23f, 0.21f));
+        Material faceMaterial = CreateMaterial("PlayerFace", new Color(0.12f, 0.14f, 0.18f));
 
         var npc = new GameObject("ShopNpc");
-        npc.transform.SetParent(shop.transform, false);
-        CreatePrimitive(PrimitiveType.Cube, "Body", npc.transform, new Vector3(0f, 0.85f, 0f), new Vector3(0.7f, 1.7f, 0.45f), npcCoat);
-        CreatePrimitive(PrimitiveType.Cube, "Head", npc.transform, new Vector3(0f, 1.95f, 0f), new Vector3(0.45f, 0.45f, 0.43f), npcSkin);
-        npc.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+        npc.transform.SetParent(parent, false);
+        npc.transform.localPosition = new Vector3(-9f, 0f, 7f);
+        npc.transform.localRotation = Quaternion.LookRotation(new Vector3(9f, 0f, -7f));
+
+        BuildHumanoid(npc.transform, coatMaterial, skinMaterial, pantsMaterial, faceMaterial);
+
+        // The rig parts have no colliders, so give the shopkeeper one body to bump into.
+        var body = npc.AddComponent<CapsuleCollider>();
+        body.height = 1.95f;
+        body.radius = 0.32f;
+        body.center = new Vector3(0f, 0.98f, 0f);
+
         npc.AddComponent<ShopNpc>();
     }
 
@@ -276,21 +279,8 @@ public static class MetaverseSceneBuilder
         Material pantsMaterial = CreateMaterial("PlayerPants", new Color(0.22f, 0.26f, 0.36f));
         Material faceMaterial = CreateMaterial("PlayerFace", new Color(0.12f, 0.14f, 0.18f));
 
-        // Blocky humanoid: torso, head, two arms and two legs, each limb on a shoulder/hip
-        // pivot so it can swing while walking.
-        var rig = new GameObject("Rig");
-        rig.transform.SetParent(root.transform, false);
-
-        var torso = BodyPart(PrimitiveType.Cube, "Torso", rig.transform, new Vector3(0f, 1.15f, 0f), new Vector3(0.62f, 0.72f, 0.34f), shirtMaterial);
-        var head = BodyPart(PrimitiveType.Cube, "Head", rig.transform, new Vector3(0f, 1.73f, 0f), new Vector3(0.44f, 0.44f, 0.42f), skinMaterial);
-        BodyPart(PrimitiveType.Cube, "Face", rig.transform, new Vector3(0f, 1.76f, 0.22f), new Vector3(0.3f, 0.1f, 0.03f), faceMaterial);
-
-        var leftArm = Limb("LeftArm", rig.transform, new Vector3(-0.4f, 1.45f, 0f), new Vector3(0.18f, 0.62f, 0.24f), shirtMaterial);
-        var rightArm = Limb("RightArm", rig.transform, new Vector3(0.4f, 1.45f, 0f), new Vector3(0.18f, 0.62f, 0.24f), shirtMaterial);
-        var leftLeg = Limb("LeftLeg", rig.transform, new Vector3(-0.17f, 0.8f, 0f), new Vector3(0.24f, 0.8f, 0.26f), pantsMaterial);
-        var rightLeg = Limb("RightLeg", rig.transform, new Vector3(0.17f, 0.8f, 0f), new Vector3(0.24f, 0.8f, 0.26f), pantsMaterial);
-
-        BuildSword(rightArm);
+        var humanoid = BuildHumanoid(root.transform, shirtMaterial, skinMaterial, pantsMaterial, faceMaterial);
+        BuildSword(humanoid.RightArm);
 
         var controller = root.AddComponent<CharacterController>();
         controller.height = 1.95f;
@@ -300,11 +290,11 @@ public static class MetaverseSceneBuilder
         controller.stepOffset = 0.4f;
 
         var limbAnimator = root.AddComponent<AvatarLimbAnimator>();
-        limbAnimator.Rig = rig.transform;
-        limbAnimator.LeftArm = leftArm;
-        limbAnimator.RightArm = rightArm;
-        limbAnimator.LeftLeg = leftLeg;
-        limbAnimator.RightLeg = rightLeg;
+        limbAnimator.Rig = humanoid.Rig;
+        limbAnimator.LeftArm = humanoid.LeftArm;
+        limbAnimator.RightArm = humanoid.RightArm;
+        limbAnimator.LeftLeg = humanoid.LeftLeg;
+        limbAnimator.RightLeg = humanoid.RightLeg;
 
         root.AddComponent<NetworkObject>();
 
@@ -318,11 +308,11 @@ public static class MetaverseSceneBuilder
         var avatar = root.AddComponent<PlayerAvatar>();
         avatar.ColoredParts = new[]
         {
-            torso.GetComponent<Renderer>(),
-            leftArm.GetComponentInChildren<Renderer>(),
-            rightArm.GetComponentInChildren<Renderer>(),
+            humanoid.Torso.GetComponent<Renderer>(),
+            humanoid.LeftArm.GetComponentInChildren<Renderer>(),
+            humanoid.RightArm.GetComponentInChildren<Renderer>(),
         };
-        avatar.NameTagHeight = head.transform.localPosition.y + 0.55f;
+        avatar.NameTagHeight = humanoid.Head.transform.localPosition.y + 0.55f;
 
         root.AddComponent<PlayerStats>();
         root.AddComponent<PlayerCombat>();
@@ -330,6 +320,43 @@ public static class MetaverseSceneBuilder
         GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
         Object.DestroyImmediate(root);
         return prefab;
+    }
+
+    /// <summary>The parts of a built humanoid that callers need to wire up afterwards.</summary>
+    struct Humanoid
+    {
+        public Transform Rig;
+        public GameObject Torso;
+        public GameObject Head;
+        public Transform LeftArm;
+        public Transform RightArm;
+        public Transform LeftLeg;
+        public Transform RightLeg;
+    }
+
+    /// <summary>
+    /// Blocky humanoid: torso, head, two arms and two legs, each limb on a shoulder/hip
+    /// pivot so it can swing while walking. Shared by the player avatar and the shopkeeper.
+    /// </summary>
+    static Humanoid BuildHumanoid(Transform parent, Material shirtMaterial, Material skinMaterial, Material pantsMaterial, Material faceMaterial)
+    {
+        var rig = new GameObject("Rig");
+        rig.transform.SetParent(parent, false);
+
+        var torso = BodyPart(PrimitiveType.Cube, "Torso", rig.transform, new Vector3(0f, 1.15f, 0f), new Vector3(0.62f, 0.72f, 0.34f), shirtMaterial);
+        var head = BodyPart(PrimitiveType.Cube, "Head", rig.transform, new Vector3(0f, 1.73f, 0f), new Vector3(0.44f, 0.44f, 0.42f), skinMaterial);
+        BodyPart(PrimitiveType.Cube, "Face", rig.transform, new Vector3(0f, 1.76f, 0.22f), new Vector3(0.3f, 0.1f, 0.03f), faceMaterial);
+
+        return new Humanoid
+        {
+            Rig = rig.transform,
+            Torso = torso,
+            Head = head,
+            LeftArm = Limb("LeftArm", rig.transform, new Vector3(-0.4f, 1.45f, 0f), new Vector3(0.18f, 0.62f, 0.24f), shirtMaterial),
+            RightArm = Limb("RightArm", rig.transform, new Vector3(0.4f, 1.45f, 0f), new Vector3(0.18f, 0.62f, 0.24f), shirtMaterial),
+            LeftLeg = Limb("LeftLeg", rig.transform, new Vector3(-0.17f, 0.8f, 0f), new Vector3(0.24f, 0.8f, 0.26f), pantsMaterial),
+            RightLeg = Limb("RightLeg", rig.transform, new Vector3(0.17f, 0.8f, 0f), new Vector3(0.24f, 0.8f, 0.26f), pantsMaterial),
+        };
     }
 
     /// <summary>
