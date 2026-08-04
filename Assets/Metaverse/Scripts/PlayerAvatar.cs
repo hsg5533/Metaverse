@@ -1,5 +1,6 @@
 using Unity.Collections;
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -10,6 +11,9 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(CharacterController))]
 public class PlayerAvatar : NetworkBehaviour
 {
+    /// <summary>The avatar this client controls, used by shops and warp pads.</summary>
+    public static PlayerAvatar Local;
+
     static readonly Color[] Palette =
     {
         new Color(0.90f, 0.32f, 0.30f),
@@ -61,6 +65,7 @@ public class PlayerAvatar : NetworkBehaviour
 
         if (IsOwner)
         {
+            Local = this;
             Teleport(SpawnPointFor(OwnerClientId));
             SubmitNicknameRpc(NetText.Trim64(MetaverseHUD.LocalNickname));
             if (FollowCamera.Instance != null)
@@ -73,6 +78,10 @@ public class PlayerAvatar : NetworkBehaviour
     public override void OnNetworkDespawn()
     {
         BodyColor.OnValueChanged -= OnBodyColorChanged;
+        if (Local == this)
+        {
+            Local = null;
+        }
     }
 
     void Update()
@@ -193,15 +202,23 @@ public class PlayerAvatar : NetworkBehaviour
         }
     }
 
-    void Teleport(Vector3 position)
+    /// <summary>Moves the avatar without interpolating, so a warp does not slide across the map.</summary>
+    public void Teleport(Vector3 position)
     {
         controller.enabled = false;
         transform.position = position;
         controller.enabled = true;
         verticalVelocity = 0f;
+
+        var networkTransform = GetComponent<NetworkTransform>();
+        if (IsSpawned && networkTransform != null)
+        {
+            networkTransform.Teleport(position, transform.rotation, transform.localScale);
+        }
     }
 
-    static Vector3 SpawnPointFor(ulong clientId)
+    /// <summary>Village spawn ring, also used when a monster knocks the avatar out.</summary>
+    public static Vector3 SpawnPointFor(ulong clientId)
     {
         float angle = clientId * 47f * Mathf.Deg2Rad;
         return new Vector3(Mathf.Cos(angle) * 7f, 0.6f, Mathf.Sin(angle) * 7f);

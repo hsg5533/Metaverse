@@ -12,6 +12,17 @@ public class ChatSystem : NetworkBehaviour
     /// <summary>True while the chat input has keyboard focus, so movement input is ignored.</summary>
     public static bool IsTyping;
 
+    static ChatSystem instance;
+
+    /// <summary>Writes a line only this client sees, used for combat and shop feedback.</summary>
+    public static void Local(string line)
+    {
+        if (instance != null)
+        {
+            instance.AddLine(line);
+        }
+    }
+
     const string ControlName = "metaverseChatInput";
     const int MaxLines = 12;
 
@@ -21,6 +32,7 @@ public class ChatSystem : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        instance = this;
         lines.Clear();
         AddLine("<i>Press Enter to chat.</i>");
     }
@@ -28,6 +40,10 @@ public class ChatSystem : NetworkBehaviour
     public override void OnNetworkDespawn()
     {
         IsTyping = false;
+        if (instance == this)
+        {
+            instance = null;
+        }
     }
 
     void OnGUI()

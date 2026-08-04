@@ -16,7 +16,17 @@ public static class MetaverseSceneBuilder
     const string Root = "Assets/Metaverse";
     const string ScenePath = Root + "/Scenes/Metaverse.unity";
     const string PrefabPath = Root + "/Prefabs/PlayerAvatar.prefab";
+    const string MonsterPrefabPath = Root + "/Prefabs/Monster.prefab";
+    const string NetworkPrefabsListPath = "Assets/DefaultNetworkPrefabs.asset";
     const string MaterialFolder = Root + "/Materials";
+
+    // The hunting field is a second area of the same scene, far enough away that the
+    // village never sees it. Warp pads are the only way across.
+    static readonly Vector3 FieldCenter = new(120f, 0f, 0f);
+    static readonly Vector3 VillagePad = new(10f, 0.05f, -12f);
+    static readonly Vector3 FieldPad = new(120f, 0.05f, -25f);
+    static readonly Vector3 VillageArrival = new(13.5f, 1f, -12f);
+    static readonly Vector3 FieldArrival = new(120f, 1f, -21.5f);
 
     [MenuItem("Tools/Metaverse/Build World Scene")]
     public static void Build()
@@ -25,9 +35,11 @@ public static class MetaverseSceneBuilder
 
         var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
+        GameObject monsterPrefab = BuildMonsterPrefab();
         BuildWorld();
+        BuildHuntingField(monsterPrefab);
         GameObject playerPrefab = BuildPlayerPrefab();
-        BuildNetworking(playerPrefab);
+        BuildNetworking(playerPrefab, monsterPrefab);
         SetupCamera();
         SetupLight();
 
@@ -36,7 +48,7 @@ public static class MetaverseSceneBuilder
 
         // NetworkObject ids are derived from the asset/scene path, so they can only be
         // generated once the prefab and the scene exist on disk. Regenerate, then save again.
-        RegenerateNetworkIds(playerPrefab);
+        RegenerateNetworkIds(playerPrefab, monsterPrefab);
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene, ScenePath);
 
@@ -46,7 +58,7 @@ public static class MetaverseSceneBuilder
         Debug.Log($"Metaverse world built: {ScenePath}");
     }
 
-    static void RegenerateNetworkIds(GameObject playerPrefab)
+    static void RegenerateNetworkIds(GameObject playerPrefab, GameObject monsterPrefab)
     {
         var onValidate = typeof(NetworkObject).GetMethod("OnValidate", BindingFlags.Instance | BindingFlags.NonPublic);
         if (onValidate == null)
@@ -58,12 +70,15 @@ public static class MetaverseSceneBuilder
         // The scene must be in the asset database before its objects have a global id.
         AssetDatabase.ImportAsset(ScenePath, ImportAssetOptions.ForceUpdate);
 
-        var prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
-        if (prefabAsset != null)
+        foreach (string path in new[] { PrefabPath, MonsterPrefabPath })
         {
-            var networkObject = prefabAsset.GetComponent<NetworkObject>();
-            onValidate.Invoke(networkObject, null);
-            EditorUtility.SetDirty(prefabAsset);
+            var prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefabAsset != null)
+            {
+                var networkObject = prefabAsset.GetComponent<NetworkObject>();
+                onValidate.Invoke(networkObject, null);
+                EditorUtility.SetDirty(prefabAsset);
+            }
         }
 
         foreach (var sceneObject in Object.FindObjectsByType<NetworkObject>(FindObjectsSortMode.None))
@@ -102,7 +117,7 @@ public static class MetaverseSceneBuilder
         var ground = CreatePrimitive(PrimitiveType.Plane, "Ground", world.transform, Vector3.zero, new Vector3(6f, 1f, 6f), groundMaterial);
         ground.isStatic = true;
 
-        CreatePrimitive(PrimitiveType.Cylinder, "Plaza", world.transform, new Vector3(0f, 0.02f, 0f), new Vector3(20f, 0.02f, 20f), plazaMaterial);
+        CreateDisc("Plaza", world.transform, new Vector3(0f, 0.02f, 0f), 20f, plazaMaterial);
 
         // Boundary walls so nobody walks off the world.
         const float half = 30f;
@@ -137,6 +152,119 @@ public static class MetaverseSceneBuilder
         }
 
         CreatePrimitive(PrimitiveType.Cylinder, "Monument", world.transform, new Vector3(0f, 3f, 0f), new Vector3(1.6f, 3f, 1.6f), accentMaterial);
+
+        BuildShop(world.transform, buildingMaterial, accentMaterial);
+        BuildWarpPad(world.transform, "WarpPadVillage", VillagePad, "Hunting Field", FieldArrival, accentMaterial, buildingMaterial);
+    }
+
+    /// <summary>Shop counter plus the NPC standing behind it.</summary>
+    static void BuildShop(Transform parent, Material buildingMaterial, Material accentMaterial)
+    {
+        Material npcCoat = CreateMaterial("NpcCoat", new Color(0.35f, 0.45f, 0.72f));
+        Material npcSkin = CreateMaterial("PlayerSkin", new Color(0.95f, 0.79f, 0.66f));
+
+        var shop = new GameObject("Shop");
+        shop.transform.SetParent(parent, false);
+        shop.transform.localPosition = new Vector3(-9f, 0f, 7f);
+
+        CreatePrimitive(PrimitiveType.Cube, "Counter", shop.transform, new Vector3(0f, 0.5f, -0.9f), new Vector3(3.4f, 1f, 0.7f), buildingMaterial);
+        CreatePrimitive(PrimitiveType.Cube, "Sign", shop.transform, new Vector3(0f, 2.4f, -0.9f), new Vector3(3f, 0.7f, 0.2f), accentMaterial);
+
+        var npc = new GameObject("ShopNpc");
+        npc.transform.SetParent(shop.transform, false);
+        CreatePrimitive(PrimitiveType.Cube, "Body", npc.transform, new Vector3(0f, 0.85f, 0f), new Vector3(0.7f, 1.7f, 0.45f), npcCoat);
+        CreatePrimitive(PrimitiveType.Cube, "Head", npc.transform, new Vector3(0f, 1.95f, 0f), new Vector3(0.45f, 0.45f, 0.43f), npcSkin);
+        npc.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+        npc.AddComponent<ShopNpc>();
+    }
+
+    static void BuildWarpPad(Transform parent, string name, Vector3 position, string label, Vector3 destination, Material padMaterial, Material pillarMaterial)
+    {
+        var pad = new GameObject(name);
+        pad.transform.SetParent(parent, false);
+        pad.transform.localPosition = position;
+
+        CreateDisc("Disc", pad.transform, Vector3.zero, 4f, padMaterial);
+        CreatePrimitive(PrimitiveType.Cube, "PillarLeft", pad.transform, new Vector3(-2f, 1.5f, 0f), new Vector3(0.4f, 3f, 0.4f), pillarMaterial);
+        CreatePrimitive(PrimitiveType.Cube, "PillarRight", pad.transform, new Vector3(2f, 1.5f, 0f), new Vector3(0.4f, 3f, 0.4f), pillarMaterial);
+
+        var warp = pad.AddComponent<WarpPad>();
+        warp.Destination = destination;
+        warp.Label = label;
+    }
+
+    /// <summary>Second area of the scene: open ground, walls, monsters and the way home.</summary>
+    static void BuildHuntingField(GameObject monsterPrefab)
+    {
+        var field = new GameObject("HuntingField");
+        field.transform.position = FieldCenter;
+
+        Material fieldMaterial = CreateMaterial("FieldGround", new Color(0.28f, 0.38f, 0.26f));
+        Material rockMaterial = CreateMaterial("Rock", new Color(0.42f, 0.42f, 0.46f));
+        Material wallMaterial = CreateMaterial("Wall", new Color(0.30f, 0.32f, 0.38f));
+        Material accentMaterial = CreateMaterial("Accent", new Color(0.95f, 0.45f, 0.25f));
+        Material buildingMaterial = CreateMaterial("Building", new Color(0.62f, 0.66f, 0.74f));
+
+        var ground = CreatePrimitive(PrimitiveType.Plane, "FieldGround", field.transform, Vector3.zero, new Vector3(6f, 1f, 6f), fieldMaterial);
+        ground.isStatic = true;
+
+        const float half = 30f;
+        CreatePrimitive(PrimitiveType.Cube, "FieldWallNorth", field.transform, new Vector3(0f, 2f, half), new Vector3(60f, 4f, 1f), wallMaterial);
+        CreatePrimitive(PrimitiveType.Cube, "FieldWallSouth", field.transform, new Vector3(0f, 2f, -half), new Vector3(60f, 4f, 1f), wallMaterial);
+        CreatePrimitive(PrimitiveType.Cube, "FieldWallEast", field.transform, new Vector3(half, 2f, 0f), new Vector3(1f, 4f, 60f), wallMaterial);
+        CreatePrimitive(PrimitiveType.Cube, "FieldWallWest", field.transform, new Vector3(-half, 2f, 0f), new Vector3(1f, 4f, 60f), wallMaterial);
+
+        var rocks = new (Vector3 position, float size)[]
+        {
+            (new Vector3(-14f, 0f, 9f), 3f),
+            (new Vector3(11f, 0f, 14f), 4f),
+            (new Vector3(18f, 0f, -8f), 2.5f),
+            (new Vector3(-9f, 0f, -15f), 3.5f),
+            (new Vector3(4f, 0f, 20f), 2f),
+        };
+        for (int i = 0; i < rocks.Length; i++)
+        {
+            CreatePrimitive(PrimitiveType.Cube, $"Rock{i}", field.transform,
+                new Vector3(rocks[i].position.x, rocks[i].size * 0.35f, rocks[i].position.z),
+                new Vector3(rocks[i].size, rocks[i].size * 0.7f, rocks[i].size),
+                rockMaterial);
+        }
+
+        BuildWarpPad(field.transform, "WarpPadField", FieldPad - FieldCenter, "Village", VillageArrival, accentMaterial, buildingMaterial);
+
+        var spawnerObject = new GameObject("MonsterSpawner");
+        spawnerObject.transform.SetParent(field.transform, false);
+        var spawner = spawnerObject.AddComponent<MonsterSpawner>();
+        spawner.MonsterPrefab = monsterPrefab;
+        spawner.Count = 12;
+        spawner.Radius = 22f;
+    }
+
+    static GameObject BuildMonsterPrefab()
+    {
+        var root = new GameObject("Monster");
+
+        Material bodyMaterial = CreateMaterial("MonsterBody", Color.white);
+        Material eyeMaterial = CreateMaterial("MonsterEye", new Color(0.10f, 0.10f, 0.12f));
+
+        var body = CreatePrimitive(PrimitiveType.Cube, "Body", root.transform, new Vector3(0f, 0.6f, 0f), new Vector3(1.1f, 1.2f, 1.1f), bodyMaterial);
+        BodyPart(PrimitiveType.Cube, "EyeLeft", root.transform, new Vector3(-0.22f, 0.9f, 0.56f), new Vector3(0.16f, 0.16f, 0.05f), eyeMaterial);
+        BodyPart(PrimitiveType.Cube, "EyeRight", root.transform, new Vector3(0.22f, 0.9f, 0.56f), new Vector3(0.16f, 0.16f, 0.05f), eyeMaterial);
+
+        root.AddComponent<NetworkObject>();
+
+        var networkTransform = root.AddComponent<NetworkTransform>();
+        networkTransform.Interpolate = true;
+        networkTransform.SyncScaleX = false;
+        networkTransform.SyncScaleY = false;
+        networkTransform.SyncScaleZ = false;
+
+        var monster = root.AddComponent<Monster>();
+        monster.ColoredParts = new[] { body.GetComponent<Renderer>() };
+
+        GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, MonsterPrefabPath);
+        Object.DestroyImmediate(root);
+        return prefab;
     }
 
     static GameObject BuildPlayerPrefab()
@@ -161,6 +289,8 @@ public static class MetaverseSceneBuilder
         var rightArm = Limb("RightArm", rig.transform, new Vector3(0.4f, 1.45f, 0f), new Vector3(0.18f, 0.62f, 0.24f), shirtMaterial);
         var leftLeg = Limb("LeftLeg", rig.transform, new Vector3(-0.17f, 0.8f, 0f), new Vector3(0.24f, 0.8f, 0.26f), pantsMaterial);
         var rightLeg = Limb("RightLeg", rig.transform, new Vector3(0.17f, 0.8f, 0f), new Vector3(0.24f, 0.8f, 0.26f), pantsMaterial);
+
+        BuildSword(rightArm);
 
         var controller = root.AddComponent<CharacterController>();
         controller.height = 1.95f;
@@ -194,9 +324,32 @@ public static class MetaverseSceneBuilder
         };
         avatar.NameTagHeight = head.transform.localPosition.y + 0.55f;
 
+        root.AddComponent<PlayerStats>();
+        root.AddComponent<PlayerCombat>();
+
         GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
         Object.DestroyImmediate(root);
         return prefab;
+    }
+
+    /// <summary>
+    /// Sword held in the right hand. It hangs under the arm pivot, so the limb animator's
+    /// attack swing carries it along without any extra bone.
+    /// </summary>
+    static void BuildSword(Transform armPivot)
+    {
+        Material gripMaterial = CreateMaterial("SwordGrip", new Color(0.32f, 0.22f, 0.16f));
+        Material bladeMaterial = CreateMaterial("SwordBlade", new Color(0.78f, 0.80f, 0.86f));
+
+        var sword = new GameObject("Sword");
+        sword.transform.SetParent(armPivot, false);
+        sword.transform.localPosition = new Vector3(0f, -0.62f, 0.06f);
+        // Tilted forward so the blade points ahead instead of dragging through the ground.
+        sword.transform.localRotation = Quaternion.Euler(-40f, 0f, 0f);
+
+        BodyPart(PrimitiveType.Cube, "Grip", sword.transform, new Vector3(0f, -0.05f, 0f), new Vector3(0.07f, 0.2f, 0.07f), gripMaterial);
+        BodyPart(PrimitiveType.Cube, "Guard", sword.transform, new Vector3(0f, -0.16f, 0f), new Vector3(0.3f, 0.06f, 0.09f), bladeMaterial);
+        BodyPart(PrimitiveType.Cube, "Blade", sword.transform, new Vector3(0f, -0.43f, 0f), new Vector3(0.11f, 0.5f, 0.04f), bladeMaterial);
     }
 
     /// <summary>Static body part with its primitive collider removed.</summary>
@@ -217,7 +370,7 @@ public static class MetaverseSceneBuilder
         return pivot.transform;
     }
 
-    static void BuildNetworking(GameObject playerPrefab)
+    static void BuildNetworking(GameObject playerPrefab, GameObject monsterPrefab)
     {
         var managerObject = new GameObject("NetworkManager");
         var manager = managerObject.AddComponent<NetworkManager>();
@@ -231,6 +384,7 @@ public static class MetaverseSceneBuilder
 
         manager.NetworkConfig.NetworkTransport = transport;
         manager.NetworkConfig.PlayerPrefab = playerPrefab;
+        RegisterNetworkPrefab(manager, monsterPrefab);
         manager.NetworkConfig.ConnectionApproval = false;
         // Required so clients register the in-scene placed ChatSystem object.
         manager.NetworkConfig.EnableSceneManagement = true;
@@ -241,6 +395,32 @@ public static class MetaverseSceneBuilder
         var chatObject = new GameObject("ChatSystem");
         chatObject.AddComponent<NetworkObject>();
         chatObject.AddComponent<ChatSystem>();
+    }
+
+    /// <summary>
+    /// Monsters are spawned at runtime, so their prefab has to be in a prefab list the
+    /// NetworkManager knows about. Netcode also auto-fills the default list on import,
+    /// hence the contains check before adding.
+    /// </summary>
+    static void RegisterNetworkPrefab(NetworkManager manager, GameObject prefab)
+    {
+        var list = AssetDatabase.LoadAssetAtPath<NetworkPrefabsList>(NetworkPrefabsListPath);
+        if (list == null)
+        {
+            Debug.LogWarning($"{NetworkPrefabsListPath} not found; register {prefab.name} by hand.");
+            return;
+        }
+
+        if (!list.Contains(prefab))
+        {
+            list.Add(new NetworkPrefab { Prefab = prefab });
+            EditorUtility.SetDirty(list);
+        }
+
+        if (!manager.NetworkConfig.Prefabs.NetworkPrefabsLists.Contains(list))
+        {
+            manager.NetworkConfig.Prefabs.NetworkPrefabsLists.Add(list);
+        }
     }
 
     static void SetupCamera()
@@ -281,6 +461,18 @@ public static class MetaverseSceneBuilder
         instance.transform.localScale = localScale;
         instance.GetComponent<MeshRenderer>().sharedMaterial = material;
         return instance;
+    }
+
+    /// <summary>
+    /// Flat decorative disc. A cylinder primitive ships with a CapsuleCollider whose height is
+    /// clamped to twice its radius, which would turn a thin disc into an invisible dome, so the
+    /// collider goes away and the ground below carries the collision.
+    /// </summary>
+    static GameObject CreateDisc(string name, Transform parent, Vector3 localPosition, float diameter, Material material)
+    {
+        var disc = CreatePrimitive(PrimitiveType.Cylinder, name, parent, localPosition, new Vector3(diameter, 0.02f, diameter), material);
+        Object.DestroyImmediate(disc.GetComponent<Collider>());
+        return disc;
     }
 
     static readonly Dictionary<string, Material> materialCache = new();

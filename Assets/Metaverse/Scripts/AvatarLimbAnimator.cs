@@ -3,6 +3,7 @@ using UnityEngine;
 /// <summary>
 /// Swings arms and legs based on how fast the avatar is actually moving.
 /// Driven by observed position change, so remote avatars animate too without extra syncing.
+/// Also plays the one-shot attack swing and the flinch when the avatar is hit.
 /// </summary>
 public class AvatarLimbAnimator : MonoBehaviour
 {
@@ -16,9 +17,26 @@ public class AvatarLimbAnimator : MonoBehaviour
     public float FullSwingSpeed = 5f;
     public float StepsPerMeter = 1.1f;
 
+    public float AttackDuration = 0.35f;
+    public float HitDuration = 0.3f;
+
     Vector3 lastPosition;
     float phase;
     float rigBaseHeight;
+    float attackEndTime;
+    float hitEndTime;
+
+    /// <summary>Raises the sword arm and chops it down once.</summary>
+    public void PlayAttack()
+    {
+        attackEndTime = Time.time + AttackDuration;
+    }
+
+    /// <summary>Leans the body back for a moment after taking damage.</summary>
+    public void PlayHit()
+    {
+        hitEndTime = Time.time + HitDuration;
+    }
 
     void Start()
     {
@@ -47,9 +65,11 @@ public class AvatarLimbAnimator : MonoBehaviour
 
         float swing = Mathf.Sin(phase) * SwingDegrees * intensity;
         SetPitch(LeftArm, -swing);
-        SetPitch(RightArm, swing);
         SetPitch(LeftLeg, swing);
         SetPitch(RightLeg, -swing);
+
+        // The sword arm follows the walk cycle unless an attack is playing on top of it.
+        SetPitch(RightArm, TryGetAttackPitch(out float attackPitch) ? attackPitch : swing);
 
         if (Rig != null)
         {
@@ -57,7 +77,40 @@ public class AvatarLimbAnimator : MonoBehaviour
             Vector3 local = Rig.localPosition;
             local.y = rigBaseHeight + bob;
             Rig.localPosition = local;
+            Rig.localRotation = Quaternion.Euler(HitLean(), 0f, 0f);
         }
+    }
+
+    /// <summary>Windup over the shoulder, then a chop forward.</summary>
+    bool TryGetAttackPitch(out float pitch)
+    {
+        pitch = 0f;
+        float remaining = attackEndTime - Time.time;
+        if (remaining <= 0f)
+        {
+            return false;
+        }
+
+        const float windupPart = 0.35f;
+        float progress = 1f - remaining / AttackDuration;
+
+        pitch = progress < windupPart
+            ? Mathf.Lerp(0f, -150f, Mathf.SmoothStep(0f, 1f, progress / windupPart))
+            : Mathf.Lerp(-150f, -40f, Mathf.SmoothStep(0f, 1f, (progress - windupPart) / (1f - windupPart)));
+
+        return true;
+    }
+
+    float HitLean()
+    {
+        float remaining = hitEndTime - Time.time;
+        if (remaining <= 0f)
+        {
+            return 0f;
+        }
+
+        float progress = 1f - remaining / HitDuration;
+        return -22f * Mathf.Sin(progress * Mathf.PI);
     }
 
     static void SetPitch(Transform limb, float degrees)

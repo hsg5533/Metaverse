@@ -1,20 +1,57 @@
 # Metaverse (Unity 6 + Netcode for GameObjects)
 
 멀티플레이 3D 공간. 아바타로 돌아다니고, 서로 보이고, 채팅한다.
+마을에는 상점 NPC, 워프패드 너머에는 몬스터 사냥터가 있다 (사냥 → 골드·경험치 → 레벨업).
 
 ## 구성
 
-| 경로 | 역할 |
-| --- | --- |
-| `Scenes/Metaverse.unity` | 생성된 월드 씬 (빌드 세팅 0번) |
-| `Prefabs/PlayerAvatar.prefab` | 인간형 아바타 - 머리·몸통·팔2·다리2 (NetworkObject + NetworkTransform 소유자 권한) |
-| `Scripts/AvatarLimbAnimator.cs` | 이동 속도 보고 팔다리 흔드는 걷기 모션 (원격 플레이어도 적용) |
-| `Scripts/PlayerAvatar.cs` | 이동/점프, 닉네임·색상 동기화, 머리 위 이름표 |
-| `Scripts/FollowCamera.cs` | 3인칭 카메라 (우클릭 드래그 회전, 휠 줌) |
-| `Scripts/ChatSystem.cs` | 서버 경유 채팅 릴레이 |
-| `Scripts/MetaverseHUD.cs` | Host / Join 접속 메뉴, 접속 상태 패널 |
-| `Scripts/NetText.cs` | 한글·이모지 안전한 FixedString 변환 |
-| `Editor/MetaverseSceneBuilder.cs` | 씬·프리팹·머티리얼 전부 생성 (`Tools > Metaverse > Build World Scene`) |
+| 경로                              | 역할                                                                                           |
+| --------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `Scenes/Metaverse.unity`          | 생성된 월드 씬 (마을 + 사냥터, 빌드 세팅 0번)                                                  |
+| `Prefabs/PlayerAvatar.prefab`     | 인간형 아바타 - 머리·몸통·팔2·다리2 + 오른손 검 (NetworkObject + NetworkTransform 소유자 권한) |
+| `Prefabs/Monster.prefab`          | 몬스터 (NetworkObject + NetworkTransform 서버 권한)                                            |
+| `Scripts/AvatarLimbAnimator.cs`   | 걷기 모션(이동 속도 기반) + 공격 스윙 + 피격 젖힘 (원격 플레이어도 적용)                       |
+| `Scripts/PlayerAvatar.cs`         | 이동/점프, 닉네임·색상 동기화, 머리 위 이름표, 워프용 `Teleport`                               |
+| `Scripts/PlayerStats.cs`          | 레벨·경험치·골드·HP·무기 (전부 서버 소유), 마을 자동 회복, 구매 RPC, 우측 상단 스탯 HUD        |
+| `Scripts/PlayerCombat.cs`         | 좌클릭 공격 요청 → 서버가 앞쪽 몬스터를 골라 데미지 적용                                       |
+| `Scripts/Monster.cs`              | 서버 AI (추적·공격·리쉬), 처치 보상, 6초 후 부활, 머리 위 HP바                                 |
+| `Scripts/MonsterSpawner.cs`       | 서버 시작 시 사냥터에 몬스터 12마리 배치                                                       |
+| `Scripts/ShopNpc.cs`              | 근처에서 `E` → 상점 창 (포션 / 무기 강화)                                                      |
+| `Scripts/WarpPad.cs`              | 근처에서 `E` → 마을 ↔ 사냥터 이동                                                              |
+| `Scripts/FollowCamera.cs`         | 3인칭 카메라 (우클릭 드래그 회전, 휠 줌)                                                       |
+| `Scripts/ChatSystem.cs`           | 서버 경유 채팅 릴레이 + 로컬 알림 줄 (`ChatSystem.Local`)                                      |
+| `Scripts/MetaverseHUD.cs`         | Host / Join 접속 메뉴, 접속 상태 패널                                                          |
+| `Scripts/NetText.cs`              | 한글·이모지 안전한 FixedString 변환                                                            |
+| `Editor/MetaverseSceneBuilder.cs` | 씬·프리팹·머티리얼 전부 생성 (`Tools > Metaverse > Build World Scene`)                         |
+
+## RPG 규칙
+
+| 항목               | 값                                                                          |
+| ------------------ | --------------------------------------------------------------------------- |
+| 최대 HP            | `100 + (레벨-1) * 20`                                                       |
+| 공격력             | `8 + (레벨-1) * 3 + 무기Lv * 4`                                             |
+| 레벨업 필요 경험치 | `40 + (레벨-1) * 30` (레벨업 시 HP 완충)                                    |
+| 몬스터             | Slime Lv1 / Goblin Lv2 / Orc Lv3 — HP 40 / 70 / 110                         |
+| 처치 보상          | 경험치 `12 + 몬스터Lv*8`, 골드 `4 + 몬스터Lv*3`                             |
+| 몬스터 공격력      | `4 + 몬스터Lv*3` (1.6초 쿨다운, 인식 12m, 리쉬 26m)                         |
+| 포션               | 20 G → HP +40                                                               |
+| 무기 강화          | `60 * (다음Lv)` G → 공격력 +4                                               |
+| 사망               | HP 0 → 마을 스폰 지점으로 복귀, HP 완충 (페널티 없음)                       |
+| 마을 자동 회복     | 마을 안(원점 기준 ±32)에 있으면 1초마다 최대 HP의 4% 회복. 사냥터에선 안 됨 |
+
+전투·보상·구매 판정은 전부 서버에서만 계산한다. 클라이언트는 "공격했다"는 요청만 보낸다.
+
+## 모션
+
+| 모션        | 방식                                                                       |
+| ----------- | -------------------------------------------------------------------------- |
+| 검 장착     | 오른팔 피벗 밑에 붙은 손잡이+가드+칼날 (별도 본 없음, 팔 회전 따라감)      |
+| 공격 스윙   | 0.35초 — 머리 위로 들었다가(-150°) 앞으로 내리침(-40°). 걷기 스윙을 덮어씀 |
+| 피격        | HP 감소를 모두가 감지 → 몸통 22° 뒤로 젖혔다 복귀 (0.3초)                  |
+| 몬스터 피격 | 흰색 플래시 + 눌렸다 펴지는 스쿼시 (0.25초)                                |
+
+공격 모션은 소유자가 즉시 로컬 재생하고, 서버가 나머지에게 `SendTo.NotOwner`로 알린다.
+피격 모션은 HP가 이미 복제되므로 RPC 없이 `OnValueChanged`만으로 처리한다.
 
 ## 실행
 
@@ -29,6 +66,8 @@
 - `WASD` / 방향키 — 이동
 - `Shift` — 달리기
 - `Space` — 점프
+- 마우스 좌클릭 — 공격 (사거리 2.6m, 앞쪽 120° 안, 0.6초 쿨다운)
+- `E` — 워프패드 이동 / 상점 열고 닫기
 - 마우스 우클릭 드래그 — 시점 회전, 휠 — 줌
 - `Enter` — 채팅창 포커스, 다시 `Enter` — 전송
 
@@ -52,6 +91,9 @@ Metaverse.exe -batchmode -nographics -mvhost        # 화면 없는 전용 서�
 ## 씬 다시 만들기
 
 씬을 망가뜨렸으면 메뉴 `Tools > Metaverse > Build World Scene` 실행. 월드·프리팹·머티리얼을 덮어써서 새로 만든다.
+**RPG 콘텐츠(상점 NPC·워프패드·사냥터·몬스터)는 이 메뉴를 한 번 실행해야 씬에 들어간다.**
+
+월드 배치: 마을은 원점 기준 ±30, 사냥터는 `x = 120` 중심의 같은 크기 구역. 두 구역은 워프패드로만 오간다.
 
 ## 다음에 붙일 만한 것
 

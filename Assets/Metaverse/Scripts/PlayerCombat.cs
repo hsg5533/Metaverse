@@ -1,0 +1,75 @@
+using Unity.Netcode;
+using UnityEngine;
+using UnityEngine.InputSystem;
+
+/// <summary>
+/// Melee attack for the local avatar. The client only asks; the server picks the target
+/// in front of the attacker and applies the damage, so hits cannot be faked.
+/// </summary>
+[RequireComponent(typeof(PlayerStats))]
+public class PlayerCombat : NetworkBehaviour
+{
+    public float Range = 2.6f;
+    public float ConeDegrees = 120f;
+    public float Cooldown = 0.6f;
+
+    PlayerStats stats;
+    AvatarLimbAnimator limbAnimator;
+    float nextAttackTime;
+
+    void Awake()
+    {
+        stats = GetComponent<PlayerStats>();
+        limbAnimator = GetComponent<AvatarLimbAnimator>();
+    }
+
+    void Update()
+    {
+        if (!IsOwner || !IsSpawned || ChatSystem.IsTyping || ShopNpc.PanelOpen)
+        {
+            return;
+        }
+
+        var mouse = Mouse.current;
+        if (mouse == null || !mouse.leftButton.wasPressedThisFrame || Time.time < nextAttackTime)
+        {
+            return;
+        }
+
+        nextAttackTime = Time.time + Cooldown;
+        PlaySwing();
+        AttackRpc();
+    }
+
+    [Rpc(SendTo.Server)]
+    void AttackRpc(RpcParams rpcParams = default)
+    {
+        if (rpcParams.Receive.SenderClientId != OwnerClientId)
+        {
+            return;
+        }
+
+        // The owner already swung locally; everyone else is told to play the same motion.
+        SwingRpc();
+
+        var target = Monster.FindTarget(transform.position + Vector3.up * 0.8f, transform.forward, Range, ConeDegrees);
+        if (target != null)
+        {
+            target.TakeDamage(stats.AttackPower, stats);
+        }
+    }
+
+    [Rpc(SendTo.NotOwner)]
+    void SwingRpc()
+    {
+        PlaySwing();
+    }
+
+    void PlaySwing()
+    {
+        if (limbAnimator != null)
+        {
+            limbAnimator.PlayAttack();
+        }
+    }
+}
