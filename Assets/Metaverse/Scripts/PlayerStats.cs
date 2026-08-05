@@ -9,9 +9,6 @@ using UnityEngine;
 [RequireComponent(typeof(PlayerAvatar))]
 public class PlayerStats : NetworkBehaviour
 {
-    public const int PotionPrice = 20;
-    public const int PotionHeal = 40;
-
     /// <summary>Half width of the walled village; outside it health does not come back on its own.</summary>
     public float VillageHalfSize = 32f;
     public float RegenInterval = 1f;
@@ -22,11 +19,14 @@ public class PlayerStats : NetworkBehaviour
     public NetworkVariable<int> Gold = new(0, writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<int> Hp = new(100, writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<int> WeaponLevel = new(0, writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<int> ArmorLevel = new(0, writePerm: NetworkVariableWritePermission.Server);
 
     public int MaxHp => 100 + (Level.Value - 1) * 20;
     public int AttackPower => 8 + (Level.Value - 1) * 3 + WeaponLevel.Value * 4;
+    public int Defense => 8 + (Level.Value - 1) * 2 + ArmorLevel.Value * 3;
     public int ExpToNextLevel => 40 + (Level.Value - 1) * 30;
     public int WeaponPrice => 60 * (WeaponLevel.Value + 1);
+    public int ArmorPrice => 50 * (ArmorLevel.Value + 1);
 
     PlayerAvatar avatar;
     AvatarLimbAnimator limbAnimator;
@@ -101,11 +101,14 @@ public class PlayerStats : NetworkBehaviour
             Exp.Value -= ExpToNextLevel;
             Level.Value++;
             Hp.Value = MaxHp;
-            NoticeRpc(NetText.Trim64($"LEVEL UP!  Lv.{Level.Value}  (HP {MaxHp}, ATK {AttackPower})"));
+            NoticeRpc(NetText.Trim64($"LEVEL UP!  Lv.{Level.Value}  (HP {MaxHp}, ATK {AttackPower}, DEF {Defense})"));
         }
     }
 
-    /// <summary>Server side: apply monster damage, respawning the avatar in the village at zero health.</summary>
+    /// <summary>
+    /// Server side: apply monster damage, respawning the avatar in the village at zero health.
+    /// Armour soaks up part of the hit but never all of it.
+    /// </summary>
     public void TakeDamage(int amount, string source)
     {
         if (!IsServer || amount <= 0)
@@ -113,7 +116,7 @@ public class PlayerStats : NetworkBehaviour
             return;
         }
 
-        Hp.Value = Mathf.Max(0, Hp.Value - amount);
+        Hp.Value = Mathf.Max(0, Hp.Value - Mathf.Max(1, amount - Defense));
         if (Hp.Value > 0)
         {
             return;
@@ -125,22 +128,23 @@ public class PlayerStats : NetworkBehaviour
     }
 
     [Rpc(SendTo.Server)]
-    public void BuyPotionRpc(RpcParams rpcParams = default)
+    public void BuyArmorRpc(RpcParams rpcParams = default)
     {
         if (rpcParams.Receive.SenderClientId != OwnerClientId)
         {
             return;
         }
 
-        if (Gold.Value < PotionPrice)
+        int price = ArmorPrice;
+        if (Gold.Value < price)
         {
             NoticeRpc(NetText.Trim64("Not enough gold."));
             return;
         }
 
-        Gold.Value -= PotionPrice;
-        Hp.Value = Mathf.Min(MaxHp, Hp.Value + PotionHeal);
-        NoticeRpc(NetText.Trim64($"Potion used. HP {Hp.Value}/{MaxHp}"));
+        Gold.Value -= price;
+        ArmorLevel.Value++;
+        NoticeRpc(NetText.Trim64($"Armor Lv.{ArmorLevel.Value}!  DEF {Defense}"));
     }
 
     [Rpc(SendTo.Server)]
@@ -182,12 +186,13 @@ public class PlayerStats : NetworkBehaviour
             return;
         }
 
-        GUILayout.BeginArea(new Rect(Screen.width - 230, 10, 220, 128), GUI.skin.box);
+        GUILayout.BeginArea(new Rect(Screen.width - 230, 10, 220, 146), GUI.skin.box);
         GUILayout.Label($"<b>Lv.{Level.Value}</b>  {Nickname()}", RichLabel());
         GUILayout.Label($"HP    {Hp.Value} / {MaxHp}{(InVillage && Hp.Value < MaxHp ? "  (resting)" : "")}");
         GUILayout.Label($"EXP   {Exp.Value} / {ExpToNextLevel}");
         GUILayout.Label($"Gold  {Gold.Value}");
         GUILayout.Label($"ATK   {AttackPower}  (Weapon Lv.{WeaponLevel.Value})");
+        GUILayout.Label($"DEF   {Defense}  (Armor Lv.{ArmorLevel.Value})");
         GUILayout.EndArea();
     }
 

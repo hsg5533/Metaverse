@@ -87,18 +87,18 @@ public class ShopNpc : MonoBehaviour
         GUILayout.Label($"Gold: {stats.Gold.Value}");
         GUILayout.Space(6);
 
-        if (GUILayout.Button($"Potion  ({PlayerStats.PotionPrice} G)  +{PlayerStats.PotionHeal} HP"))
-        {
-            stats.BuyPotionRpc();
-        }
-
-        if (GUILayout.Button($"Weapon Lv.{stats.WeaponLevel.Value} -> Lv.{stats.WeaponLevel.Value + 1}  ({stats.WeaponPrice} G)"))
+        if (GUILayout.Button($"Weapon Lv.{stats.WeaponLevel.Value} -> Lv.{stats.WeaponLevel.Value + 1}  ({stats.WeaponPrice} G)  +4 ATK"))
         {
             stats.BuyWeaponRpc();
         }
 
+        if (GUILayout.Button($"Armor Lv.{stats.ArmorLevel.Value} -> Lv.{stats.ArmorLevel.Value + 1}  ({stats.ArmorPrice} G)  +3 DEF"))
+        {
+            stats.BuyArmorRpc();
+        }
+
         GUILayout.Space(6);
-        GUILayout.Label($"HP {stats.Hp.Value}/{stats.MaxHp}   ATK {stats.AttackPower}");
+        GUILayout.Label($"HP {stats.Hp.Value}/{stats.MaxHp}   ATK {stats.AttackPower}   DEF {stats.Defense}");
 
         if (GUILayout.Button("Close  [E]"))
         {

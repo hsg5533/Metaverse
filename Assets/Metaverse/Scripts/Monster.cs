@@ -13,6 +13,31 @@ public class Monster : NetworkBehaviour
     /// <summary>Every spawned monster, used by the server to resolve player attacks.</summary>
     public static readonly List<Monster> All = new();
 
+    /// <summary>
+    /// The three kinds of monster in the field. Their level is not fixed: it follows the
+    /// players, so a Slime is always "your level" and an Orc is always two above it.
+    /// </summary>
+    public readonly struct Kind
+    {
+        public readonly string Name;
+        public readonly int LevelOffset;
+        public readonly Color Tint;
+
+        public Kind(string name, int levelOffset, Color tint)
+        {
+            Name = name;
+            LevelOffset = levelOffset;
+            Tint = tint;
+        }
+    }
+
+    public static readonly Kind[] Kinds =
+    {
+        new("Slime", 0, new Color(0.42f, 0.82f, 0.45f)),
+        new("Goblin", 1, new Color(0.85f, 0.72f, 0.30f)),
+        new("Orc", 2, new Color(0.80f, 0.35f, 0.30f)),
+    };
+
     public Renderer[] ColoredParts;
 
     public float MoveSpeed = 2.4f;
@@ -32,7 +57,13 @@ public class Monster : NetworkBehaviour
     public NetworkVariable<Color> Tint = new(new Color(0.4f, 0.8f, 0.4f), writePerm: NetworkVariableWritePermission.Server);
 
     public bool IsAlive => Hp.Value > 0;
-    public int Damage => 4 + Level.Value * 3;
+
+    // Damage grows faster than the players' defence (+2 a level), so higher level monsters
+    // actually hurt more instead of being shrugged off.
+    public int Damage => 6 + Level.Value * 4;
+
+    /// <summary>Higher level monsters are visibly bigger, so a tough one reads at a glance.</summary>
+    public float LevelScale => Mathf.Min(1f + 0.04f * (Level.Value - 1), 1.8f);
     public int ExpReward => 12 + Level.Value * 8;
     public int GoldReward => 4 + Level.Value * 3;
 
@@ -40,6 +71,7 @@ public class Monster : NetworkBehaviour
 
     Renderer[] renderers;
     Collider[] colliders;
+    int kindIndex;
     Vector3 home;
     Vector3 baseScale;
     float nextAttackTime;
@@ -61,15 +93,17 @@ public class Monster : NetworkBehaviour
     {
         All.Add(this);
         Tint.OnValueChanged += OnTintChanged;
+        Level.OnValueChanged += OnLevelChanged;
         // Health is replicated to everyone, so the hit reaction needs no extra RPC.
         Hp.OnValueChanged += OnHpChanged;
-        ApplyTint(Tint.Value);
+        ApplyTint(BodyColor);
     }
 
     public override void OnNetworkDespawn()
     {
         All.Remove(this);
         Tint.OnValueChanged -= OnTintChanged;
+        Level.OnValueChanged -= OnLevelChanged;
         Hp.OnValueChanged -= OnHpChanged;
     }
 
@@ -84,33 +118,84 @@ public class Monster : NetworkBehaviour
     /// <summary>Local only: flash white and squash for a moment after being hit.</summary>
     void UpdateHitFlash()
     {
+        Vector3 bodyScale = baseScale * LevelScale;
         float remaining = hitFlashEndTime - Time.time;
+
         if (remaining <= 0f)
         {
+            transform.localScale = bodyScale;
             if (flashing)
             {
                 flashing = false;
-                transform.localScale = baseScale;
-                ApplyTint(Tint.Value);
+                ApplyTint(BodyColor);
             }
             return;
         }
 
         flashing = true;
         float strength = remaining / HitFlashDuration;
-        ApplyTint(Color.Lerp(Tint.Value, Color.white, strength));
-        transform.localScale = Vector3.Scale(baseScale, new Vector3(1f + 0.2f * strength, 1f - 0.2f * strength, 1f + 0.2f * strength));
+        ApplyTint(Color.Lerp(BodyColor, Color.white, strength));
+        transform.localScale = Vector3.Scale(bodyScale, new Vector3(1f + 0.2f * strength, 1f - 0.2f * strength, 1f + 0.2f * strength));
     }
 
+    /// <summary>The kind's colour, deepened as the monster levels so tough ones look tough.</summary>
+    Color BodyColor => Color.Lerp(Tint.Value, Tint.Value * 0.45f, Mathf.Min((Level.Value - 1) * 0.06f, 1f));
+
     /// <summary>Server side: give the freshly spawned monster its kind, stats and home point.</summary>
-    public void Configure(string monsterName, int level, int maxHp, Color tint)
+    public void Configure(int kind)
     {
-        MonsterName.Value = NetText.Trim64(monsterName);
-        Level.Value = level;
-        MaxHp.Value = maxHp;
-        Hp.Value = maxHp;
-        Tint.Value = tint;
+        kindIndex = Mathf.Clamp(kind, 0, Kinds.Length - 1);
+        ApplyLevel();
         home = transform.position;
+    }
+
+    /// <summary>
+    /// Server side: (re)rolls this monster's stats against the players currently in the world.
+    /// Runs on spawn and on every revive, so the field keeps up as players level.
+    /// </summary>
+    void ApplyLevel()
+    {
+        Kind kind = Kinds[kindIndex];
+        int level = Mathf.Max(1, PlayerLevel() + kind.LevelOffset);
+
+        MonsterName.Value = NetText.Trim64(kind.Name);
+        Level.Value = level;
+        MaxHp.Value = 20 + level * 26;
+        Hp.Value = MaxHp.Value;
+        Tint.Value = kind.Tint;
+    }
+
+    /// <summary>
+    /// Out of combat and untouched, so it can quietly re-level. Without this the first batch
+    /// of monsters would stay at the level of whoever was online when the server started.
+    /// </summary>
+    void RelevelIfIdle()
+    {
+        int wanted = Mathf.Max(1, PlayerLevel() + Kinds[kindIndex].LevelOffset);
+        if (wanted != Level.Value && Hp.Value == MaxHp.Value)
+        {
+            ApplyLevel();
+        }
+    }
+
+    /// <summary>Average level of the players in the world; 1 while nobody has spawned yet.</summary>
+    int PlayerLevel()
+    {
+        int total = 0;
+        int players = 0;
+
+        foreach (var client in NetworkManager.ConnectedClientsList)
+        {
+            var playerObject = client.PlayerObject;
+            var stats = playerObject != null ? playerObject.GetComponent<PlayerStats>() : null;
+            if (stats != null)
+            {
+                total += stats.Level.Value;
+                players++;
+            }
+        }
+
+        return players == 0 ? 1 : Mathf.Max(1, Mathf.RoundToInt(total / (float)players));
     }
 
     /// <summary>Server side: apply a player hit and hand out the reward on the killing blow.</summary>
@@ -196,6 +281,7 @@ public class Monster : NetworkBehaviour
         var target = NearestPlayer();
         if (target == null)
         {
+            RelevelIfIdle();
             return;
         }
 
@@ -216,7 +302,7 @@ public class Monster : NetworkBehaviour
 
     void Revive()
     {
-        Hp.Value = MaxHp.Value;
+        ApplyLevel();
         transform.position = home;
     }
 
@@ -300,7 +386,12 @@ public class Monster : NetworkBehaviour
 
     void OnTintChanged(Color previous, Color current)
     {
-        ApplyTint(current);
+        ApplyTint(BodyColor);
+    }
+
+    void OnLevelChanged(int previous, int current)
+    {
+        ApplyTint(BodyColor);
     }
 
     void ApplyTint(Color color)

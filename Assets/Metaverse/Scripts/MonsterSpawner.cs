@@ -11,13 +11,6 @@ public class MonsterSpawner : MonoBehaviour
     public int Count = 12;
     public float Radius = 22f;
 
-    static readonly (string name, int level, int maxHp, Color tint)[] Kinds =
-    {
-        ("Slime", 1, 40, new Color(0.42f, 0.82f, 0.45f)),
-        ("Goblin", 2, 70, new Color(0.85f, 0.72f, 0.30f)),
-        ("Orc", 3, 110, new Color(0.80f, 0.35f, 0.30f)),
-    };
-
     bool spawned;
 
     void Update()
@@ -41,17 +34,21 @@ public class MonsterSpawner : MonoBehaviour
     {
         for (int i = 0; i < Count; i++)
         {
-            var kind = Kinds[i % Kinds.Length];
+            int kind = i % Monster.Kinds.Length;
 
-            // Spread the pack evenly around the field instead of clumping at the centre.
-            float angle = (i * 360f / Count + kind.level * 11f) * Mathf.Deg2Rad;
-            float distance = Mathf.Lerp(6f, Radius, (i % 4) / 3f);
+            // Weak kinds near the middle, tough ones out at the rim, so walking further out
+            // is what raises the difficulty.
+            float angle = (i * 360f / Count + kind * 11f) * Mathf.Deg2Rad;
+            float ring = Monster.Kinds.Length > 1 ? kind / (float)(Monster.Kinds.Length - 1) : 0f;
+            float distance = Mathf.Lerp(8f, Radius, ring) + (i % 3) * 1.5f;
             Vector3 position = transform.position + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * distance;
 
             var instance = Instantiate(MonsterPrefab, position, Quaternion.identity);
-            instance.name = $"{kind.name}{i}";
+            instance.name = $"{Monster.Kinds[kind].Name}{i}";
             instance.GetComponent<NetworkObject>().Spawn();
-            instance.GetComponent<Monster>().Configure(kind.name, kind.level, kind.maxHp, kind.tint);
+
+            // The monster works out its own level from the players in the world.
+            instance.GetComponent<Monster>().Configure(kind);
         }
 
         Debug.Log($"[Metaverse] spawned {Count} monsters at {transform.position}");

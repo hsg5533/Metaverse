@@ -159,8 +159,19 @@ public class MetaverseHUD : MonoBehaviour
             transport.SetConnectionData(host ? "0.0.0.0" : address.Trim(), parsedPort, host ? "0.0.0.0" : null);
         }
 
+        // Binding fails after StartHost has already returned true, so the failure only shows
+        // up through this event. Without it the menu just sits there looking like nothing happened.
+        manager.OnTransportFailure -= OnTransportFailure;
+        manager.OnTransportFailure += OnTransportFailure;
+
         bool started = host ? manager.StartHost() : manager.StartClient();
-        message = started ? "" : "Could not start. Port already in use?";
+        message = started ? "" : $"Could not start on port {parsedPort}.";
+    }
+
+    void OnTransportFailure()
+    {
+        message = $"Port {port} is busy. Try another port, or restart Unity.";
+        Debug.LogWarning($"[Metaverse] transport failed to start on port {port}.");
     }
 
     static GUIStyle richLabel;
