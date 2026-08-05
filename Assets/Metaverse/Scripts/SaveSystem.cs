@@ -43,7 +43,23 @@ public class SaveSystem : MonoBehaviour
     Book book = new();
     float nextSave;
 
-    static string FilePath => Path.Combine(Application.persistentDataPath, "metaverse-save.json");
+    public const string FileName = "metaverse-save.json";
+
+    static string FilePath => Path.Combine(RootFolder, FileName);
+
+    /// <summary>
+    /// The project folder in the editor, and the folder holding the executable in a build:
+    /// both are the parent of Application.dataPath. Keeping the save here means it sits next
+    /// to the game instead of hiding under AppData.
+    /// </summary>
+    static string RootFolder
+    {
+        get
+        {
+            var parent = Directory.GetParent(Application.dataPath);
+            return parent != null ? parent.FullName : Application.persistentDataPath;
+        }
+    }
 
     void Awake()
     {

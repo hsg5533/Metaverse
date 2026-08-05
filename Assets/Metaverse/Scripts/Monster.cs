@@ -33,9 +33,9 @@ public class Monster : NetworkBehaviour
 
     public static readonly Kind[] Kinds =
     {
-        new("Slime", 0, new Color(0.42f, 0.82f, 0.45f)),
-        new("Goblin", 1, new Color(0.85f, 0.72f, 0.30f)),
-        new("Orc", 2, new Color(0.80f, 0.35f, 0.30f)),
+        new("슬라임", 0, new Color(0.42f, 0.82f, 0.45f)),
+        new("고블린", 1, new Color(0.85f, 0.72f, 0.30f)),
+        new("오크", 2, new Color(0.80f, 0.35f, 0.30f)),
     };
 
     /// <summary>One body per kind, indexed the same way as <see cref="Kinds"/> plus the boss.</summary>
@@ -86,7 +86,7 @@ public class Monster : NetworkBehaviour
     public const int BossLevelOffset = 5;
     public const int BossHpMultiplier = 8;
     public const int BossRewardMultiplier = 6;
-    public const string BossName = "Ogre Lord";
+    public const string BossName = "오우거 군주";
 
     public float SlamCooldown = 7f;
     public float SlamRadius = 6f;
@@ -96,6 +96,7 @@ public class Monster : NetworkBehaviour
 
     Renderer[] renderers;
     Collider[] colliders;
+    CharacterController controller;
     float motionEndTime;
     bool motionIsSlam;
     bool motionPlaying;
@@ -116,6 +117,7 @@ public class Monster : NetworkBehaviour
     {
         renderers = GetComponentsInChildren<Renderer>(true);
         colliders = GetComponentsInChildren<Collider>(true);
+        controller = GetComponent<CharacterController>();
         home = transform.position;
         baseScale = transform.localScale;
     }
@@ -371,7 +373,8 @@ public class Monster : NetworkBehaviour
                 }
             }
 
-            ChatSystem.Announce($"{BossName} Lv.{Level.Value} has fallen to {contributors.Count} challenger(s).");
+            ChatSystem.Announce($"{BossName} Lv.{Level.Value} 토벌 성공! 참가자 {contributors.Count}명");
+            TreasureChest.UnlockAll();
             contributors.Clear();
             return;
         }
@@ -382,13 +385,33 @@ public class Monster : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Pays out a kill. Party members standing nearby each receive the full experience and
+    /// the full gold, plus the quest tick, so hunting together is strictly better than alone.
+    /// </summary>
     void Reward(PlayerStats player, int multiplier)
     {
-        player.GainReward(ExpReward * multiplier, GoldReward * multiplier);
-        var quests = player.GetComponent<PlayerQuests>();
-        if (quests != null)
+        var receivers = PartySystem.Instance != null
+            ? PartySystem.Instance.Share(player)
+            : new System.Collections.Generic.List<PlayerStats> { player };
+
+        int exp = ExpReward * multiplier;
+        int gold = GoldReward * multiplier;
+
+        foreach (var receiver in receivers)
         {
-            quests.OnMonsterKilled();
+            if (receiver == null)
+            {
+                continue;
+            }
+
+            receiver.GainReward(exp, gold);
+
+            var quests = receiver.GetComponent<PlayerQuests>();
+            if (quests != null)
+            {
+                quests.OnMonsterKilled();
+            }
         }
     }
 
@@ -409,7 +432,7 @@ public class Monster : NetworkBehaviour
             var stats = playerObject.GetComponent<PlayerStats>();
             if (stats != null)
             {
-                stats.TakeDamage(Damage * 2, $"{BossName} slam");
+                stats.TakeDamage(Damage * 2, $"{BossName}의 내리찍기");
             }
         }
     }
@@ -507,7 +530,21 @@ public class Monster : NetworkBehaviour
     void Revive()
     {
         ApplyLevel();
-        transform.position = home;
+        Teleport(home);
+    }
+
+    /// <summary>The controller owns the transform, so it has to be switched off to move it.</summary>
+    void Teleport(Vector3 position)
+    {
+        if (controller != null)
+        {
+            controller.enabled = false;
+            transform.position = position;
+            controller.enabled = true;
+            return;
+        }
+
+        transform.position = position;
     }
 
     PlayerStats NearestPlayer()
@@ -548,9 +585,21 @@ public class Monster : NetworkBehaviour
             return;
         }
 
-        Vector3 position = transform.position + step.normalized * MoveSpeed * Time.deltaTime;
-        position.y = home.y;
-        transform.position = position;
+        Vector3 motion = step.normalized * MoveSpeed * Time.deltaTime;
+
+        if (controller != null && controller.enabled)
+        {
+            // The controller slides along walls instead of walking through them, which is
+            // what the dungeon corridor needs. The downward push keeps it on the floor.
+            controller.Move(motion + Vector3.down * 4f * Time.deltaTime);
+        }
+        else
+        {
+            Vector3 position = transform.position + motion;
+            position.y = home.y;
+            transform.position = position;
+        }
+
         FaceTowards(destination);
     }
 
@@ -661,6 +710,8 @@ public class Monster : NetworkBehaviour
 
     void OnGUI()
     {
+        MetaverseUi.ApplyFont();
+
         if (!IsSpawned || !IsAlive)
         {
             return;

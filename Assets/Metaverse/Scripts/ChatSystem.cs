@@ -19,7 +19,7 @@ public class ChatSystem : NetworkBehaviour
     {
         if (instance != null && instance.IsServer)
         {
-            instance.BroadcastChatRpc(new Unity.Collections.FixedString64Bytes("World"), NetText.Trim512(text));
+            instance.BroadcastChatRpc(new Unity.Collections.FixedString64Bytes("월드"), NetText.Trim512(text));
         }
     }
 
@@ -43,7 +43,7 @@ public class ChatSystem : NetworkBehaviour
     {
         instance = this;
         lines.Clear();
-        AddLine("<i>Press Enter to chat.</i>");
+        AddLine("<i>Enter를 눌러 채팅합니다.</i>");
     }
 
     public override void OnNetworkDespawn()
@@ -57,6 +57,8 @@ public class ChatSystem : NetworkBehaviour
 
     void OnGUI()
     {
+        MetaverseUi.ApplyFont();
+
         if (!IsSpawned)
         {
             return;

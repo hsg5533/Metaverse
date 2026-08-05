@@ -7,7 +7,7 @@ using UnityEngine.InputSystem;
 /// </summary>
 public abstract class InteractStation : MonoBehaviour
 {
-    public string Title = "Station";
+    public string Title = "시설";
     public float InteractRange = 3.5f;
     public float PromptHeight = 2.2f;
     public Vector2 PanelSize = new(340f, 210f);
@@ -30,7 +30,7 @@ public abstract class InteractStation : MonoBehaviour
         }
 
         var keyboard = Keyboard.current;
-        if (keyboard != null && keyboard.eKey.wasPressedThisFrame && !ChatSystem.IsTyping)
+        if (keyboard != null && keyboard.eKey.wasPressedThisFrame && !ChatSystem.IsTyping && !PlayerInventory.WindowOpen)
         {
             open = !open;
             ShopNpc.PanelOpen = open;
@@ -48,6 +48,8 @@ public abstract class InteractStation : MonoBehaviour
 
     void OnGUI()
     {
+        MetaverseUi.ApplyFont();
+
         var player = PlayerAvatar.Local;
         if (player == null)
         {
@@ -61,7 +63,7 @@ public abstract class InteractStation : MonoBehaviour
             GUILayout.Label($"<b>{Title}</b>", RichLabel());
             DrawPanel(player);
             GUILayout.Space(4);
-            if (GUILayout.Button("Close  [E]"))
+            if (GUILayout.Button("닫기  [E]"))
             {
                 Close();
             }

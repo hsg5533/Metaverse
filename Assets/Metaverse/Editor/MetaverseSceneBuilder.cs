@@ -338,6 +338,36 @@ public static class MetaverseSceneBuilder
         duels.CornerB = CornerB;
     }
 
+
+    /// <summary>
+    /// A chest: a box with a hinged lid. The lid hangs off its own pivot at the back edge,
+    /// so rotating that pivot opens it rather than sinking it into the body.
+    /// </summary>
+    static void BuildChest(Transform parent, string name, Vector3 localPosition)
+    {
+        Material woodMaterial = CreateMaterial("ChestWood", new Color(0.42f, 0.28f, 0.16f));
+        Material bandMaterial = CreateMaterial("ChestBand", new Color(0.80f, 0.66f, 0.28f));
+
+        var chest = new GameObject(name);
+        chest.transform.SetParent(parent, false);
+        chest.transform.localPosition = localPosition;
+
+        CreatePrimitive(PrimitiveType.Cube, "Body", chest.transform, new Vector3(0f, 0.3f, 0f), new Vector3(1.4f, 0.6f, 0.9f), woodMaterial);
+        BodyPart(PrimitiveType.Cube, "BandLeft", chest.transform, new Vector3(-0.45f, 0.3f, 0f), new Vector3(0.12f, 0.64f, 0.94f), bandMaterial);
+        BodyPart(PrimitiveType.Cube, "BandRight", chest.transform, new Vector3(0.45f, 0.3f, 0f), new Vector3(0.12f, 0.64f, 0.94f), bandMaterial);
+        BodyPart(PrimitiveType.Cube, "Lock", chest.transform, new Vector3(0f, 0.42f, -0.47f), new Vector3(0.22f, 0.22f, 0.08f), bandMaterial);
+
+        var lid = new GameObject("Lid");
+        lid.transform.SetParent(chest.transform, false);
+        lid.transform.localPosition = new Vector3(0f, 0.6f, 0.45f);
+        BodyPart(PrimitiveType.Cube, "LidBoard", lid.transform, new Vector3(0f, 0.1f, -0.45f), new Vector3(1.4f, 0.2f, 0.9f), woodMaterial);
+        BodyPart(PrimitiveType.Cube, "LidBand", lid.transform, new Vector3(0f, 0.21f, -0.45f), new Vector3(0.2f, 0.06f, 0.94f), bandMaterial);
+
+        chest.AddComponent<NetworkObject>();
+        var treasure = chest.AddComponent<TreasureChest>();
+        treasure.Lid = lid.transform;
+    }
+
     /// <summary>Anvil, campfire and quest board, all within sight of the plaza.</summary>
     static void BuildStations(Transform parent)
     {
@@ -665,6 +695,10 @@ public static class MetaverseSceneBuilder
         guardSpawner.Radius = 5f;
         guardSpawner.LevelBonus = 3;
 
+        // Two chests flanking the pedestal, shut until the boss goes down.
+        BuildChest(dungeon.transform, "ChestLeft", new Vector3(-4.5f, 0.3f, 14f));
+        BuildChest(dungeon.transform, "ChestRight", new Vector3(4.5f, 0.3f, 14f));
+
         var bossPoint = new GameObject("BossSpawner");
         bossPoint.transform.SetParent(dungeon.transform, false);
         bossPoint.transform.localPosition = new Vector3(0f, 0f, 14f);
@@ -786,11 +820,14 @@ public static class MetaverseSceneBuilder
             BuildOgreBody(root.transform, bodyMaterial, eyeMaterial, boneMaterial),
         };
 
-        // One collider for the whole creature, sized for the biggest body.
-        var collider = root.AddComponent<CapsuleCollider>();
-        collider.height = 2.2f;
-        collider.radius = 0.55f;
-        collider.center = new Vector3(0f, 1.1f, 0f);
+        // A controller rather than a plain collider: the server moves monsters with it, so
+        // they collide with walls instead of sliding through them.
+        var controller = root.AddComponent<CharacterController>();
+        controller.height = 2.2f;
+        controller.radius = 0.5f;
+        controller.center = new Vector3(0f, 1.1f, 0f);
+        controller.slopeLimit = 55f;
+        controller.stepOffset = 0.5f;
 
         root.AddComponent<NetworkObject>();
 
@@ -973,7 +1010,9 @@ public static class MetaverseSceneBuilder
 
         var torso = BodyPart(PrimitiveType.Cube, "Torso", rig.transform, new Vector3(0f, 1.15f, 0f), new Vector3(0.62f, 0.72f, 0.34f), shirtMaterial);
         var head = BodyPart(PrimitiveType.Cube, "Head", rig.transform, new Vector3(0f, 1.73f, 0f), new Vector3(0.44f, 0.44f, 0.42f), skinMaterial);
-        BodyPart(PrimitiveType.Cube, "Face", rig.transform, new Vector3(0f, 1.76f, 0.22f), new Vector3(0.3f, 0.1f, 0.03f), faceMaterial);
+        // Two eyes rather than one visor strip, so the face reads as a face.
+        BodyPart(PrimitiveType.Cube, "EyeLeft", rig.transform, new Vector3(-0.11f, 1.77f, 0.22f), new Vector3(0.09f, 0.1f, 0.03f), faceMaterial);
+        BodyPart(PrimitiveType.Cube, "EyeRight", rig.transform, new Vector3(0.11f, 1.77f, 0.22f), new Vector3(0.09f, 0.1f, 0.03f), faceMaterial);
 
         return new Humanoid
         {
@@ -1056,6 +1095,10 @@ public static class MetaverseSceneBuilder
         var tradeObject = new GameObject("TradeSystem");
         tradeObject.AddComponent<NetworkObject>();
         tradeObject.AddComponent<TradeSystem>();
+
+        var partyObject = new GameObject("PartySystem");
+        partyObject.AddComponent<NetworkObject>();
+        partyObject.AddComponent<PartySystem>();
     }
 
     /// <summary>

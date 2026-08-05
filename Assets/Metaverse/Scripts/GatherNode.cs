@@ -110,6 +110,13 @@ public class GatherNode : NetworkBehaviour
         }
     }
 
+    string KoreanName => Kind switch
+    {
+        GatherKind.Ore => "광석",
+        GatherKind.Herb => "약초",
+        _ => "나무",
+    };
+
     bool InRange()
     {
         return Vector3.Distance(PlayerAvatar.Local.transform.position, transform.position) <= InteractRange;
@@ -117,6 +124,8 @@ public class GatherNode : NetworkBehaviour
 
     void OnGUI()
     {
+        MetaverseUi.ApplyFont();
+
         if (!IsSpawned || !Ready.Value || PlayerAvatar.Local == null || !InRange())
         {
             return;
@@ -134,7 +143,7 @@ public class GatherNode : NetworkBehaviour
             return;
         }
 
-        var prompt = new GUIContent($"[E] Gather {Kind}");
+        var prompt = new GUIContent($"[E] {KoreanName} 채집");
         Vector2 size = GUI.skin.box.CalcSize(prompt);
         GUI.Box(new Rect(screenPoint.x - size.x * 0.5f, Screen.height - screenPoint.y, size.x, size.y), prompt);
     }

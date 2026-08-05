@@ -59,3 +59,7 @@ crashlytics-build.properties
 # OS files
 .DS_Store
 Thumbs.db
+
+# Player progress written next to the project by SaveSystem
+/metaverse-save.json
+/metaverse-save.json.*.bak

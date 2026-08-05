@@ -5,7 +5,7 @@ public class CraftStation : InteractStation
 {
     void Reset()
     {
-        Title = "Anvil";
+        Title = "모루";
     }
 
     protected override void DrawPanel(PlayerAvatar player)
@@ -17,8 +17,8 @@ public class CraftStation : InteractStation
             return;
         }
 
-        GUILayout.Label($"Ore {inventory.Ore.Value}   Wood {inventory.Wood.Value}");
-        GUILayout.Label($"Weapon Lv.{stats.WeaponLevel.Value}   Armor Lv.{stats.ArmorLevel.Value}");
+        GUILayout.Label($"광석 {inventory.Ore.Value}   나무 {inventory.Wood.Value}");
+        GUILayout.Label($"검 Lv.{stats.WeaponLevel.Value}   방어구 Lv.{stats.ArmorLevel.Value}");
         GUILayout.Space(6);
 
         for (int i = 0; i < PlayerInventory.CraftRecipes.Length; i++)

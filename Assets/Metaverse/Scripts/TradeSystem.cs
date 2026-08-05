@@ -96,20 +96,20 @@ public class TradeSystem : NetworkBehaviour
 
         if (best == null)
         {
-            NoticeRpc(NetText.Trim64("Nobody close enough to trade with."), RpcTarget.Single(senderId, RpcTargetUse.Temp));
+            NoticeRpc(NetText.Trim512("근처에 거래할 사람이 없습니다."), RpcTarget.Single(senderId, RpcTargetUse.Temp));
             return;
         }
 
         ulong targetId = best.OwnerClientId;
         if (SessionOf(targetId) != null)
         {
-            NoticeRpc(NetText.Trim64("They are already trading."), RpcTarget.Single(senderId, RpcTargetUse.Temp));
+            NoticeRpc(NetText.Trim512("상대가 이미 거래 중입니다."), RpcTarget.Single(senderId, RpcTargetUse.Temp));
             return;
         }
 
         invites[targetId] = senderId;
         InviteRpc(NetText.Trim64(NameOf(senderId)), senderId, RpcTarget.Single(targetId, RpcTargetUse.Temp));
-        NoticeRpc(NetText.Trim64($"Trade offered to {NameOf(targetId)}."), RpcTarget.Single(senderId, RpcTargetUse.Temp));
+        NoticeRpc(NetText.Trim512($"{NameOf(targetId)}에게 거래를 신청했습니다."), RpcTarget.Single(senderId, RpcTargetUse.Temp));
     }
 
     [Rpc(SendTo.Server)]
@@ -197,7 +197,7 @@ public class TradeSystem : NetworkBehaviour
         var session = SessionOf(rpcParams.Receive.SenderClientId);
         if (session != null)
         {
-            Close(session, "Trade cancelled.");
+            Close(session, "거래가 취소되었습니다.");
         }
     }
 
@@ -207,7 +207,7 @@ public class TradeSystem : NetworkBehaviour
         var b = PlayerObject(session.B);
         if (a == null || b == null)
         {
-            Close(session, "Trade failed.");
+            Close(session, "거래에 실패했습니다.");
             return;
         }
 
@@ -223,7 +223,7 @@ public class TradeSystem : NetworkBehaviour
 
         if (!canPay)
         {
-            Close(session, "Trade failed: someone no longer has what they offered.");
+            Close(session, "거래 실패: 제시한 물건이 부족합니다.");
             return;
         }
 
@@ -240,7 +240,7 @@ public class TradeSystem : NetworkBehaviour
             bagB.Herb.Value - session.HerbB + session.HerbA,
             bagB.Wood.Value - session.WoodB + session.WoodA);
 
-        Close(session, "Trade complete.");
+        Close(session, "거래가 성사되었습니다.");
     }
 
     void DropBrokenSessions()
@@ -253,11 +253,11 @@ public class TradeSystem : NetworkBehaviour
 
             if (a == null || b == null)
             {
-                Close(session, "Trade closed: the other player left.");
+                Close(session, "상대가 나가서 거래가 종료되었습니다.");
             }
             else if (Vector3.Distance(a.transform.position, b.transform.position) > BreakRange)
             {
-                Close(session, "Trade closed: too far apart.");
+                Close(session, "너무 멀어져서 거래가 종료되었습니다.");
             }
         }
     }
@@ -266,7 +266,7 @@ public class TradeSystem : NetworkBehaviour
     {
         sessions.Remove(session);
         var targets = RpcTarget.Group(new[] { session.A, session.B }, RpcTargetUse.Temp);
-        ClosedRpc(NetText.Trim64(reason), targets);
+        ClosedRpc(NetText.Trim512(reason), targets);
     }
 
     void PushState(Session session)
@@ -339,7 +339,7 @@ public class TradeSystem : NetworkBehaviour
     }
 
     [Rpc(SendTo.SpecifiedInParams)]
-    void ClosedRpc(FixedString64Bytes reason, RpcParams rpcParams)
+    void ClosedRpc(FixedString512Bytes reason, RpcParams rpcParams)
     {
         open = false;
         ShopNpc.PanelOpen = false;
@@ -347,13 +347,15 @@ public class TradeSystem : NetworkBehaviour
     }
 
     [Rpc(SendTo.SpecifiedInParams)]
-    void NoticeRpc(FixedString64Bytes text, RpcParams rpcParams)
+    void NoticeRpc(FixedString512Bytes text, RpcParams rpcParams)
     {
         ChatSystem.Local(text.ToString());
     }
 
     void OnGUI()
     {
+        MetaverseUi.ApplyFont();
+
         if (!IsClient || PlayerAvatar.Local == null)
         {
             return;
@@ -364,7 +366,7 @@ public class TradeSystem : NetworkBehaviour
             if (inviteFrom.Length > 0 && Time.time < inviteExpiry)
             {
                 var box = new Rect(Screen.width * 0.5f - 140f, 90f, 280f, 26f);
-                GUI.Box(box, $"{inviteFrom} wants to trade  —  [Y] accept");
+                GUI.Box(box, $"{inviteFrom}님이 거래를 신청했습니다  —  [Y] 수락");
             }
             return;
         }
@@ -372,25 +374,25 @@ public class TradeSystem : NetworkBehaviour
         var area = new Rect(Screen.width * 0.5f - 200f, Screen.height * 0.5f - 130f, 400f, 260f);
         GUILayout.BeginArea(area, GUI.skin.box);
 
-        GUILayout.Label($"<b>Trading with {partnerName}</b>", RichLabel());
+        GUILayout.Label($"<b>{partnerName}님과 거래 중</b>", RichLabel());
         GUILayout.Space(4);
 
-        GUILayout.Label($"They offer:  {theirGold} G, {theirOre} ore, {theirHerb} herb, {theirWood} wood  {(theirConfirm ? "[confirmed]" : "")}");
+        GUILayout.Label($"상대 제시:  골드 {theirGold}, 광석 {theirOre}, 약초 {theirHerb}, 나무 {theirWood}  {(theirConfirm ? "[확인함]" : "")}");
         GUILayout.Space(6);
-        GUILayout.Label($"You offer:  {myGold} G, {myOre} ore, {myHerb} herb, {myWood} wood  {(myConfirm ? "[confirmed]" : "")}");
+        GUILayout.Label($"내 제시:  골드 {myGold}, 광석 {myOre}, 약초 {myHerb}, 나무 {myWood}  {(myConfirm ? "[확인함]" : "")}");
 
-        DrawOfferRow("Gold", ref myGold, 10);
-        DrawOfferRow("Ore", ref myOre, 1);
-        DrawOfferRow("Herb", ref myHerb, 1);
-        DrawOfferRow("Wood", ref myWood, 1);
+        DrawOfferRow("골드", ref myGold, 10);
+        DrawOfferRow("광석", ref myOre, 1);
+        DrawOfferRow("약초", ref myHerb, 1);
+        DrawOfferRow("나무", ref myWood, 1);
 
         GUILayout.Space(6);
         GUILayout.BeginHorizontal();
-        if (GUILayout.Button(myConfirm ? "Confirmed" : "Confirm"))
+        if (GUILayout.Button(myConfirm ? "확인함" : "확인"))
         {
             ConfirmRpc();
         }
-        if (GUILayout.Button("Cancel"))
+        if (GUILayout.Button("취소"))
         {
             CancelRpc();
         }

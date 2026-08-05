@@ -14,11 +14,11 @@ public class PlayerQuests : NetworkBehaviour
 
     public static readonly (string Text, int Kind, int Detail, int Target, int Gold, int Exp)[] Board =
     {
-        ("Cull 5 monsters", Hunt, 0, 5, 40, 30),
-        ("Mine 8 ore", Gather, (int)GatherKind.Ore, 8, 35, 20),
-        ("Pick 8 herbs", Gather, (int)GatherKind.Herb, 8, 35, 20),
-        ("Chop 6 wood", Gather, (int)GatherKind.Wood, 6, 30, 18),
-        ("Cull 12 monsters", Hunt, 0, 12, 90, 70),
+        ("몬스터 5마리 처치", Hunt, 0, 5, 40, 30),
+        ("광석 8개 채집", Gather, (int)GatherKind.Ore, 8, 35, 20),
+        ("약초 8개 채집", Gather, (int)GatherKind.Herb, 8, 35, 20),
+        ("나무 6개 채집", Gather, (int)GatherKind.Wood, 6, 30, 18),
+        ("몬스터 12마리 처치", Hunt, 0, 12, 90, 70),
     };
 
     /// <summary>Index into <see cref="Board"/>, or -1 when nothing is taken.</summary>
@@ -45,13 +45,13 @@ public class PlayerQuests : NetworkBehaviour
 
         if (HasQuest)
         {
-            NoticeRpc(NetText.Trim64("Finish the quest you already took."));
+            NoticeRpc(NetText.Trim512("이미 받은 의뢰를 먼저 끝내세요."));
             return;
         }
 
         Quest.Value = index;
         Progress.Value = 0;
-        NoticeRpc(NetText.Trim64($"Quest taken: {Board[index].Text}"));
+        NoticeRpc(NetText.Trim512($"의뢰 수락: {Board[index].Text}"));
     }
 
     [Rpc(SendTo.Server)]
@@ -67,7 +67,7 @@ public class PlayerQuests : NetworkBehaviour
         Progress.Value = 0;
         stats.Gold.Value += quest.Gold;
         stats.GainReward(quest.Exp, 0);
-        NoticeRpc(NetText.Trim64($"Quest done: +{quest.Gold} G"));
+        NoticeRpc(NetText.Trim512($"의뢰 완료: 골드 +{quest.Gold}"));
     }
 
     [Rpc(SendTo.Server)]
@@ -111,7 +111,7 @@ public class PlayerQuests : NetworkBehaviour
         Progress.Value = Mathf.Min(quest.Target, Progress.Value + amount);
         if (Progress.Value >= quest.Target)
         {
-            NoticeRpc(NetText.Trim64("Quest ready. Return to the board."));
+            NoticeRpc(NetText.Trim512("의뢰 조건 달성. 게시판으로 돌아가세요."));
         }
     }
 
@@ -128,20 +128,22 @@ public class PlayerQuests : NetworkBehaviour
     }
 
     [Rpc(SendTo.Owner)]
-    void NoticeRpc(FixedString64Bytes text)
+    void NoticeRpc(FixedString512Bytes text)
     {
         ChatSystem.Local(text.ToString());
     }
 
     void OnGUI()
     {
+        MetaverseUi.ApplyFont();
+
         if (!IsOwner || !IsSpawned || !HasQuest)
         {
             return;
         }
 
         var quest = Board[Quest.Value];
-        GUILayout.BeginArea(new Rect(Screen.width - 230, 218, 220, 26), GUI.skin.box);
+        GUILayout.BeginArea(new Rect(Screen.width - 250, 270, 240, 28), GUI.skin.box);
         GUILayout.Label($"{quest.Text}  {Progress.Value}/{quest.Target}");
         GUILayout.EndArea();
     }

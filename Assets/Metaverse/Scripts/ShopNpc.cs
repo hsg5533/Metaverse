@@ -10,7 +10,7 @@ public class ShopNpc : MonoBehaviour
     /// <summary>True while any shop window is open, so the attack input stays quiet.</summary>
     public static bool PanelOpen;
 
-    public string ShopName = "Village Shop";
+    public string ShopName = "마을 상점";
     public float InteractRange = 3.5f;
     public float PromptHeight = 2.4f;
 
@@ -31,7 +31,7 @@ public class ShopNpc : MonoBehaviour
         }
 
         var keyboard = Keyboard.current;
-        if (keyboard != null && keyboard.eKey.wasPressedThisFrame && !ChatSystem.IsTyping)
+        if (keyboard != null && keyboard.eKey.wasPressedThisFrame && !ChatSystem.IsTyping && !PlayerInventory.WindowOpen)
         {
             open = !open;
             PanelOpen = open;
@@ -49,6 +49,8 @@ public class ShopNpc : MonoBehaviour
 
     void OnGUI()
     {
+        MetaverseUi.ApplyFont();
+
         var stats = PlayerAvatar.Local != null ? PlayerAvatar.Local.GetComponent<PlayerStats>() : null;
         if (stats == null)
         {
@@ -80,27 +82,27 @@ public class ShopNpc : MonoBehaviour
 
     void DrawShop(PlayerStats stats)
     {
-        var area = new Rect(Screen.width * 0.5f - 150f, Screen.height * 0.5f - 90f, 300f, 180f);
+        var area = new Rect(Screen.width * 0.5f - 190f, Screen.height * 0.5f - 140f, 380f, 280f);
         GUILayout.BeginArea(area, GUI.skin.box);
 
         GUILayout.Label($"<b>{ShopName}</b>", RichLabel());
-        GUILayout.Label($"Gold: {stats.Gold.Value}");
+        GUILayout.Label($"골드: {stats.Gold.Value}");
         GUILayout.Space(6);
 
-        if (GUILayout.Button($"Weapon Lv.{stats.WeaponLevel.Value} -> Lv.{stats.WeaponLevel.Value + 1}  ({stats.WeaponPrice} G)  +4 ATK"))
+        if (GUILayout.Button($"검 Lv.{stats.WeaponLevel.Value} → Lv.{stats.WeaponLevel.Value + 1}  (골드 {stats.WeaponPrice})  공격 +4"))
         {
             stats.BuyWeaponRpc();
         }
 
-        if (GUILayout.Button($"Armor Lv.{stats.ArmorLevel.Value} -> Lv.{stats.ArmorLevel.Value + 1}  ({stats.ArmorPrice} G)  +3 DEF"))
+        if (GUILayout.Button($"방어구 Lv.{stats.ArmorLevel.Value} → Lv.{stats.ArmorLevel.Value + 1}  (골드 {stats.ArmorPrice})  방어 +3"))
         {
             stats.BuyArmorRpc();
         }
 
         GUILayout.Space(6);
-        GUILayout.Label($"HP {stats.Hp.Value}/{stats.MaxHp}   ATK {stats.AttackPower}   DEF {stats.Defense}");
+        GUILayout.Label($"체력 {stats.Hp.Value}/{stats.MaxHp}   공격 {stats.AttackPower}   방어 {stats.Defense}");
 
-        if (GUILayout.Button("Close  [E]"))
+        if (GUILayout.Button("닫기  [E]"))
         {
             Close();
         }

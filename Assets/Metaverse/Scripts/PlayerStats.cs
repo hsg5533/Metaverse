@@ -1,6 +1,7 @@
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// RPG progression for one avatar: level, experience, gold, health and weapon.
@@ -9,6 +10,9 @@ using UnityEngine;
 [RequireComponent(typeof(PlayerAvatar))]
 public class PlayerStats : NetworkBehaviour
 {
+    /// <summary>True while the local player has the character sheet open.</summary>
+    public static bool WindowOpen;
+
     /// <summary>Half width of the walled village; outside it health does not come back on its own.</summary>
     public float VillageHalfSize = 32f;
     public float RegenInterval = 1f;
@@ -30,6 +34,14 @@ public class PlayerStats : NetworkBehaviour
     public int ExpToNextLevel => 40 + (Level.Value - 1) * 30;
     public int WeaponPrice => 60 * (WeaponLevel.Value + 1);
     public int ArmorPrice => 50 * (ArmorLevel.Value + 1);
+
+    /// <summary>Gear is named by the level it has been upgraded to, the same number the shop quotes.</summary>
+    public string WeaponName => $"검 Lv.{WeaponLevel.Value}";
+    public string ArmorName => $"방어구 Lv.{ArmorLevel.Value}";
+
+    /// <summary>What the gear adds on its own, without the level or a buff behind it.</summary>
+    public int WeaponBonus => WeaponLevel.Value * 4;
+    public int ArmorBonus => ArmorLevel.Value * 3;
 
     PlayerAvatar avatar;
     AvatarLimbAnimator limbAnimator;
@@ -57,10 +69,36 @@ public class PlayerStats : NetworkBehaviour
     public override void OnNetworkDespawn()
     {
         Hp.OnValueChanged -= OnHpChanged;
+
+        if (IsOwner)
+        {
+            WindowOpen = false;
+        }
+    }
+
+    void Update()
+    {
+        HandleWindowKey();
+        Regenerate();
+    }
+
+    /// <summary>The sheet is off by default; P brings it up.</summary>
+    void HandleWindowKey()
+    {
+        if (!IsOwner || !IsSpawned || ChatSystem.IsTyping)
+        {
+            return;
+        }
+
+        var keyboard = Keyboard.current;
+        if (keyboard != null && keyboard.pKey.wasPressedThisFrame)
+        {
+            WindowOpen = !WindowOpen;
+        }
     }
 
     /// <summary>Server side: resting in the village ticks health back up.</summary>
-    void Update()
+    void Regenerate()
     {
         if (!IsServer || !IsSpawned || Time.time < nextRegenTime)
         {
@@ -99,14 +137,14 @@ public class PlayerStats : NetworkBehaviour
 
         Exp.Value += exp;
         Gold.Value += gold;
-        NoticeRpc(NetText.Trim64($"+{exp} EXP  +{gold} G"));
+        NoticeRpc(NetText.Trim512($"경험치 +{exp}, 골드 +{gold}"));
 
         while (Exp.Value >= ExpToNextLevel)
         {
             Exp.Value -= ExpToNextLevel;
             Level.Value++;
             Hp.Value = MaxHp;
-            NoticeRpc(NetText.Trim64($"LEVEL UP!  Lv.{Level.Value}  (HP {MaxHp}, ATK {AttackPower}, DEF {Defense})"));
+            NoticeRpc(NetText.Trim512($"레벨 업! Lv.{Level.Value} (체력 {MaxHp}, 공격 {AttackPower}, 방어 {Defense})"));
         }
     }
 
@@ -128,7 +166,7 @@ public class PlayerStats : NetworkBehaviour
         }
 
         Hp.Value = MaxHp;
-        NoticeRpc(NetText.Trim64($"You were knocked out by {source}. Back to the village."));
+        NoticeRpc(NetText.Trim512($"{source}에게 쓰러졌습니다. 마을로 돌아갑니다."));
         RespawnRpc();
     }
 
@@ -143,13 +181,13 @@ public class PlayerStats : NetworkBehaviour
         int price = ArmorPrice;
         if (Gold.Value < price)
         {
-            NoticeRpc(NetText.Trim64("Not enough gold."));
+            NoticeRpc(NetText.Trim512("골드가 부족합니다."));
             return;
         }
 
         Gold.Value -= price;
         ArmorLevel.Value++;
-        NoticeRpc(NetText.Trim64($"Armor Lv.{ArmorLevel.Value}!  DEF {Defense}"));
+        NoticeRpc(NetText.Trim512($"방어구 Lv.{ArmorLevel.Value}! 방어력 {Defense}"));
     }
 
     [Rpc(SendTo.Server)]
@@ -163,13 +201,13 @@ public class PlayerStats : NetworkBehaviour
         int price = WeaponPrice;
         if (Gold.Value < price)
         {
-            NoticeRpc(NetText.Trim64("Not enough gold."));
+            NoticeRpc(NetText.Trim512("골드가 부족합니다."));
             return;
         }
 
         Gold.Value -= price;
         WeaponLevel.Value++;
-        NoticeRpc(NetText.Trim64($"Weapon Lv.{WeaponLevel.Value}!  ATK {AttackPower}"));
+        NoticeRpc(NetText.Trim512($"검 Lv.{WeaponLevel.Value}! 공격력 {AttackPower}"));
     }
 
     /// <summary>
@@ -186,7 +224,7 @@ public class PlayerStats : NetworkBehaviour
         Hp.Value = Mathf.Max(1, Hp.Value - Mathf.Max(1, amount - Defense));
         if (Hp.Value <= 1)
         {
-            NoticeRpc(NetText.Trim64($"{source} knocked you out."));
+            NoticeRpc(NetText.Trim512($"{source}에게 패배했습니다."));
         }
     }
 
@@ -236,28 +274,30 @@ public class PlayerStats : NetworkBehaviour
     }
 
     [Rpc(SendTo.Owner)]
-    void NoticeRpc(FixedString64Bytes text)
+    void NoticeRpc(FixedString512Bytes text)
     {
         ChatSystem.Local(text.ToString());
     }
 
     void OnGUI()
     {
-        if (!IsOwner || !IsSpawned)
+        MetaverseUi.ApplyFont();
+
+        if (!IsOwner || !IsSpawned || !WindowOpen)
         {
             return;
         }
 
-        GUILayout.BeginArea(new Rect(Screen.width - 230, 10, 220, 164), GUI.skin.box);
-        GUILayout.Label($"<b>Lv.{Level.Value}</b>  {Nickname()}", RichLabel());
-        GUILayout.Label($"HP    {Hp.Value} / {MaxHp}{(InVillage && Hp.Value < MaxHp ? "  (resting)" : "")}");
-        GUILayout.Label($"EXP   {Exp.Value} / {ExpToNextLevel}");
-        GUILayout.Label($"Gold  {Gold.Value}");
-        GUILayout.Label($"ATK   {AttackPower}  (Weapon Lv.{WeaponLevel.Value})");
-        GUILayout.Label($"DEF   {Defense}  (Armor Lv.{ArmorLevel.Value})");
+        GUILayout.BeginArea(new Rect(Screen.width - 250, 10, 240, 220), GUI.skin.box);
+        GUILayout.Label($"<b>Lv.{Level.Value}</b>  {Nickname()}   [P] 닫기", RichLabel());
+        GUILayout.Label($"체력    {Hp.Value} / {MaxHp}{(InVillage && Hp.Value < MaxHp ? "  (휴식 중)" : "")}");
+        GUILayout.Label($"경험치  {Exp.Value} / {ExpToNextLevel}");
+        GUILayout.Label($"골드    {Gold.Value}");
+        GUILayout.Label($"공격력  {AttackPower}  ({WeaponName})");
+        GUILayout.Label($"방어력  {Defense}  ({ArmorName})");
         if (DuelWins.Value + DuelLosses.Value > 0)
         {
-            GUILayout.Label($"Duels {DuelWins.Value}W {DuelLosses.Value}L");
+            GUILayout.Label($"결투 {DuelWins.Value}승 {DuelLosses.Value}패");
         }
         GUILayout.EndArea();
     }

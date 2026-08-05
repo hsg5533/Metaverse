@@ -54,22 +54,24 @@ public class PlayerBuffs : NetworkBehaviour
     {
         return kind switch
         {
-            Attack => "+ATK",
-            Defense => "+DEF",
-            Speed => "+Speed",
+            Attack => "공격력 증가",
+            Defense => "방어력 증가",
+            Speed => "이동속도 증가",
             _ => "",
         };
     }
 
     void OnGUI()
     {
+        MetaverseUi.ApplyFont();
+
         if (!IsOwner || !IsSpawned || !Active)
         {
             return;
         }
 
-        GUILayout.BeginArea(new Rect(Screen.width - 230, 190, 220, 26), GUI.skin.box);
-        GUILayout.Label($"{NameOf(Kind.Value)}   {Mathf.CeilToInt(Remaining)}s left");
+        GUILayout.BeginArea(new Rect(Screen.width - 250, 238, 240, 28), GUI.skin.box);
+        GUILayout.Label($"{NameOf(Kind.Value)}   {Mathf.CeilToInt(Remaining)}초 남음");
         GUILayout.EndArea();
     }
 }

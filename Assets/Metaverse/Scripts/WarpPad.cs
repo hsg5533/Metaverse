@@ -28,7 +28,7 @@ public class WarpPad : MonoBehaviour
         {
             if (!MeetsRequirement(avatar))
             {
-                ChatSystem.Local($"You need level {RequiredLevel} to enter {Label}.");
+                ChatSystem.Local($"{Label} 입장은 레벨 {RequiredLevel} 이상부터 가능합니다.");
                 return;
             }
 
@@ -52,7 +52,7 @@ public class WarpPad : MonoBehaviour
         }
 
         string suffix = RequiredLevel > 0 ? $"  (Lv.{RequiredLevel}+)" : "";
-        var prompt = new GUIContent($"[E] Warp to {Label}{suffix}");
+        var prompt = new GUIContent($"[E] {Label}(으)로 이동{suffix}");
         Vector2 size = GUI.skin.box.CalcSize(prompt);
         GUI.Box(new Rect(screenPoint.x - size.x * 0.5f, Screen.height - screenPoint.y, size.x, size.y), prompt);
     }

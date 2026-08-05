@@ -25,7 +25,7 @@ public class PlayerCombat : NetworkBehaviour
 
     void Update()
     {
-        if (!IsOwner || !IsSpawned || ChatSystem.IsTyping || ShopNpc.PanelOpen)
+        if (!IsOwner || !IsSpawned || ChatSystem.IsTyping || ShopNpc.PanelOpen || MetaverseHUD.PointerOverHud)
         {
             return;
         }

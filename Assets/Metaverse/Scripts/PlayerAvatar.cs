@@ -29,6 +29,7 @@ public class PlayerAvatar : NetworkBehaviour
     /// <summary>Body parts tinted with the player colour (shirt and arms).</summary>
     public Renderer[] ColoredParts;
 
+
     /// <summary>Local height the name tag is drawn at.</summary>
     public float NameTagHeight = 2.3f;
 
@@ -60,10 +61,11 @@ public class PlayerAvatar : NetworkBehaviour
         BodyColor.OnValueChanged += OnBodyColorChanged;
         ApplyColor(BodyColor.Value);
 
+
         if (IsServer)
         {
             BodyColor.Value = Palette[OwnerClientId % (ulong)Palette.Length];
-            Nickname.Value = NetText.Trim64("Player " + OwnerClientId);
+            Nickname.Value = NetText.Trim64("플레이어 " + OwnerClientId);
         }
 
         if (IsOwner)
@@ -146,6 +148,8 @@ public class PlayerAvatar : NetworkBehaviour
 
     void OnGUI()
     {
+        MetaverseUi.ApplyFont();
+
         if (!IsSpawned)
         {
             return;
