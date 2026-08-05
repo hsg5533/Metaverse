@@ -3,12 +3,6 @@ using UnityEngine;
 /// <summary>The board on the plaza: take one job at a time, come back to claim it.</summary>
 public class QuestBoard : InteractStation
 {
-    void Reset()
-    {
-        Title = "의뢰 게시판";
-        PanelSize = new Vector2(360f, 240f);
-    }
-
     protected override void DrawPanel(PlayerAvatar player)
     {
         var quests = player.GetComponent<PlayerQuests>();

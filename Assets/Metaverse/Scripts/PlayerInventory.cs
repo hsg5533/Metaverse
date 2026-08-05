@@ -58,16 +58,6 @@ public class PlayerInventory : NetworkBehaviour
         buffs = GetComponent<PlayerBuffs>();
     }
 
-    public int Count(GatherKind kind)
-    {
-        return kind switch
-        {
-            GatherKind.Ore => Ore.Value,
-            GatherKind.Herb => Herb.Value,
-            _ => Wood.Value,
-        };
-    }
-
     /// <summary>Server side.</summary>
     public void Add(GatherKind kind, int amount)
     {
@@ -234,7 +224,7 @@ public class PlayerInventory : NetworkBehaviour
         var window = new Rect(Screen.width * 0.5f - width * 0.5f, Screen.height * 0.5f - height * 0.5f, width, height);
 
         GUI.Box(window, "");
-        GUI.Label(new Rect(window.x + padding, window.y + 6f, width, 22f), "<b>인벤토리</b>   [I] 닫기", RichLabel());
+        GUI.Label(new Rect(window.x + padding, window.y + 6f, width, 22f), "<b>인벤토리</b>   [I] 닫기", MetaverseUi.Rich);
 
         var stats = GetComponent<PlayerStats>();
         if (stats != null)
@@ -271,7 +261,7 @@ public class PlayerInventory : NetworkBehaviour
     /// </summary>
     void DrawEquipment(Rect area, PlayerStats stats)
     {
-        GUI.Label(new Rect(area.x, area.y - 2f, area.width, 20f), "<b>장비</b>", RichLabel());
+        GUI.Label(new Rect(area.x, area.y - 2f, area.width, 20f), "<b>장비</b>", MetaverseUi.Rich);
 
         if (stats == null)
         {
@@ -352,14 +342,7 @@ public class PlayerInventory : NetworkBehaviour
         GUI.Label(new Rect(slot.x, slot.y + slot.height - 20f, slot.width - 6f, 18f), count.ToString(), RightAligned());
     }
 
-    static GUIStyle richLabel;
     static GUIStyle rightAligned;
-
-    static GUIStyle RichLabel()
-    {
-        richLabel ??= new GUIStyle(GUI.skin.label) { richText = true };
-        return richLabel;
-    }
 
     static GUIStyle RightAligned()
     {

@@ -71,7 +71,7 @@ public class TradeSystem : NetworkBehaviour
     void RequestNearestRpc(RpcParams rpcParams = default)
     {
         ulong senderId = rpcParams.Receive.SenderClientId;
-        var sender = PlayerObject(senderId);
+        var sender = MetaverseUi.PlayerObject(senderId);
         if (sender == null || SessionOf(senderId) != null)
         {
             return;
@@ -108,8 +108,8 @@ public class TradeSystem : NetworkBehaviour
         }
 
         invites[targetId] = senderId;
-        InviteRpc(NetText.Trim64(NameOf(senderId)), senderId, RpcTarget.Single(targetId, RpcTargetUse.Temp));
-        NoticeRpc(NetText.Trim512($"{NameOf(targetId)}에게 거래를 신청했습니다."), RpcTarget.Single(senderId, RpcTargetUse.Temp));
+        InviteRpc(NetText.Trim64(MetaverseUi.NameOf(senderId)), senderId, RpcTarget.Single(targetId, RpcTargetUse.Temp));
+        NoticeRpc(NetText.Trim512($"{MetaverseUi.NameOf(targetId)}에게 거래를 신청했습니다."), RpcTarget.Single(senderId, RpcTargetUse.Temp));
     }
 
     [Rpc(SendTo.Server)]
@@ -203,8 +203,8 @@ public class TradeSystem : NetworkBehaviour
 
     void Settle(Session session)
     {
-        var a = PlayerObject(session.A);
-        var b = PlayerObject(session.B);
+        var a = MetaverseUi.PlayerObject(session.A);
+        var b = MetaverseUi.PlayerObject(session.B);
         if (a == null || b == null)
         {
             Close(session, "거래에 실패했습니다.");
@@ -248,8 +248,8 @@ public class TradeSystem : NetworkBehaviour
         for (int i = sessions.Count - 1; i >= 0; i--)
         {
             var session = sessions[i];
-            var a = PlayerObject(session.A);
-            var b = PlayerObject(session.B);
+            var a = MetaverseUi.PlayerObject(session.A);
+            var b = MetaverseUi.PlayerObject(session.B);
 
             if (a == null || b == null)
             {
@@ -271,12 +271,12 @@ public class TradeSystem : NetworkBehaviour
 
     void PushState(Session session)
     {
-        StateRpc(NetText.Trim64(NameOf(session.B)),
+        StateRpc(NetText.Trim64(MetaverseUi.NameOf(session.B)),
             session.GoldA, session.OreA, session.HerbA, session.WoodA, session.ConfirmA,
             session.GoldB, session.OreB, session.HerbB, session.WoodB, session.ConfirmB,
             RpcTarget.Single(session.A, RpcTargetUse.Temp));
 
-        StateRpc(NetText.Trim64(NameOf(session.A)),
+        StateRpc(NetText.Trim64(MetaverseUi.NameOf(session.A)),
             session.GoldB, session.OreB, session.HerbB, session.WoodB, session.ConfirmB,
             session.GoldA, session.OreA, session.HerbA, session.WoodA, session.ConfirmA,
             RpcTarget.Single(session.B, RpcTargetUse.Temp));
@@ -293,18 +293,6 @@ public class TradeSystem : NetworkBehaviour
         }
 
         return null;
-    }
-
-    NetworkObject PlayerObject(ulong clientId)
-    {
-        return NetworkManager.ConnectedClients.TryGetValue(clientId, out var client) ? client.PlayerObject : null;
-    }
-
-    string NameOf(ulong clientId)
-    {
-        var player = PlayerObject(clientId);
-        var avatar = player != null ? player.GetComponent<PlayerAvatar>() : null;
-        return avatar != null ? avatar.Nickname.Value.ToString() : "Player";
     }
 
     // ---------------------------------------------------------------- client
@@ -374,7 +362,7 @@ public class TradeSystem : NetworkBehaviour
         var area = new Rect(Screen.width * 0.5f - 200f, Screen.height * 0.5f - 130f, 400f, 260f);
         GUILayout.BeginArea(area, GUI.skin.box);
 
-        GUILayout.Label($"<b>{partnerName}님과 거래 중</b>", RichLabel());
+        GUILayout.Label($"<b>{partnerName}님과 거래 중</b>", MetaverseUi.Rich);
         GUILayout.Space(4);
 
         GUILayout.Label($"상대 제시:  골드 {theirGold}, 광석 {theirOre}, 약초 {theirHerb}, 나무 {theirWood}  {(theirConfirm ? "[확인함]" : "")}");
@@ -422,13 +410,5 @@ public class TradeSystem : NetworkBehaviour
     void SendOffer()
     {
         SetOfferRpc(myGold, myOre, myHerb, myWood);
-    }
-
-    static GUIStyle richLabel;
-
-    static GUIStyle RichLabel()
-    {
-        richLabel ??= new GUIStyle(GUI.skin.label) { richText = true };
-        return richLabel;
     }
 }

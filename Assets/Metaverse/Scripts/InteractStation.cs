@@ -29,8 +29,7 @@ public abstract class InteractStation : MonoBehaviour
             return;
         }
 
-        var keyboard = Keyboard.current;
-        if (keyboard != null && keyboard.eKey.wasPressedThisFrame && !ChatSystem.IsTyping && !PlayerInventory.WindowOpen)
+        if (MetaverseUi.InteractPressed && !ChatSystem.IsTyping && !PlayerInventory.WindowOpen)
         {
             open = !open;
             ShopNpc.PanelOpen = open;
@@ -60,7 +59,7 @@ public abstract class InteractStation : MonoBehaviour
         {
             var area = new Rect(Screen.width * 0.5f - PanelSize.x * 0.5f, Screen.height * 0.5f - PanelSize.y * 0.5f, PanelSize.x, PanelSize.y);
             GUILayout.BeginArea(area, GUI.skin.box);
-            GUILayout.Label($"<b>{Title}</b>", RichLabel());
+            GUILayout.Label($"<b>{Title}</b>", MetaverseUi.Rich);
             DrawPanel(player);
             GUILayout.Space(4);
             if (GUILayout.Button("닫기  [E]"))
@@ -71,33 +70,16 @@ public abstract class InteractStation : MonoBehaviour
             return;
         }
 
-        var camera = Camera.main;
-        if (camera == null || !InRange())
+        if (!InRange())
         {
             return;
         }
 
-        Vector3 screenPoint = camera.WorldToScreenPoint(transform.position + Vector3.up * PromptHeight);
-        if (screenPoint.z <= 0f)
-        {
-            return;
-        }
-
-        var prompt = new GUIContent($"[E] {Title}");
-        Vector2 size = GUI.skin.box.CalcSize(prompt);
-        GUI.Box(new Rect(screenPoint.x - size.x * 0.5f, Screen.height - screenPoint.y, size.x, size.y), prompt);
+        MetaverseUi.WorldPrompt(transform.position + Vector3.up * PromptHeight, $"[E] {Title}");
     }
 
     bool InRange()
     {
         return Vector3.Distance(PlayerAvatar.Local.transform.position, transform.position) <= InteractRange;
-    }
-
-    static GUIStyle richLabel;
-
-    protected static GUIStyle RichLabel()
-    {
-        richLabel ??= new GUIStyle(GUI.skin.label) { richText = true };
-        return richLabel;
     }
 }

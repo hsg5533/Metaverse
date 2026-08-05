@@ -43,8 +43,7 @@ public class GatherNode : NetworkBehaviour
             return;
         }
 
-        var keyboard = Keyboard.current;
-        if (keyboard != null && keyboard.eKey.wasPressedThisFrame)
+        if (MetaverseUi.InteractPressed)
         {
             GatherRpc();
         }
@@ -58,14 +57,10 @@ public class GatherNode : NetworkBehaviour
             return;
         }
 
-        ulong senderId = rpcParams.Receive.SenderClientId;
-        if (!NetworkManager.ConnectedClients.TryGetValue(senderId, out var client) || client.PlayerObject == null)
-        {
-            return;
-        }
+        var player = MetaverseUi.PlayerObject(rpcParams.Receive.SenderClientId);
 
         // The client asked, but the server decides whether they are actually standing here.
-        if (Vector3.Distance(client.PlayerObject.transform.position, transform.position) > InteractRange + 1f)
+        if (player == null || Vector3.Distance(player.transform.position, transform.position) > InteractRange + 1f)
         {
             return;
         }
@@ -73,19 +68,19 @@ public class GatherNode : NetworkBehaviour
         Ready.Value = false;
         readyTime = Time.time + Cooldown;
 
-        var inventory = client.PlayerObject.GetComponent<PlayerInventory>();
+        var inventory = player.GetComponent<PlayerInventory>();
         if (inventory != null)
         {
             inventory.Add(Kind, Yield);
         }
 
-        var stats = client.PlayerObject.GetComponent<PlayerStats>();
+        var stats = player.GetComponent<PlayerStats>();
         if (stats != null)
         {
             stats.GainReward(Exp, 0);
         }
 
-        var quests = client.PlayerObject.GetComponent<PlayerQuests>();
+        var quests = player.GetComponent<PlayerQuests>();
         if (quests != null)
         {
             quests.OnGathered(Kind, Yield);
@@ -131,20 +126,6 @@ public class GatherNode : NetworkBehaviour
             return;
         }
 
-        var camera = Camera.main;
-        if (camera == null)
-        {
-            return;
-        }
-
-        Vector3 screenPoint = camera.WorldToScreenPoint(transform.position + Vector3.up * PromptHeight);
-        if (screenPoint.z <= 0f)
-        {
-            return;
-        }
-
-        var prompt = new GUIContent($"[E] {KoreanName} 채집");
-        Vector2 size = GUI.skin.box.CalcSize(prompt);
-        GUI.Box(new Rect(screenPoint.x - size.x * 0.5f, Screen.height - screenPoint.y, size.x, size.y), prompt);
+        MetaverseUi.WorldPrompt(transform.position + Vector3.up * PromptHeight, $"[E] {KoreanName} 채집");
     }
 }

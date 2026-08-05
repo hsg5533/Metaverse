@@ -23,8 +23,7 @@ public class WarpPad : MonoBehaviour
             return;
         }
 
-        var keyboard = Keyboard.current;
-        if (keyboard != null && keyboard.eKey.wasPressedThisFrame)
+        if (MetaverseUi.InteractPressed)
         {
             if (!MeetsRequirement(avatar))
             {
@@ -39,22 +38,13 @@ public class WarpPad : MonoBehaviour
     void OnGUI()
     {
         var avatar = PlayerAvatar.Local;
-        var camera = Camera.main;
-        if (avatar == null || camera == null || !InRange(avatar) || ShopNpc.PanelOpen)
-        {
-            return;
-        }
-
-        Vector3 screenPoint = camera.WorldToScreenPoint(transform.position + Vector3.up * PromptHeight);
-        if (screenPoint.z <= 0f)
+        if (avatar == null || !InRange(avatar) || ShopNpc.PanelOpen)
         {
             return;
         }
 
         string suffix = RequiredLevel > 0 ? $"  (Lv.{RequiredLevel}+)" : "";
-        var prompt = new GUIContent($"[E] {Label}(으)로 이동{suffix}");
-        Vector2 size = GUI.skin.box.CalcSize(prompt);
-        GUI.Box(new Rect(screenPoint.x - size.x * 0.5f, Screen.height - screenPoint.y, size.x, size.y), prompt);
+        MetaverseUi.WorldPrompt(transform.position + Vector3.up * PromptHeight, $"[E] {Label}(으)로 이동{suffix}");
     }
 
     bool InRange(PlayerAvatar avatar)

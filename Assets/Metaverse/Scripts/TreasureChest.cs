@@ -56,8 +56,7 @@ public class TreasureChest : NetworkBehaviour
             return;
         }
 
-        var keyboard = Keyboard.current;
-        if (keyboard != null && keyboard.eKey.wasPressedThisFrame && Unlocked.Value)
+        if (Unlocked.Value && MetaverseUi.InteractPressed)
         {
             LootRpc();
         }
@@ -83,34 +82,30 @@ public class TreasureChest : NetworkBehaviour
             return;
         }
 
-        ulong senderId = rpcParams.Receive.SenderClientId;
-        if (!NetworkManager.ConnectedClients.TryGetValue(senderId, out var client) || client.PlayerObject == null)
-        {
-            return;
-        }
+        var player = MetaverseUi.PlayerObject(rpcParams.Receive.SenderClientId);
 
         // The client asked, but the server decides whether they are actually standing here.
-        if (Vector3.Distance(client.PlayerObject.transform.position, transform.position) > InteractRange + 1f)
+        if (player == null || Vector3.Distance(player.transform.position, transform.position) > InteractRange + 1f)
         {
             return;
         }
 
         Unlocked.Value = false;
 
-        var stats = client.PlayerObject.GetComponent<PlayerStats>();
+        var stats = player.GetComponent<PlayerStats>();
         if (stats != null)
         {
             stats.Gold.Value += Gold;
             stats.GainReward(Exp, 0);
         }
 
-        var inventory = client.PlayerObject.GetComponent<PlayerInventory>();
+        var inventory = player.GetComponent<PlayerInventory>();
         if (inventory != null)
         {
             inventory.Add(GatherKind.Ore, Ore);
         }
 
-        var avatar = client.PlayerObject.GetComponent<PlayerAvatar>();
+        var avatar = player.GetComponent<PlayerAvatar>();
         string who = avatar != null ? avatar.Nickname.Value.ToString() : "누군가";
         ChatSystem.Announce($"{who}님이 보물상자를 열었습니다. (골드 {Gold}, 광석 {Ore})");
     }
@@ -129,20 +124,7 @@ public class TreasureChest : NetworkBehaviour
             return;
         }
 
-        var camera = Camera.main;
-        if (camera == null)
-        {
-            return;
-        }
-
-        Vector3 screenPoint = camera.WorldToScreenPoint(transform.position + Vector3.up * PromptHeight);
-        if (screenPoint.z <= 0f)
-        {
-            return;
-        }
-
-        var prompt = new GUIContent(Unlocked.Value ? "[E] 보물상자 열기" : "보스를 처치해야 열린다");
-        Vector2 size = GUI.skin.box.CalcSize(prompt);
-        GUI.Box(new Rect(screenPoint.x - size.x * 0.5f, Screen.height - screenPoint.y, size.x, size.y), prompt);
+        MetaverseUi.WorldPrompt(transform.position + Vector3.up * PromptHeight,
+            Unlocked.Value ? "[E] 보물상자 열기" : "보스를 처치해야 열린다");
     }
 }

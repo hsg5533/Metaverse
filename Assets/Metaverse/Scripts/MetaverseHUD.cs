@@ -172,7 +172,7 @@ public class MetaverseHUD : MonoBehaviour
         if (helpOpen)
         {
             GUI.Box(panel, "");
-            GUI.Label(new Rect(panel.x + 10f, panel.y + 6f, panel.width, 20f), "<b>조작</b>", RichLabel());
+            GUI.Label(new Rect(panel.x + 10f, panel.y + 6f, panel.width, 20f), "<b>조작</b>", MetaverseUi.Rich);
 
             for (int i = 0; i < Controls.Length; i++)
             {
@@ -231,7 +231,7 @@ public class MetaverseHUD : MonoBehaviour
 
     void DrawConnectMenu(NetworkManager manager)
     {
-        GUILayout.Label("<b>메타버스</b>", RichLabel());
+        GUILayout.Label("<b>메타버스</b>", MetaverseUi.Rich);
 
         GUILayout.Label("닉네임");
         LocalNickname = GUILayout.TextField(LocalNickname, 16);
@@ -261,7 +261,7 @@ public class MetaverseHUD : MonoBehaviour
     void DrawSessionPanel(NetworkManager manager)
     {
         string role = manager.IsHost ? "호스트" : manager.IsServer ? "서버" : "클라이언트";
-        GUILayout.Label($"<b>{role}</b> · {LocalNickname}", RichLabel());
+        GUILayout.Label($"<b>{role}</b> · {LocalNickname}", MetaverseUi.Rich);
 
         if (manager.IsServer)
         {
@@ -307,13 +307,5 @@ public class MetaverseHUD : MonoBehaviour
     {
         message = $"포트 {port}가 사용 중입니다. 다른 포트를 쓰거나 Unity를 재시작하세요.";
         Debug.LogWarning($"[Metaverse] transport failed to start on port {port}.");
-    }
-
-    static GUIStyle richLabel;
-
-    static GUIStyle RichLabel()
-    {
-        richLabel ??= new GUIStyle(GUI.skin.label) { richText = true };
-        return richLabel;
     }
 }

@@ -289,7 +289,7 @@ public class PlayerStats : NetworkBehaviour
         }
 
         GUILayout.BeginArea(new Rect(Screen.width - 250, 10, 240, 220), GUI.skin.box);
-        GUILayout.Label($"<b>Lv.{Level.Value}</b>  {Nickname()}   [P] 닫기", RichLabel());
+        GUILayout.Label($"<b>Lv.{Level.Value}</b>  {Nickname()}   [P] 닫기", MetaverseUi.Rich);
         GUILayout.Label($"체력    {Hp.Value} / {MaxHp}{(InVillage && Hp.Value < MaxHp ? "  (휴식 중)" : "")}");
         GUILayout.Label($"경험치  {Exp.Value} / {ExpToNextLevel}");
         GUILayout.Label($"골드    {Gold.Value}");
@@ -305,13 +305,5 @@ public class PlayerStats : NetworkBehaviour
     string Nickname()
     {
         return avatar != null ? avatar.Nickname.Value.ToString() : "";
-    }
-
-    static GUIStyle richLabel;
-
-    static GUIStyle RichLabel()
-    {
-        richLabel ??= new GUIStyle(GUI.skin.label) { richText = true };
-        return richLabel;
     }
 }

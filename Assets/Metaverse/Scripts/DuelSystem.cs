@@ -104,12 +104,12 @@ public class DuelSystem : NetworkBehaviour
 
             if (match.A == clientId)
             {
-                return StatsOf(match.B);
+                return MetaverseUi.StatsOf(match.B);
             }
 
             if (match.B == clientId)
             {
-                return StatsOf(match.A);
+                return MetaverseUi.StatsOf(match.A);
             }
         }
 
@@ -136,8 +136,8 @@ public class DuelSystem : NetworkBehaviour
         for (int i = matches.Count - 1; i >= 0; i--)
         {
             Match match = matches[i];
-            var a = PlayerObject(match.A);
-            var b = PlayerObject(match.B);
+            var a = MetaverseUi.PlayerObject(match.A);
+            var b = MetaverseUi.PlayerObject(match.B);
 
             if (a == null || b == null)
             {
@@ -181,7 +181,7 @@ public class DuelSystem : NetworkBehaviour
     void ChallengeRpc(RpcParams rpcParams = default)
     {
         ulong senderId = rpcParams.Receive.SenderClientId;
-        var sender = PlayerObject(senderId);
+        var sender = MetaverseUi.PlayerObject(senderId);
         if (sender == null || MatchOf(senderId) != null)
         {
             return;
@@ -224,8 +224,8 @@ public class DuelSystem : NetworkBehaviour
         }
 
         invites[targetId] = senderId;
-        InviteRpc(NetText.Trim64(NameOf(senderId)), senderId, RpcTarget.Single(targetId, RpcTargetUse.Temp));
-        NoticeRpc(NetText.Trim512($"{NameOf(targetId)}에게 결투를 신청했습니다."), RpcTarget.Single(senderId, RpcTargetUse.Temp));
+        InviteRpc(NetText.Trim64(MetaverseUi.NameOf(senderId)), senderId, RpcTarget.Single(targetId, RpcTargetUse.Temp));
+        NoticeRpc(NetText.Trim512($"{MetaverseUi.NameOf(targetId)}에게 결투를 신청했습니다."), RpcTarget.Single(senderId, RpcTargetUse.Temp));
     }
 
     [Rpc(SendTo.Server)]
@@ -249,15 +249,15 @@ public class DuelSystem : NetworkBehaviour
         Prepare(match.A, CornerA, CornerB);
         Prepare(match.B, CornerB, CornerA);
 
-        StartRpc(NetText.Trim64(NameOf(match.B)), Countdown, RoundTime, RpcTarget.Single(match.A, RpcTargetUse.Temp));
-        StartRpc(NetText.Trim64(NameOf(match.A)), Countdown, RoundTime, RpcTarget.Single(match.B, RpcTargetUse.Temp));
-        ChatSystem.Announce($"{NameOf(match.A)} vs {NameOf(match.B)} 결투 시작!");
+        StartRpc(NetText.Trim64(MetaverseUi.NameOf(match.B)), Countdown, RoundTime, RpcTarget.Single(match.A, RpcTargetUse.Temp));
+        StartRpc(NetText.Trim64(MetaverseUi.NameOf(match.A)), Countdown, RoundTime, RpcTarget.Single(match.B, RpcTargetUse.Temp));
+        ChatSystem.Announce($"{MetaverseUi.NameOf(match.A)} vs {MetaverseUi.NameOf(match.B)} 결투 시작!");
     }
 
     /// <summary>Server side: full health, on your own mark, facing the other side.</summary>
     void Prepare(ulong clientId, Vector3 corner, Vector3 facing)
     {
-        var stats = StatsOf(clientId);
+        var stats = MetaverseUi.StatsOf(clientId);
         if (stats != null)
         {
             stats.Heal();
@@ -270,10 +270,10 @@ public class DuelSystem : NetworkBehaviour
     {
         matches.Remove(match);
 
-        StatsOf(match.A)?.Heal();
-        StatsOf(match.B)?.Heal();
+        MetaverseUi.StatsOf(match.A)?.Heal();
+        MetaverseUi.StatsOf(match.B)?.Heal();
 
-        var winnerStats = winner == NoWinner ? null : StatsOf(winner);
+        var winnerStats = winner == NoWinner ? null : MetaverseUi.StatsOf(winner);
         if (winnerStats == null)
         {
             ChatSystem.Announce($"결투가 무승부로 끝났습니다 ({reason}).");
@@ -281,8 +281,8 @@ public class DuelSystem : NetworkBehaviour
         else
         {
             winnerStats.RecordDuel(true);
-            StatsOf(winner == match.A ? match.B : match.A)?.RecordDuel(false);
-            ChatSystem.Announce($"{NameOf(winner)}님이 결투에서 승리했습니다 ({reason}).");
+            MetaverseUi.StatsOf(winner == match.A ? match.B : match.A)?.RecordDuel(false);
+            ChatSystem.Announce($"{MetaverseUi.NameOf(winner)}님이 결투에서 승리했습니다 ({reason}).");
         }
 
         EndRpc(RpcTarget.Group(new[] { match.A, match.B }, RpcTargetUse.Temp));
@@ -306,24 +306,6 @@ public class DuelSystem : NetworkBehaviour
         }
 
         return null;
-    }
-
-    NetworkObject PlayerObject(ulong clientId)
-    {
-        return NetworkManager.ConnectedClients.TryGetValue(clientId, out var client) ? client.PlayerObject : null;
-    }
-
-    PlayerStats StatsOf(ulong clientId)
-    {
-        var player = PlayerObject(clientId);
-        return player != null ? player.GetComponent<PlayerStats>() : null;
-    }
-
-    string NameOf(ulong clientId)
-    {
-        var player = PlayerObject(clientId);
-        var avatar = player != null ? player.GetComponent<PlayerAvatar>() : null;
-        return avatar != null ? avatar.Nickname.Value.ToString() : "Player";
     }
 
     // ---------------------------------------------------------------- client

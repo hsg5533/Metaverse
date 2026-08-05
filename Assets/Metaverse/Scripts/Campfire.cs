@@ -3,11 +3,6 @@ using UnityEngine;
 /// <summary>The cooking fire: materials in, a timed buff out.</summary>
 public class Campfire : InteractStation
 {
-    void Reset()
-    {
-        Title = "모닥불";
-    }
-
     protected override void DrawPanel(PlayerAvatar player)
     {
         var inventory = player.GetComponent<PlayerInventory>();

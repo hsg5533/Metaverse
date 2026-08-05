@@ -63,3 +63,8 @@ Thumbs.db
 # Player progress written next to the project by SaveSystem
 /metaverse-save.json
 /metaverse-save.json.*.bak
+
+# Unity build leftovers
+/.utmp/
+/*_BurstDebugInformation_DoNotShip/
+/*_BackUpThisFolder_ButDontShipItWithYourGame/

@@ -1,8 +1,10 @@
+using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
-/// The built-in IMGUI font has no Hangul, so every panel would draw boxes. This pulls a
-/// Korean face out of the operating system once and hands it to the skin.
+/// Shared IMGUI bits: the Korean font, the two label styles every panel wants, the floating
+/// world prompt, and the player lookups the server systems all need.
 /// </summary>
 public static class MetaverseUi
 {
@@ -19,6 +21,8 @@ public static class MetaverseUi
 
     static Font font;
     static bool searched;
+    static GUIStyle rich;
+    static GUIStyle centered;
 
     /// <summary>Call at the top of an OnGUI; after the first frame it is a single assignment.</summary>
     public static void ApplyFont()
@@ -38,5 +42,56 @@ public static class MetaverseUi
         {
             GUI.skin.font = font;
         }
+    }
+
+    public static GUIStyle Rich => rich ??= new GUIStyle(GUI.skin.label) { richText = true };
+
+    public static GUIStyle Centered =>
+        centered ??= new GUIStyle(GUI.skin.label) { richText = true, alignment = TextAnchor.MiddleCenter };
+
+    /// <summary>A label box floating over a point in the world, e.g. "[E] 채집".</summary>
+    public static void WorldPrompt(Vector3 worldPosition, string text)
+    {
+        var camera = Camera.main;
+        if (camera == null)
+        {
+            return;
+        }
+
+        Vector3 screenPoint = camera.WorldToScreenPoint(worldPosition);
+        if (screenPoint.z <= 0f)
+        {
+            return;
+        }
+
+        var content = new GUIContent(text);
+        Vector2 size = GUI.skin.box.CalcSize(content);
+        GUI.Box(new Rect(screenPoint.x - size.x * 0.5f, Screen.height - screenPoint.y, size.x, size.y), content);
+    }
+
+    /// <summary>E on the keyboard. Every station and node reads this one check.</summary>
+    public static bool InteractPressed =>
+        Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame;
+
+    /// <summary>The avatar a client owns, or null when it has not spawned.</summary>
+    public static NetworkObject PlayerObject(ulong clientId)
+    {
+        var manager = NetworkManager.Singleton;
+        return manager != null && manager.ConnectedClients.TryGetValue(clientId, out var client)
+            ? client.PlayerObject
+            : null;
+    }
+
+    public static PlayerStats StatsOf(ulong clientId)
+    {
+        var player = PlayerObject(clientId);
+        return player != null ? player.GetComponent<PlayerStats>() : null;
+    }
+
+    public static string NameOf(ulong clientId)
+    {
+        var player = PlayerObject(clientId);
+        var avatar = player != null ? player.GetComponent<PlayerAvatar>() : null;
+        return avatar != null ? avatar.Nickname.Value.ToString() : "플레이어";
     }
 }

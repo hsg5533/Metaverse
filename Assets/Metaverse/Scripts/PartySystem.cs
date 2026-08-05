@@ -96,7 +96,7 @@ public class PartySystem : NetworkBehaviour
                 continue;
             }
 
-            var stats = StatsOf(member);
+            var stats = MetaverseUi.StatsOf(member);
             if (stats != null && Vector3.Distance(stats.transform.position, source.transform.position) <= ShareRange)
             {
                 receivers.Add(stats);
@@ -110,7 +110,7 @@ public class PartySystem : NetworkBehaviour
     void InviteRpc(RpcParams rpcParams = default)
     {
         ulong senderId = rpcParams.Receive.SenderClientId;
-        var sender = PlayerObject(senderId);
+        var sender = MetaverseUi.PlayerObject(senderId);
         if (sender == null)
         {
             return;
@@ -148,8 +148,8 @@ public class PartySystem : NetworkBehaviour
 
         ulong targetId = best.OwnerClientId;
         invites[targetId] = senderId;
-        InvitedRpc(NetText.Trim64(NameOf(senderId)), senderId, RpcTarget.Single(targetId, RpcTargetUse.Temp));
-        NoticeRpc(NetText.Trim512($"{NameOf(targetId)}님을 파티에 초대했습니다."), RpcTarget.Single(senderId, RpcTargetUse.Temp));
+        InvitedRpc(NetText.Trim64(MetaverseUi.NameOf(senderId)), senderId, RpcTarget.Single(targetId, RpcTargetUse.Temp));
+        NoticeRpc(NetText.Trim512($"{MetaverseUi.NameOf(targetId)}님을 파티에 초대했습니다."), RpcTarget.Single(senderId, RpcTargetUse.Temp));
     }
 
     [Rpc(SendTo.Server)]
@@ -181,7 +181,7 @@ public class PartySystem : NetworkBehaviour
         }
 
         party.Add(senderId);
-        Announce(party, $"{NameOf(senderId)}님이 파티에 참가했습니다.");
+        Announce(party, $"{MetaverseUi.NameOf(senderId)}님이 파티에 참가했습니다.");
         PushRoster(party);
     }
 
@@ -202,7 +202,7 @@ public class PartySystem : NetworkBehaviour
 
         party.Remove(clientId);
         RosterRpc(new ulong[0], RpcTarget.Single(clientId, RpcTargetUse.Temp));
-        Announce(party, $"{NameOf(clientId)}{reason}");
+        Announce(party, $"{MetaverseUi.NameOf(clientId)}{reason}");
 
         // A party of one is not a party.
         if (party.Count <= 1)
@@ -231,7 +231,7 @@ public class PartySystem : NetworkBehaviour
         {
             for (int j = parties[i].Count - 1; j >= 0; j--)
             {
-                if (PlayerObject(parties[i][j]) == null)
+                if (MetaverseUi.PlayerObject(parties[i][j]) == null)
                 {
                     Remove(parties[i][j], "님이 접속을 종료했습니다.");
                     break;
@@ -267,24 +267,6 @@ public class PartySystem : NetworkBehaviour
         }
 
         return null;
-    }
-
-    NetworkObject PlayerObject(ulong clientId)
-    {
-        return NetworkManager.ConnectedClients.TryGetValue(clientId, out var client) ? client.PlayerObject : null;
-    }
-
-    PlayerStats StatsOf(ulong clientId)
-    {
-        var player = PlayerObject(clientId);
-        return player != null ? player.GetComponent<PlayerStats>() : null;
-    }
-
-    string NameOf(ulong clientId)
-    {
-        var player = PlayerObject(clientId);
-        var avatar = player != null ? player.GetComponent<PlayerAvatar>() : null;
-        return avatar != null ? avatar.Nickname.Value.ToString() : "플레이어";
     }
 
     // ---------------------------------------------------------------- client
@@ -330,7 +312,7 @@ public class PartySystem : NetworkBehaviour
 
         float height = 30f + members.Length * 34f;
         GUILayout.BeginArea(new Rect(10, 250, 210, height), GUI.skin.box);
-        GUILayout.Label($"<b>파티</b>  {members.Length}/{MaxMembers}   [L] 나가기", RichLabel());
+        GUILayout.Label($"<b>파티</b>  {members.Length}/{MaxMembers}   [L] 나가기", MetaverseUi.Rich);
 
         foreach (ulong member in members)
         {
@@ -374,13 +356,5 @@ public class PartySystem : NetworkBehaviour
         GUI.color = new Color(0.35f, 0.8f, 0.4f, 0.95f);
         GUI.DrawTexture(new Rect(bar.x, bar.y, bar.width * fill, bar.height), Texture2D.whiteTexture);
         GUI.color = previous;
-    }
-
-    static GUIStyle richLabel;
-
-    static GUIStyle RichLabel()
-    {
-        richLabel ??= new GUIStyle(GUI.skin.label) { richText = true };
-        return richLabel;
     }
 }

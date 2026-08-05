@@ -3,11 +3,6 @@ using UnityEngine;
 /// <summary>The anvil: turns gathered materials into gear upgrades, no gold involved.</summary>
 public class CraftStation : InteractStation
 {
-    void Reset()
-    {
-        Title = "모루";
-    }
-
     protected override void DrawPanel(PlayerAvatar player)
     {
         var inventory = player.GetComponent<PlayerInventory>();
