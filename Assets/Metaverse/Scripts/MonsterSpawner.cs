@@ -11,6 +11,12 @@ public class MonsterSpawner : MonoBehaviour
     public int Count = 12;
     public float Radius = 22f;
 
+    /// <summary>Levels added on top of the players' level, for tougher areas.</summary>
+    public int LevelBonus;
+
+    /// <summary>Spawns a single boss standing on this spot instead of a pack.</summary>
+    public bool Boss;
+
     bool spawned;
 
     void Update()
@@ -32,6 +38,16 @@ public class MonsterSpawner : MonoBehaviour
 
     void SpawnAll()
     {
+        if (Boss)
+        {
+            var bossInstance = Instantiate(MonsterPrefab, transform.position, Quaternion.identity);
+            bossInstance.name = Monster.BossName;
+            bossInstance.GetComponent<NetworkObject>().Spawn();
+            bossInstance.GetComponent<Monster>().Configure(0, LevelBonus, true);
+            Debug.Log($"[Metaverse] boss placed at {transform.position}");
+            return;
+        }
+
         for (int i = 0; i < Count; i++)
         {
             int kind = i % Monster.Kinds.Length;
@@ -40,7 +56,9 @@ public class MonsterSpawner : MonoBehaviour
             // is what raises the difficulty.
             float angle = (i * 360f / Count + kind * 11f) * Mathf.Deg2Rad;
             float ring = Monster.Kinds.Length > 1 ? kind / (float)(Monster.Kinds.Length - 1) : 0f;
-            float distance = Mathf.Lerp(8f, Radius, ring) + (i % 3) * 1.5f;
+            // The inner ring and the jitter both scale with the area, so a narrow corridor
+            // does not end up with monsters standing inside its walls.
+            float distance = Mathf.Lerp(Mathf.Min(8f, Radius), Radius, ring) + (i % 3) * Radius * 0.1f;
             Vector3 position = transform.position + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * distance;
 
             var instance = Instantiate(MonsterPrefab, position, Quaternion.identity);
@@ -48,7 +66,7 @@ public class MonsterSpawner : MonoBehaviour
             instance.GetComponent<NetworkObject>().Spawn();
 
             // The monster works out its own level from the players in the world.
-            instance.GetComponent<Monster>().Configure(kind);
+            instance.GetComponent<Monster>().Configure(kind, LevelBonus);
         }
 
         Debug.Log($"[Metaverse] spawned {Count} monsters at {transform.position}");

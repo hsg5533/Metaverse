@@ -77,7 +77,7 @@ public class MetaverseHUD : MonoBehaviour
             return;
         }
 
-        GUILayout.BeginArea(new Rect(10, 10, 250, 210), GUI.skin.box);
+        GUILayout.BeginArea(new Rect(10, 10, 250, 230), GUI.skin.box);
         if (manager.IsClient || manager.IsServer)
         {
             DrawSessionPanel(manager);
@@ -135,7 +135,8 @@ public class MetaverseHUD : MonoBehaviour
         GUILayout.Space(4);
         GUILayout.Label("WASD move, Space jump, Shift run");
         GUILayout.Label("Right mouse drag looks around");
-        GUILayout.Label("Left click attacks, E uses pad / shop");
+        GUILayout.Label("Left click attacks, E interacts");
+        GUILayout.Label("T trade, Z wave, X dance, C sit");
 
         GUILayout.Space(6);
         if (GUILayout.Button("Leave"))

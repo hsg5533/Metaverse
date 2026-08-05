@@ -20,6 +20,9 @@ public class AvatarLimbAnimator : MonoBehaviour
     public float AttackDuration = 0.35f;
     public float HitDuration = 0.3f;
 
+    /// <summary>Emote pose to hold, set every frame by <see cref="PlayerEmotes"/>.</summary>
+    public int Emote;
+
     Vector3 lastPosition;
     float phase;
     float rigBaseHeight;
@@ -63,6 +66,12 @@ public class AvatarLimbAnimator : MonoBehaviour
             phase = Mathf.Lerp(phase, Mathf.Round(phase / Mathf.PI) * Mathf.PI, 10f * Time.deltaTime);
         }
 
+        if (Emote != PlayerEmotes.None && intensity < 0.05f)
+        {
+            ApplyEmote();
+            return;
+        }
+
         float swing = Mathf.Sin(phase) * SwingDegrees * intensity;
         SetPitch(LeftArm, -swing);
         SetPitch(LeftLeg, swing);
@@ -78,6 +87,51 @@ public class AvatarLimbAnimator : MonoBehaviour
             local.y = rigBaseHeight + bob;
             Rig.localPosition = local;
             Rig.localRotation = Quaternion.Euler(HitLean(), 0f, 0f);
+        }
+    }
+
+    /// <summary>Held poses. They replace the walk cycle while the avatar is standing still.</summary>
+    void ApplyEmote()
+    {
+        float time = Time.time;
+
+        switch (Emote)
+        {
+            case PlayerEmotes.Wave:
+                SetPitch(RightArm, -150f + Mathf.Sin(time * 8f) * 18f);
+                SetPitch(LeftArm, 0f);
+                SetPitch(LeftLeg, 0f);
+                SetPitch(RightLeg, 0f);
+                SetRig(0f, 0f);
+                break;
+
+            case PlayerEmotes.Dance:
+                float swing = Mathf.Sin(time * 7f) * 55f;
+                SetPitch(RightArm, -110f + swing);
+                SetPitch(LeftArm, -110f - swing);
+                SetPitch(LeftLeg, swing * 0.4f);
+                SetPitch(RightLeg, -swing * 0.4f);
+                SetRig(Mathf.Abs(Mathf.Sin(time * 7f)) * 0.09f, 0f);
+                break;
+
+            case PlayerEmotes.Sit:
+                SetPitch(RightArm, -25f);
+                SetPitch(LeftArm, -25f);
+                SetPitch(LeftLeg, -85f);
+                SetPitch(RightLeg, -85f);
+                SetRig(-0.42f, 0f);
+                break;
+        }
+    }
+
+    void SetRig(float heightOffset, float lean)
+    {
+        if (Rig != null)
+        {
+            Vector3 local = Rig.localPosition;
+            local.y = rigBaseHeight + heightOffset;
+            Rig.localPosition = local;
+            Rig.localRotation = Quaternion.Euler(lean, 0f, 0f);
         }
     }
 

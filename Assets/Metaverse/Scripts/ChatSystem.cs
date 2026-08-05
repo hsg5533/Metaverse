@@ -14,6 +14,15 @@ public class ChatSystem : NetworkBehaviour
 
     static ChatSystem instance;
 
+    /// <summary>Server side: tells everyone in the world about something, e.g. a boss dying.</summary>
+    public static void Announce(string text)
+    {
+        if (instance != null && instance.IsServer)
+        {
+            instance.BroadcastChatRpc(new Unity.Collections.FixedString64Bytes("World"), NetText.Trim512(text));
+        }
+    }
+
     /// <summary>Writes a line only this client sees, used for combat and shop feedback.</summary>
     public static void Local(string line)
     {

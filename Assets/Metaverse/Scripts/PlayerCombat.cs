@@ -52,11 +52,33 @@ public class PlayerCombat : NetworkBehaviour
         // The owner already swung locally; everyone else is told to play the same motion.
         SwingRpc();
 
+        // In a duel the swing goes at the other fighter; monsters are ignored entirely.
+        var opponent = DuelSystem.Instance != null ? DuelSystem.Instance.OpponentOf(OwnerClientId) : null;
+        if (opponent != null)
+        {
+            if (InReach(opponent.transform.position))
+            {
+                var avatar = GetComponent<PlayerAvatar>();
+                opponent.TakeDuelDamage(stats.AttackPower, avatar != null ? avatar.Nickname.Value.ToString() : "Someone");
+                DuelSystem.Instance.ReportDuelHit(opponent);
+            }
+
+            return;
+        }
+
         var target = Monster.FindTarget(transform.position + Vector3.up * 0.8f, transform.forward, Range, ConeDegrees);
         if (target != null)
         {
             target.TakeDamage(stats.AttackPower, stats);
         }
+    }
+
+    /// <summary>Same cone the monster search uses, so duels and hunting feel identical.</summary>
+    bool InReach(Vector3 position)
+    {
+        Vector3 to = position - transform.position;
+        to.y = 0f;
+        return to.magnitude <= Range && Vector3.Angle(transform.forward, to) <= ConeDegrees * 0.5f;
     }
 
     [Rpc(SendTo.NotOwner)]

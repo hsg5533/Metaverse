@@ -12,6 +12,9 @@ public class WarpPad : MonoBehaviour
     public float InteractRange = 3f;
     public float PromptHeight = 2.2f;
 
+    /// <summary>Minimum level to step through; 0 leaves the pad open to anyone.</summary>
+    public int RequiredLevel;
+
     void Update()
     {
         var avatar = PlayerAvatar.Local;
@@ -23,6 +26,12 @@ public class WarpPad : MonoBehaviour
         var keyboard = Keyboard.current;
         if (keyboard != null && keyboard.eKey.wasPressedThisFrame)
         {
+            if (!MeetsRequirement(avatar))
+            {
+                ChatSystem.Local($"You need level {RequiredLevel} to enter {Label}.");
+                return;
+            }
+
             avatar.Teleport(Destination);
         }
     }
@@ -42,7 +51,8 @@ public class WarpPad : MonoBehaviour
             return;
         }
 
-        var prompt = new GUIContent($"[E] Warp to {Label}");
+        string suffix = RequiredLevel > 0 ? $"  (Lv.{RequiredLevel}+)" : "";
+        var prompt = new GUIContent($"[E] Warp to {Label}{suffix}");
         Vector2 size = GUI.skin.box.CalcSize(prompt);
         GUI.Box(new Rect(screenPoint.x - size.x * 0.5f, Screen.height - screenPoint.y, size.x, size.y), prompt);
     }
@@ -50,5 +60,16 @@ public class WarpPad : MonoBehaviour
     bool InRange(PlayerAvatar avatar)
     {
         return Vector3.Distance(avatar.transform.position, transform.position) <= InteractRange;
+    }
+
+    bool MeetsRequirement(PlayerAvatar avatar)
+    {
+        if (RequiredLevel <= 0)
+        {
+            return true;
+        }
+
+        var stats = avatar.GetComponent<PlayerStats>();
+        return stats == null || stats.Level.Value >= RequiredLevel;
     }
 }

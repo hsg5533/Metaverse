@@ -20,22 +20,27 @@ public class PlayerStats : NetworkBehaviour
     public NetworkVariable<int> Hp = new(100, writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<int> WeaponLevel = new(0, writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<int> ArmorLevel = new(0, writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<int> DuelWins = new(0, writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<int> DuelLosses = new(0, writePerm: NetworkVariableWritePermission.Server);
+
 
     public int MaxHp => 100 + (Level.Value - 1) * 20;
-    public int AttackPower => 8 + (Level.Value - 1) * 3 + WeaponLevel.Value * 4;
-    public int Defense => 8 + (Level.Value - 1) * 2 + ArmorLevel.Value * 3;
+    public int AttackPower => 8 + (Level.Value - 1) * 3 + WeaponLevel.Value * 4 + (buffs != null ? buffs.AttackBonus : 0);
+    public int Defense => 8 + (Level.Value - 1) * 2 + ArmorLevel.Value * 3 + (buffs != null ? buffs.DefenseBonus : 0);
     public int ExpToNextLevel => 40 + (Level.Value - 1) * 30;
     public int WeaponPrice => 60 * (WeaponLevel.Value + 1);
     public int ArmorPrice => 50 * (ArmorLevel.Value + 1);
 
     PlayerAvatar avatar;
     AvatarLimbAnimator limbAnimator;
+    PlayerBuffs buffs;
     float nextRegenTime;
 
     void Awake()
     {
         avatar = GetComponent<PlayerAvatar>();
         limbAnimator = GetComponent<AvatarLimbAnimator>();
+        buffs = GetComponent<PlayerBuffs>();
     }
 
     public override void OnNetworkSpawn()
@@ -167,6 +172,63 @@ public class PlayerStats : NetworkBehaviour
         NoticeRpc(NetText.Trim64($"Weapon Lv.{WeaponLevel.Value}!  ATK {AttackPower}"));
     }
 
+    /// <summary>
+    /// Server side: a hit from another player in the arena. Duels never kill - the loser is
+    /// left standing on one hit point and the match ends there.
+    /// </summary>
+    public void TakeDuelDamage(int amount, string source)
+    {
+        if (!IsServer || amount <= 0)
+        {
+            return;
+        }
+
+        Hp.Value = Mathf.Max(1, Hp.Value - Mathf.Max(1, amount - Defense));
+        if (Hp.Value <= 1)
+        {
+            NoticeRpc(NetText.Trim64($"{source} knocked you out."));
+        }
+    }
+
+    /// <summary>Server side: back to full, used at both ends of a duel.</summary>
+    public void Heal()
+    {
+        if (IsServer)
+        {
+            Hp.Value = MaxHp;
+        }
+    }
+
+    /// <summary>Server side: one more line in the arena record.</summary>
+    public void RecordDuel(bool won)
+    {
+        if (!IsServer)
+        {
+            return;
+        }
+
+        if (won)
+        {
+            DuelWins.Value++;
+        }
+        else
+        {
+            DuelLosses.Value++;
+        }
+    }
+
+    /// <summary>Server side: used by the save file.</summary>
+    public void RestoreDuels(int wins, int losses)
+    {
+        if (!IsServer)
+        {
+            return;
+        }
+
+        DuelWins.Value = Mathf.Max(0, wins);
+        DuelLosses.Value = Mathf.Max(0, losses);
+    }
+
     [Rpc(SendTo.Owner)]
     void RespawnRpc()
     {
@@ -186,13 +248,17 @@ public class PlayerStats : NetworkBehaviour
             return;
         }
 
-        GUILayout.BeginArea(new Rect(Screen.width - 230, 10, 220, 146), GUI.skin.box);
+        GUILayout.BeginArea(new Rect(Screen.width - 230, 10, 220, 164), GUI.skin.box);
         GUILayout.Label($"<b>Lv.{Level.Value}</b>  {Nickname()}", RichLabel());
         GUILayout.Label($"HP    {Hp.Value} / {MaxHp}{(InVillage && Hp.Value < MaxHp ? "  (resting)" : "")}");
         GUILayout.Label($"EXP   {Exp.Value} / {ExpToNextLevel}");
         GUILayout.Label($"Gold  {Gold.Value}");
         GUILayout.Label($"ATK   {AttackPower}  (Weapon Lv.{WeaponLevel.Value})");
         GUILayout.Label($"DEF   {Defense}  (Armor Lv.{ArmorLevel.Value})");
+        if (DuelWins.Value + DuelLosses.Value > 0)
+        {
+            GUILayout.Label($"Duels {DuelWins.Value}W {DuelLosses.Value}L");
+        }
         GUILayout.EndArea();
     }
 

@@ -1,0 +1,228 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using Unity.Netcode;
+using UnityEngine;
+
+/// <summary>
+/// Server side persistence. Progress is keyed by nickname and written to a JSON file next to
+/// the player data folder, so a session can be stopped and picked up again.
+/// Nickname is the only identity here, which is fine for a LAN game and nothing more.
+/// </summary>
+public class SaveSystem : MonoBehaviour
+{
+    public float SaveInterval = 15f;
+
+    [Serializable]
+    class Record
+    {
+        public string name;
+        public int level = 1;
+        public int exp;
+        public int gold;
+        public int weapon;
+        public int armor;
+        public int hp = -1;
+        public int ore;
+        public int herb;
+        public int wood;
+        public int quest = -1;
+        public int questProgress;
+        public int duelWins;
+        public int duelLosses;
+    }
+
+    [Serializable]
+    class Book
+    {
+        public List<Record> players = new();
+    }
+
+    static SaveSystem instance;
+
+    Book book = new();
+    float nextSave;
+
+    static string FilePath => Path.Combine(Application.persistentDataPath, "metaverse-save.json");
+
+    void Awake()
+    {
+        instance = this;
+        Load();
+    }
+
+    void OnDestroy()
+    {
+        if (instance == this)
+        {
+            SaveAll();
+            instance = null;
+        }
+    }
+
+    void OnApplicationQuit()
+    {
+        SaveAll();
+    }
+
+    void Update()
+    {
+        var manager = NetworkManager.Singleton;
+        if (manager == null || !manager.IsServer || Time.time < nextSave)
+        {
+            return;
+        }
+
+        nextSave = Time.time + SaveInterval;
+        SaveAll();
+    }
+
+    /// <summary>
+    /// Server side: called once the nickname is known, which is the key everything hangs off.
+    /// </summary>
+    public static void LoadInto(PlayerAvatar avatar)
+    {
+        if (instance == null || avatar == null)
+        {
+            return;
+        }
+
+        Record record = instance.Find(avatar.Nickname.Value.ToString());
+        if (record == null)
+        {
+            return;
+        }
+
+        var stats = avatar.GetComponent<PlayerStats>();
+        if (stats != null)
+        {
+            stats.Level.Value = Mathf.Max(1, record.level);
+            stats.Exp.Value = Mathf.Max(0, record.exp);
+            stats.Gold.Value = Mathf.Max(0, record.gold);
+            stats.WeaponLevel.Value = Mathf.Max(0, record.weapon);
+            stats.ArmorLevel.Value = Mathf.Max(0, record.armor);
+            stats.Hp.Value = record.hp > 0 ? Mathf.Min(record.hp, stats.MaxHp) : stats.MaxHp;
+            stats.RestoreDuels(record.duelWins, record.duelLosses);
+        }
+
+        var inventory = avatar.GetComponent<PlayerInventory>();
+        if (inventory != null)
+        {
+            inventory.SetAll(record.ore, record.herb, record.wood);
+        }
+
+        var quests = avatar.GetComponent<PlayerQuests>();
+        if (quests != null)
+        {
+            quests.Restore(record.quest, record.questProgress);
+        }
+
+        Debug.Log($"[Metaverse] loaded save for {record.name} (Lv.{record.level}, {record.gold} G)");
+    }
+
+    void SaveAll()
+    {
+        var manager = NetworkManager.Singleton;
+        if (manager == null || !manager.IsServer)
+        {
+            return;
+        }
+
+        foreach (var client in manager.ConnectedClientsList)
+        {
+            var player = client.PlayerObject;
+            if (player == null)
+            {
+                continue;
+            }
+
+            var avatar = player.GetComponent<PlayerAvatar>();
+            var stats = player.GetComponent<PlayerStats>();
+            if (avatar == null || stats == null)
+            {
+                continue;
+            }
+
+            string name = avatar.Nickname.Value.ToString();
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                continue;
+            }
+
+            Record record = Find(name);
+            if (record == null)
+            {
+                record = new Record { name = name };
+                book.players.Add(record);
+            }
+
+            record.level = stats.Level.Value;
+            record.exp = stats.Exp.Value;
+            record.gold = stats.Gold.Value;
+            record.weapon = stats.WeaponLevel.Value;
+            record.armor = stats.ArmorLevel.Value;
+            record.hp = stats.Hp.Value;
+            record.duelWins = stats.DuelWins.Value;
+            record.duelLosses = stats.DuelLosses.Value;
+
+            var inventory = player.GetComponent<PlayerInventory>();
+            if (inventory != null)
+            {
+                record.ore = inventory.Ore.Value;
+                record.herb = inventory.Herb.Value;
+                record.wood = inventory.Wood.Value;
+            }
+
+            var quests = player.GetComponent<PlayerQuests>();
+            if (quests != null)
+            {
+                record.quest = quests.Quest.Value;
+                record.questProgress = quests.Progress.Value;
+            }
+        }
+
+        Write();
+    }
+
+    Record Find(string name)
+    {
+        foreach (var record in book.players)
+        {
+            if (record.name == name)
+            {
+                return record;
+            }
+        }
+
+        return null;
+    }
+
+    void Load()
+    {
+        try
+        {
+            if (File.Exists(FilePath))
+            {
+                book = JsonUtility.FromJson<Book>(File.ReadAllText(FilePath)) ?? new Book();
+                Debug.Log($"[Metaverse] save file loaded: {FilePath} ({book.players.Count} players)");
+            }
+        }
+        catch (Exception error)
+        {
+            Debug.LogWarning($"[Metaverse] could not read the save file: {error.Message}");
+            book = new Book();
+        }
+    }
+
+    void Write()
+    {
+        try
+        {
+            File.WriteAllText(FilePath, JsonUtility.ToJson(book, true));
+        }
+        catch (Exception error)
+        {
+            Debug.LogWarning($"[Metaverse] could not write the save file: {error.Message}");
+        }
+    }
+}

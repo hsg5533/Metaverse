@@ -38,7 +38,19 @@ public class Monster : NetworkBehaviour
         new("Orc", 2, new Color(0.80f, 0.35f, 0.30f)),
     };
 
-    public Renderer[] ColoredParts;
+    /// <summary>One body per kind, indexed the same way as <see cref="Kinds"/> plus the boss.</summary>
+    public GameObject[] Bodies;
+
+    /// <summary>Flat ring that expands under the boss when it slams.</summary>
+    public GameObject SlamRing;
+
+    public float LungeDuration = 0.35f;
+    public float SlamDuration = 0.6f;
+
+    public const int BossShape = 3;
+
+    /// <summary>Which body to show. Replicated, so late joiners see the right creature.</summary>
+    public NetworkVariable<int> Shape = new(0, writePerm: NetworkVariableWritePermission.Server);
 
     public float MoveSpeed = 2.4f;
     public float AggroRange = 12f;
@@ -63,15 +75,34 @@ public class Monster : NetworkBehaviour
     public int Damage => 6 + Level.Value * 4;
 
     /// <summary>Higher level monsters are visibly bigger, so a tough one reads at a glance.</summary>
-    public float LevelScale => Mathf.Min(1f + 0.04f * (Level.Value - 1), 1.8f);
+    public float LevelScale => Mathf.Min(1f + 0.04f * (Level.Value - 1), 1.8f) * (Shape.Value == BossShape ? 1.6f : 1f);
     public int ExpReward => 12 + Level.Value * 8;
     public int GoldReward => 4 + Level.Value * 3;
 
     public float HitFlashDuration = 0.25f;
 
+    // Boss settings. A boss is the same monster with fatter numbers, a slam that catches
+    // everyone standing near it, and a reward that goes to every player who helped.
+    public const int BossLevelOffset = 5;
+    public const int BossHpMultiplier = 8;
+    public const int BossRewardMultiplier = 6;
+    public const string BossName = "Ogre Lord";
+
+    public float SlamCooldown = 7f;
+    public float SlamRadius = 6f;
+    public float BossRespawnDelay = 180f;
+
+    readonly System.Collections.Generic.Dictionary<ulong, PlayerStats> contributors = new();
+
     Renderer[] renderers;
     Collider[] colliders;
+    float motionEndTime;
+    bool motionIsSlam;
+    bool motionPlaying;
+    bool boss;
+    int levelBonus;
     int kindIndex;
+    float nextSlamTime;
     Vector3 home;
     Vector3 baseScale;
     float nextAttackTime;
@@ -83,8 +114,8 @@ public class Monster : NetworkBehaviour
 
     void Awake()
     {
-        renderers = GetComponentsInChildren<Renderer>();
-        colliders = GetComponentsInChildren<Collider>();
+        renderers = GetComponentsInChildren<Renderer>(true);
+        colliders = GetComponentsInChildren<Collider>(true);
         home = transform.position;
         baseScale = transform.localScale;
     }
@@ -94,6 +125,8 @@ public class Monster : NetworkBehaviour
         All.Add(this);
         Tint.OnValueChanged += OnTintChanged;
         Level.OnValueChanged += OnLevelChanged;
+        Shape.OnValueChanged += OnShapeChanged;
+        ApplyShape(Shape.Value);
         // Health is replicated to everyone, so the hit reaction needs no extra RPC.
         Hp.OnValueChanged += OnHpChanged;
         ApplyTint(BodyColor);
@@ -104,6 +137,7 @@ public class Monster : NetworkBehaviour
         All.Remove(this);
         Tint.OnValueChanged -= OnTintChanged;
         Level.OnValueChanged -= OnLevelChanged;
+        Shape.OnValueChanged -= OnShapeChanged;
         Hp.OnValueChanged -= OnHpChanged;
     }
 
@@ -113,6 +147,98 @@ public class Monster : NetworkBehaviour
         {
             hitFlashEndTime = Time.time + HitFlashDuration;
         }
+    }
+
+    /// <summary>Attacks are decided on the server, so the motion is announced to everyone.</summary>
+    [Rpc(SendTo.Everyone)]
+    void AttackMotionRpc(bool slam)
+    {
+        motionIsSlam = slam;
+        motionEndTime = Time.time + (slam ? SlamDuration : LungeDuration);
+    }
+
+    /// <summary>
+    /// Local only. The bodies have no limb pivots, so the whole body lunges: a swipe forward
+    /// for a normal hit, a rear-up and drop for the boss slam, with a ring marking its reach.
+    /// </summary>
+    void UpdateAttackMotion()
+    {
+        Transform body = ActiveBody();
+        if (body == null)
+        {
+            return;
+        }
+
+        float remaining = motionEndTime - Time.time;
+        if (remaining <= 0f)
+        {
+            if (motionPlaying)
+            {
+                motionPlaying = false;
+                body.localPosition = Vector3.zero;
+                body.localRotation = Quaternion.identity;
+                if (SlamRing != null)
+                {
+                    SlamRing.SetActive(false);
+                }
+            }
+            return;
+        }
+
+        motionPlaying = true;
+        float duration = motionIsSlam ? SlamDuration : LungeDuration;
+        float progress = Mathf.Clamp01(1f - remaining / duration);
+
+        if (!motionIsSlam)
+        {
+            // One smooth swipe: out and back.
+            float punch = Mathf.Sin(progress * Mathf.PI);
+            body.localPosition = new Vector3(0f, 0f, punch * 0.45f);
+            body.localRotation = Quaternion.Euler(punch * 22f, 0f, 0f);
+            return;
+        }
+
+        // Rear up, drop, settle. Each phase is layered on top of the previous one.
+        float windup = Mathf.Clamp01(progress / 0.4f);
+        float strike = Mathf.Clamp01((progress - 0.4f) / 0.25f);
+        float recover = Mathf.Clamp01((progress - 0.65f) / 0.35f);
+
+        float pitch = Mathf.Lerp(0f, -26f, windup);
+        pitch = Mathf.Lerp(pitch, 26f, strike);
+        pitch = Mathf.Lerp(pitch, 0f, recover);
+
+        float lift = Mathf.Lerp(0f, 0.45f, windup);
+        lift = Mathf.Lerp(lift, -0.12f, strike);
+        lift = Mathf.Lerp(lift, 0f, recover);
+
+        body.localPosition = new Vector3(0f, lift, 0f);
+        body.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+
+        if (SlamRing == null)
+        {
+            return;
+        }
+
+        if (strike <= 0f)
+        {
+            SlamRing.SetActive(false);
+            return;
+        }
+
+        // The ring grows to the real slam radius, so the danger zone is honest.
+        SlamRing.SetActive(true);
+        float diameter = Mathf.Lerp(1f, SlamRadius * 2f, Mathf.SmoothStep(0f, 1f, strike));
+        SlamRing.transform.localScale = new Vector3(diameter, 0.02f, diameter);
+    }
+
+    Transform ActiveBody()
+    {
+        if (Bodies == null || Bodies.Length == 0)
+        {
+            return null;
+        }
+
+        return Bodies[Mathf.Clamp(Shape.Value, 0, Bodies.Length - 1)].transform;
     }
 
     /// <summary>Local only: flash white and squash for a moment after being hit.</summary>
@@ -142,9 +268,22 @@ public class Monster : NetworkBehaviour
     Color BodyColor => Color.Lerp(Tint.Value, Tint.Value * 0.45f, Mathf.Min((Level.Value - 1) * 0.06f, 1f));
 
     /// <summary>Server side: give the freshly spawned monster its kind, stats and home point.</summary>
-    public void Configure(int kind)
+    public void Configure(int kind, int extraLevels = 0, bool isBoss = false)
     {
         kindIndex = Mathf.Clamp(kind, 0, Kinds.Length - 1);
+        levelBonus = extraLevels;
+        boss = isBoss;
+
+        Shape.Value = boss ? BossShape : kindIndex;
+
+        if (boss)
+        {
+            AggroRange = 22f;
+            LeashRange = 40f;
+            MoveSpeed = 2.9f;
+            RespawnDelay = BossRespawnDelay;
+        }
+
         ApplyLevel();
         home = transform.position;
     }
@@ -156,13 +295,15 @@ public class Monster : NetworkBehaviour
     void ApplyLevel()
     {
         Kind kind = Kinds[kindIndex];
-        int level = Mathf.Max(1, PlayerLevel() + kind.LevelOffset);
+        int offset = boss ? BossLevelOffset : kind.LevelOffset;
+        int level = Mathf.Max(1, PlayerLevel() + offset + levelBonus);
 
-        MonsterName.Value = NetText.Trim64(kind.Name);
+        MonsterName.Value = NetText.Trim64(boss ? BossName : kind.Name);
         Level.Value = level;
-        MaxHp.Value = 20 + level * 26;
+        MaxHp.Value = (20 + level * 26) * (boss ? BossHpMultiplier : 1);
         Hp.Value = MaxHp.Value;
-        Tint.Value = kind.Tint;
+        Tint.Value = boss ? new Color(0.58f, 0.14f, 0.30f) : kind.Tint;
+        contributors.Clear();
     }
 
     /// <summary>
@@ -171,7 +312,7 @@ public class Monster : NetworkBehaviour
     /// </summary>
     void RelevelIfIdle()
     {
-        int wanted = Mathf.Max(1, PlayerLevel() + Kinds[kindIndex].LevelOffset);
+        int wanted = Mathf.Max(1, PlayerLevel() + (boss ? BossLevelOffset : Kinds[kindIndex].LevelOffset) + levelBonus);
         if (wanted != Level.Value && Hp.Value == MaxHp.Value)
         {
             ApplyLevel();
@@ -206,6 +347,11 @@ public class Monster : NetworkBehaviour
             return;
         }
 
+        if (attacker != null)
+        {
+            contributors[attacker.OwnerClientId] = attacker;
+        }
+
         Hp.Value = Mathf.Max(0, Hp.Value - amount);
         if (Hp.Value > 0)
         {
@@ -213,9 +359,58 @@ public class Monster : NetworkBehaviour
         }
 
         reviveTime = Time.time + RespawnDelay;
+
+        // A boss pays out to everyone who landed a hit, so helping is never a waste.
+        if (boss)
+        {
+            foreach (var helper in contributors.Values)
+            {
+                if (helper != null)
+                {
+                    Reward(helper, BossRewardMultiplier);
+                }
+            }
+
+            ChatSystem.Announce($"{BossName} Lv.{Level.Value} has fallen to {contributors.Count} challenger(s).");
+            contributors.Clear();
+            return;
+        }
+
         if (attacker != null)
         {
-            attacker.GainReward(ExpReward, GoldReward);
+            Reward(attacker, 1);
+        }
+    }
+
+    void Reward(PlayerStats player, int multiplier)
+    {
+        player.GainReward(ExpReward * multiplier, GoldReward * multiplier);
+        var quests = player.GetComponent<PlayerQuests>();
+        if (quests != null)
+        {
+            quests.OnMonsterKilled();
+        }
+    }
+
+    /// <summary>Server side: the boss sweep, which is why standing in a clump hurts.</summary>
+    void Slam()
+    {
+        nextSlamTime = Time.time + SlamCooldown;
+        AttackMotionRpc(true);
+
+        foreach (var client in NetworkManager.ConnectedClientsList)
+        {
+            var playerObject = client.PlayerObject;
+            if (playerObject == null || Vector3.Distance(playerObject.transform.position, transform.position) > SlamRadius)
+            {
+                continue;
+            }
+
+            var stats = playerObject.GetComponent<PlayerStats>();
+            if (stats != null)
+            {
+                stats.TakeDamage(Damage * 2, $"{BossName} slam");
+            }
         }
     }
 
@@ -256,6 +451,7 @@ public class Monster : NetworkBehaviour
     {
         SyncVisuals();
         UpdateHitFlash();
+        UpdateAttackMotion();
 
         if (!IsServer || !IsSpawned)
         {
@@ -293,9 +489,17 @@ public class Monster : NetworkBehaviour
         }
 
         FaceTowards(targetPosition);
+
+        if (boss && Time.time >= nextSlamTime)
+        {
+            Slam();
+            return;
+        }
+
         if (Time.time >= nextAttackTime)
         {
             nextAttackTime = Time.time + AttackCooldown;
+            AttackMotionRpc(false);
             target.TakeDamage(Damage, $"{MonsterName.Value} Lv.{Level.Value}");
         }
     }
@@ -394,20 +598,65 @@ public class Monster : NetworkBehaviour
         ApplyTint(BodyColor);
     }
 
-    void ApplyTint(Color color)
+    void OnShapeChanged(int previous, int current)
     {
-        if (ColoredParts == null)
+        ApplyShape(current);
+    }
+
+    /// <summary>Shows one body and hides the rest, so a Goblin never looks like a Slime.</summary>
+    void ApplyShape(int shape)
+    {
+        if (Bodies == null || Bodies.Length == 0)
         {
             return;
         }
 
-        foreach (var part in ColoredParts)
+        for (int i = 0; i < Bodies.Length; i++)
         {
-            if (part != null)
+            if (Bodies[i] != null)
             {
-                part.material.color = color;
+                Bodies[i].SetActive(i == shape);
             }
         }
+
+        NameTagHeight = shape switch
+        {
+            0 => 1.5f,
+            1 => 2.0f,
+            2 => 2.5f,
+            _ => 3.6f,
+        };
+
+        ApplyTint(BodyColor);
+    }
+
+    /// <summary>Parts named like this keep their own colour: eyes, tusks, horns, claws.</summary>
+    static readonly string[] UntintedParts = { "Eye", "Tusk", "Horn", "Claw", "Detail", "Ring" };
+
+    void ApplyTint(Color color)
+    {
+        foreach (var renderer in renderers)
+        {
+            if (renderer == null || !renderer.gameObject.activeInHierarchy || IsUntinted(renderer.name))
+            {
+                continue;
+            }
+
+            renderer.material.color = color;
+        }
+    }
+
+    static bool IsUntinted(string name)
+    {
+        foreach (string keyword in UntintedParts)
+        {
+            if (name.Contains(keyword))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     void OnGUI()

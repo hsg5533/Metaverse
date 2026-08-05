@@ -37,6 +37,7 @@ public class PlayerAvatar : NetworkBehaviour
     public float JumpHeight = 1.3f;
     public float Gravity = -22f;
 
+
     public NetworkVariable<FixedString64Bytes> Nickname =
         new(new FixedString64Bytes("Player"), writePerm: NetworkVariableWritePermission.Server);
 
@@ -44,12 +45,14 @@ public class PlayerAvatar : NetworkBehaviour
         new(Color.gray, writePerm: NetworkVariableWritePermission.Server);
 
     CharacterController controller;
+    PlayerBuffs buffs;
     float verticalVelocity;
     static GUIStyle nameTagStyle;
 
     void Awake()
     {
         controller = GetComponent<CharacterController>();
+        buffs = GetComponent<PlayerBuffs>();
     }
 
     public override void OnNetworkSpawn()
@@ -124,6 +127,10 @@ public class PlayerAvatar : NetworkBehaviour
         }
 
         float speed = acceptInput && keyboard.leftShiftKey.isPressed ? MoveSpeed * RunMultiplier : MoveSpeed;
+        if (buffs != null)
+        {
+            speed *= buffs.SpeedMultiplier;
+        }
         controller.Move((direction * speed + Vector3.up * verticalVelocity) * Time.deltaTime);
 
         if (direction.sqrMagnitude > 0.01f)
@@ -178,6 +185,8 @@ public class PlayerAvatar : NetworkBehaviour
         if (nickname.Length > 0)
         {
             Nickname.Value = nickname;
+            // The nickname is the save key, so this is the first moment progress can be restored.
+            SaveSystem.LoadInto(this);
         }
     }
 
