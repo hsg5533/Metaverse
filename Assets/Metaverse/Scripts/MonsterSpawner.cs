@@ -21,13 +21,16 @@ public class MonsterSpawner : MonoBehaviour
 
     void Update()
     {
-        if (spawned || MonsterPrefab == null)
+        var manager = NetworkManager.Singleton;
+        if (manager == null || !manager.IsListening || !manager.IsServer)
         {
+            // Play mode can start without reloading the scene, so the flag has to clear
+            // itself between sessions or the second run comes up empty.
+            spawned = false;
             return;
         }
 
-        var manager = NetworkManager.Singleton;
-        if (manager == null || !manager.IsListening || !manager.IsServer)
+        if (spawned || MonsterPrefab == null)
         {
             return;
         }

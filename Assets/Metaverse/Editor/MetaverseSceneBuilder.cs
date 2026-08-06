@@ -1041,9 +1041,31 @@ public static class MetaverseSceneBuilder
         // Tilted forward so the blade points ahead instead of dragging through the ground.
         sword.transform.localRotation = Quaternion.Euler(-40f, 0f, 0f);
 
+        Material trimMaterial = CreateMaterial("SwordTrim", new Color(0.80f, 0.66f, 0.28f));
+        Material fullerMaterial = CreateMaterial("SwordFuller", new Color(0.52f, 0.55f, 0.62f));
+
+        // Hilt: pommel, wrapped grip, crossguard with turned tips.
+        BodyPart(PrimitiveType.Cube, "Pommel", sword.transform, new Vector3(0f, 0.07f, 0f), new Vector3(0.11f, 0.09f, 0.11f), trimMaterial);
         BodyPart(PrimitiveType.Cube, "Grip", sword.transform, new Vector3(0f, -0.05f, 0f), new Vector3(0.07f, 0.2f, 0.07f), gripMaterial);
-        BodyPart(PrimitiveType.Cube, "Guard", sword.transform, new Vector3(0f, -0.16f, 0f), new Vector3(0.3f, 0.06f, 0.09f), bladeMaterial);
-        BodyPart(PrimitiveType.Cube, "Blade", sword.transform, new Vector3(0f, -0.43f, 0f), new Vector3(0.11f, 0.5f, 0.04f), bladeMaterial);
+        BodyPart(PrimitiveType.Cube, "WrapUpper", sword.transform, new Vector3(0f, -0.01f, 0f), new Vector3(0.085f, 0.02f, 0.085f), trimMaterial);
+        BodyPart(PrimitiveType.Cube, "WrapLower", sword.transform, new Vector3(0f, -0.09f, 0f), new Vector3(0.085f, 0.02f, 0.085f), trimMaterial);
+
+        BodyPart(PrimitiveType.Cube, "Guard", sword.transform, new Vector3(0f, -0.17f, 0f), new Vector3(0.3f, 0.06f, 0.1f), trimMaterial);
+        foreach (float side in new[] { -1f, 1f })
+        {
+            var tip = BodyPart(PrimitiveType.Cube, side < 0f ? "GuardTipLeft" : "GuardTipRight", sword.transform,
+                new Vector3(side * 0.17f, -0.145f, 0f), new Vector3(0.07f, 0.09f, 0.09f), trimMaterial);
+            tip.transform.localRotation = Quaternion.Euler(0f, 0f, side * 28f);
+        }
+
+        // Blade: a wide upper half, a narrower lower half, a fuller down the middle, a point.
+        BodyPart(PrimitiveType.Cube, "Ricasso", sword.transform, new Vector3(0f, -0.23f, 0f), new Vector3(0.1f, 0.07f, 0.05f), bladeMaterial);
+        BodyPart(PrimitiveType.Cube, "BladeUpper", sword.transform, new Vector3(0f, -0.42f, 0f), new Vector3(0.115f, 0.34f, 0.042f), bladeMaterial);
+        BodyPart(PrimitiveType.Cube, "BladeLower", sword.transform, new Vector3(0f, -0.68f, 0f), new Vector3(0.085f, 0.22f, 0.036f), bladeMaterial);
+        BodyPart(PrimitiveType.Cube, "Fuller", sword.transform, new Vector3(0f, -0.5f, 0.024f), new Vector3(0.032f, 0.5f, 0.012f), fullerMaterial);
+
+        var point = BodyPart(PrimitiveType.Cube, "Point", sword.transform, new Vector3(0f, -0.81f, 0f), new Vector3(0.062f, 0.062f, 0.036f), bladeMaterial);
+        point.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
     }
 
     /// <summary>Static body part with its primitive collider removed.</summary>

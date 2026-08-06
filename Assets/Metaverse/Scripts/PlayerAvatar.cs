@@ -71,6 +71,11 @@ public class PlayerAvatar : NetworkBehaviour
         if (IsOwner)
         {
             Local = this;
+
+            // Statics survive a play session when domain reload is off; start clean.
+            ShopNpc.PanelOpen = false;
+            PlayerInventory.WindowOpen = false;
+            PlayerStats.WindowOpen = false;
             Teleport(SpawnPointFor(OwnerClientId));
             SubmitNicknameRpc(NetText.Trim64(MetaverseHUD.LocalNickname));
             if (FollowCamera.Instance != null)
