@@ -269,38 +269,22 @@ public class PlayerInventory : NetworkBehaviour
         }
 
         DrawGearSlot(new Rect(area.x, area.y + 20f, area.width, 66f), "무기", stats.WeaponName,
-            $"+{stats.WeaponBonus} ATK", new Color(0.78f, 0.80f, 0.86f), true);
+            $"+{stats.WeaponBonus} ATK", true);
 
         DrawGearSlot(new Rect(area.x, area.y + 94f, area.width, 66f), "방어구", stats.ArmorName,
-            $"+{stats.ArmorBonus} DEF", new Color(0.72f, 0.55f, 0.32f), false);
+            $"+{stats.ArmorBonus} DEF", false);
 
         GUI.Label(new Rect(area.x, area.y + 170f, area.width, 60f),
             "상점이나 모루에서\n강화한다.");
     }
 
-    static void DrawGearSlot(Rect slot, string label, string name, string bonus, Color colour, bool blade)
+    static void DrawGearSlot(Rect slot, string label, string name, string bonus, bool blade)
     {
         var icon = new Rect(slot.x, slot.y, 60f, 60f);
         DrawSlotBackground(icon);
 
-        Color previous = GUI.color;
-        GUI.color = colour;
-
-        if (blade)
-        {
-            // Blade and crossguard.
-            GUI.DrawTexture(new Rect(icon.center.x - 3f, icon.y + 8f, 6f, 34f), Texture2D.whiteTexture);
-            GUI.DrawTexture(new Rect(icon.center.x - 12f, icon.y + 40f, 24f, 4f), Texture2D.whiteTexture);
-        }
-        else
-        {
-            // Chest piece with two shoulders.
-            GUI.DrawTexture(new Rect(icon.center.x - 16f, icon.y + 18f, 32f, 28f), Texture2D.whiteTexture);
-            GUI.DrawTexture(new Rect(icon.center.x - 22f, icon.y + 14f, 12f, 12f), Texture2D.whiteTexture);
-            GUI.DrawTexture(new Rect(icon.center.x + 10f, icon.y + 14f, 12f, 12f), Texture2D.whiteTexture);
-        }
-
-        GUI.color = previous;
+        // The real models, turning slowly, rendered by GearPreview.
+        GearPreview.Draw(icon, blade);
 
         GUI.Label(new Rect(slot.x + 66f, slot.y + 4f, slot.width - 66f, 18f), label);
         GUI.Label(new Rect(slot.x + 66f, slot.y + 22f, slot.width - 66f, 18f), name);
