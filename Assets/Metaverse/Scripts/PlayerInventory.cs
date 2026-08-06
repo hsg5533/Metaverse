@@ -36,13 +36,8 @@ public class PlayerInventory : NetworkBehaviour
     /// <summary>True while the local player has the bag open; other panels stay shut.</summary>
     public static bool WindowOpen;
 
-    /// <summary>What each slot holds and how it is drawn.</summary>
-    static readonly (string Name, Color Colour)[] Slots =
-    {
-        ("광석", new Color(0.42f, 0.82f, 0.92f)),
-        ("약초", new Color(0.40f, 0.78f, 0.42f)),
-        ("나무", new Color(0.54f, 0.38f, 0.24f)),
-    };
+    /// <summary>What each material slot holds, in the same order as the preview models.</summary>
+    static readonly string[] Slots = { "광석", "약초", "나무" };
 
     public NetworkVariable<int> Ore = new(0, writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<int> Herb = new(0, writePerm: NetworkVariableWritePermission.Server);
@@ -269,22 +264,22 @@ public class PlayerInventory : NetworkBehaviour
         }
 
         DrawGearSlot(new Rect(area.x, area.y + 20f, area.width, 66f), "무기", stats.WeaponName,
-            $"+{stats.WeaponBonus} ATK", true);
+            $"+{stats.WeaponBonus} ATK", GearPreview.Weapon);
 
         DrawGearSlot(new Rect(area.x, area.y + 94f, area.width, 66f), "방어구", stats.ArmorName,
-            $"+{stats.ArmorBonus} DEF", false);
+            $"+{stats.ArmorBonus} DEF", GearPreview.Armor);
 
         GUI.Label(new Rect(area.x, area.y + 170f, area.width, 60f),
             "상점이나 모루에서\n강화한다.");
     }
 
-    static void DrawGearSlot(Rect slot, string label, string name, string bonus, bool blade)
+    static void DrawGearSlot(Rect slot, string label, string name, string bonus, int preview)
     {
         var icon = new Rect(slot.x, slot.y, 60f, 60f);
         DrawSlotBackground(icon);
 
         // The real models, turning slowly, rendered by GearPreview.
-        GearPreview.Draw(icon, blade);
+        GearPreview.Draw(icon, preview);
 
         GUI.Label(new Rect(slot.x + 66f, slot.y + 4f, slot.width - 66f, 18f), label);
         GUI.Label(new Rect(slot.x + 66f, slot.y + 22f, slot.width - 66f, 18f), name);
@@ -317,12 +312,11 @@ public class PlayerInventory : NetworkBehaviour
             return;
         }
 
-        Color previous = GUI.color;
-        GUI.color = Slots[index].Colour;
-        GUI.DrawTexture(new Rect(slot.x + 14f, slot.y + 10f, slot.width - 28f, slot.height - 30f), Texture2D.whiteTexture);
-        GUI.color = previous;
+        // Ore, herb and wood are modelled the same way the gear is: index 0 and 1 are the
+        // weapon and the armour, so the material slots start after them.
+        GearPreview.Draw(new Rect(slot.x + 6f, slot.y + 2f, slot.width - 12f, slot.height - 20f), GearPreview.Ore + index);
 
-        GUI.Label(new Rect(slot.x + 4f, slot.y + slot.height - 20f, slot.width - 8f, 18f), Slots[index].Name);
+        GUI.Label(new Rect(slot.x + 4f, slot.y + slot.height - 20f, slot.width - 8f, 18f), Slots[index]);
         GUI.Label(new Rect(slot.x, slot.y + slot.height - 20f, slot.width - 6f, 18f), count.ToString(), RightAligned());
     }
 

@@ -49,9 +49,28 @@ public static class MetaverseUi
     public static GUIStyle Centered =>
         centered ??= new GUIStyle(GUI.skin.label) { richText = true, alignment = TextAnchor.MiddleCenter };
 
+    /// <summary>
+    /// Depth for anything drawn out in the world - name tags, prompts, health bars. Higher
+    /// draws further back, so a window opened on top of them always wins.
+    /// </summary>
+    public const int WorldDepth = 10;
+
+    /// <summary>A filled bar on a dark backing: health over a head, health on the HUD.</summary>
+    public static void Bar(Rect rect, float fill, Color colour)
+    {
+        Color previous = GUI.color;
+        GUI.color = new Color(0f, 0f, 0f, 0.6f);
+        GUI.DrawTexture(rect, Texture2D.whiteTexture);
+        GUI.color = colour;
+        GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width * Mathf.Clamp01(fill), rect.height), Texture2D.whiteTexture);
+        GUI.color = previous;
+    }
+
     /// <summary>A label box floating over a point in the world, e.g. "[E] 채집".</summary>
     public static void WorldPrompt(Vector3 worldPosition, string text)
     {
+        GUI.depth = WorldDepth;
+
         var camera = Camera.main;
         if (camera == null)
         {

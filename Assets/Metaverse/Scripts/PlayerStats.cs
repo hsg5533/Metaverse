@@ -273,6 +273,16 @@ public class PlayerStats : NetworkBehaviour
         avatar.Teleport(PlayerAvatar.SpawnPointFor(OwnerClientId));
     }
 
+    /// <summary>The owner's own health, bottom centre, clear of the chat and the gear icon.</summary>
+    void DrawHealthBar()
+    {
+        const float width = 260f;
+        var rect = new Rect(Screen.width * 0.5f - width * 0.5f, Screen.height - 46f, width, 20f);
+
+        MetaverseUi.Bar(rect, Hp.Value / (float)MaxHp, new Color(0.80f, 0.24f, 0.24f, 0.95f));
+        GUI.Label(rect, $"<b>{Hp.Value} / {MaxHp}</b>", MetaverseUi.Centered);
+    }
+
     [Rpc(SendTo.Owner)]
     void NoticeRpc(FixedString512Bytes text)
     {
@@ -283,7 +293,14 @@ public class PlayerStats : NetworkBehaviour
     {
         MetaverseUi.ApplyFont();
 
-        if (!IsOwner || !IsSpawned || !WindowOpen)
+        if (!IsOwner || !IsSpawned)
+        {
+            return;
+        }
+
+        DrawHealthBar();
+
+        if (!WindowOpen)
         {
             return;
         }

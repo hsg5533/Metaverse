@@ -971,6 +971,7 @@ public class Monster : NetworkBehaviour
     void OnGUI()
     {
         MetaverseUi.ApplyFont();
+        GUI.depth = MetaverseUi.WorldDepth;
 
         if (!IsSpawned || !IsAlive)
         {
@@ -1002,12 +1003,7 @@ public class Monster : NetworkBehaviour
         GUI.Label(new Rect(x - size.x * 0.5f, y - size.y, size.x, size.y), label, nameTagStyle);
 
         const float barWidth = 60f;
-        float fill = MaxHp.Value > 0 ? Mathf.Clamp01(Hp.Value / (float)MaxHp.Value) : 0f;
-        Color previous = GUI.color;
-        GUI.color = new Color(0f, 0f, 0f, 0.6f);
-        GUI.DrawTexture(new Rect(x - barWidth * 0.5f, y, barWidth, 5f), Texture2D.whiteTexture);
-        GUI.color = new Color(0.85f, 0.25f, 0.25f, 0.95f);
-        GUI.DrawTexture(new Rect(x - barWidth * 0.5f, y, barWidth * fill, 5f), Texture2D.whiteTexture);
-        GUI.color = previous;
+        float fill = MaxHp.Value > 0 ? Hp.Value / (float)MaxHp.Value : 0f;
+        MetaverseUi.Bar(new Rect(x - barWidth * 0.5f, y, barWidth, 5f), fill, new Color(0.85f, 0.25f, 0.25f, 0.95f));
     }
 }

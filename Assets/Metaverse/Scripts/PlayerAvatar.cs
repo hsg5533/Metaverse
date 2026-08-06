@@ -154,6 +154,7 @@ public class PlayerAvatar : NetworkBehaviour
     void OnGUI()
     {
         MetaverseUi.ApplyFont();
+        GUI.depth = MetaverseUi.WorldDepth;
 
         if (!IsSpawned)
         {
@@ -186,6 +187,14 @@ public class PlayerAvatar : NetworkBehaviour
         GUI.color = IsOwner ? new Color(1f, 0.92f, 0.4f) : Color.white;
         GUI.Label(rect, content, nameTagStyle);
         GUI.color = previous;
+
+        var stats = GetComponent<PlayerStats>();
+        if (stats != null && stats.MaxHp > 0)
+        {
+            const float barWidth = 70f;
+            MetaverseUi.Bar(new Rect(screenPoint.x - barWidth * 0.5f, rect.yMax, barWidth, 5f),
+                stats.Hp.Value / (float)stats.MaxHp, new Color(0.35f, 0.80f, 0.40f, 0.95f));
+        }
     }
 
     [Rpc(SendTo.Server)]
