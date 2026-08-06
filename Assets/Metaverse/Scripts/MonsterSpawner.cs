@@ -14,6 +14,9 @@ public class MonsterSpawner : MonoBehaviour
     /// <summary>Levels added on top of the players' level, for tougher areas.</summary>
     public int LevelBonus;
 
+    /// <summary>Which ground this is: index into <see cref="Monster.Rosters"/>.</summary>
+    public int Theme;
+
     /// <summary>Spawns a single boss standing on this spot instead of a pack.</summary>
     public bool Boss;
 
@@ -44,21 +47,24 @@ public class MonsterSpawner : MonoBehaviour
         if (Boss)
         {
             var bossInstance = Instantiate(MonsterPrefab, transform.position, Quaternion.identity);
-            bossInstance.name = Monster.BossName;
+            bossInstance.name = Monster.BossNameFor(Theme);
             bossInstance.GetComponent<NetworkObject>().Spawn();
-            bossInstance.GetComponent<Monster>().Configure(0, LevelBonus, true);
+            bossInstance.GetComponent<Monster>().Configure(0, LevelBonus, true, Theme);
             Debug.Log($"[Metaverse] boss placed at {transform.position}");
             return;
         }
 
+        int[] roster = Monster.RosterFor(Theme);
+
         for (int i = 0; i < Count; i++)
         {
-            int kind = i % Monster.Kinds.Length;
+            int slot = i % roster.Length;
+            int kind = roster[slot];
 
             // Weak kinds near the middle, tough ones out at the rim, so walking further out
             // is what raises the difficulty.
-            float angle = (i * 360f / Count + kind * 11f) * Mathf.Deg2Rad;
-            float ring = Monster.Kinds.Length > 1 ? kind / (float)(Monster.Kinds.Length - 1) : 0f;
+            float angle = (i * 360f / Count + slot * 11f) * Mathf.Deg2Rad;
+            float ring = roster.Length > 1 ? slot / (float)(roster.Length - 1) : 0f;
             // The inner ring and the jitter both scale with the area, so a narrow corridor
             // does not end up with monsters standing inside its walls.
             float distance = Mathf.Lerp(Mathf.Min(8f, Radius), Radius, ring) + (i % 3) * Radius * 0.1f;
@@ -69,7 +75,7 @@ public class MonsterSpawner : MonoBehaviour
             instance.GetComponent<NetworkObject>().Spawn();
 
             // The monster works out its own level from the players in the world.
-            instance.GetComponent<Monster>().Configure(kind, LevelBonus);
+            instance.GetComponent<Monster>().Configure(kind, LevelBonus, false, Theme);
         }
 
         Debug.Log($"[Metaverse] spawned {Count} monsters at {transform.position}");

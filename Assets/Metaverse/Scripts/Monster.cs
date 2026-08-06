@@ -14,8 +14,8 @@ public class Monster : NetworkBehaviour
     public static readonly List<Monster> All = new();
 
     /// <summary>
-    /// The three kinds of monster in the field. Their level is not fixed: it follows the
-    /// players, so a Slime is always "your level" and an Orc is always two above it.
+    /// One kind of monster: what it is called, how far above the players' level it rolls,
+    /// and its colour. Which kinds appear where is decided by Rosters.
     /// </summary>
     public readonly struct Kind
     {
@@ -36,9 +36,54 @@ public class Monster : NetworkBehaviour
         new("슬라임", 0, new Color(0.42f, 0.82f, 0.45f)),
         new("고블린", 1, new Color(0.85f, 0.72f, 0.30f)),
         new("오크", 2, new Color(0.80f, 0.35f, 0.30f)),
+        new("서리 늑대", 1, new Color(0.72f, 0.80f, 0.90f)),
+        new("설원 망령", 2, new Color(0.66f, 0.72f, 0.94f)),
+        new("얼음 골렘", 3, new Color(0.58f, 0.74f, 0.86f)),
+        new("마그마 두꺼비", 1, new Color(0.80f, 0.34f, 0.18f)),
+        new("용암 전갈", 2, new Color(0.74f, 0.26f, 0.14f)),
+        new("잿불 정령", 3, new Color(1f, 0.55f, 0.20f)),
     };
 
-    /// <summary>One body per kind, indexed the same way as <see cref="Kinds"/> plus the boss.</summary>
+    /// <summary>
+    /// Which kinds live on which ground, lined up with <see cref="Bosses"/>. A frost field
+    /// and a lava field share nothing, so walking into one is walking into new creatures.
+    /// </summary>
+    public static readonly int[][] Rosters =
+    {
+        new[] { 0, 1, 2 },
+        new[] { 3, 4, 5 },
+        new[] { 6, 7, 8 },
+    };
+
+    public static int[] RosterFor(int theme)
+    {
+        return Rosters[Mathf.Clamp(theme, 0, Rosters.Length - 1)];
+    }
+
+    /// <summary>
+    /// The boss of each theme, lined up with <see cref="Rosters"/>: one per ground, so a
+    /// dungeon's fight looks like the place it happens in. Same shape as any other kind,
+    /// it just carries the boss level offset.
+    /// </summary>
+    public static readonly Kind[] Bosses =
+    {
+        new("오우거 군주", BossLevelOffset, new Color(0.58f, 0.14f, 0.30f)),
+        new("서리 거인", BossLevelOffset, new Color(0.46f, 0.66f, 0.88f)),
+        new("용암 파괴자", BossLevelOffset, new Color(0.72f, 0.22f, 0.10f)),
+    };
+
+    /// <summary>The boss body for a theme sits after the kinds in <see cref="Bodies"/>.</summary>
+    public static int BossShapeFor(int theme)
+    {
+        return Kinds.Length + Mathf.Clamp(theme, 0, Bosses.Length - 1);
+    }
+
+    public static string BossNameFor(int theme)
+    {
+        return Bosses[Mathf.Clamp(theme, 0, Bosses.Length - 1)].Name;
+    }
+
+    /// <summary>One body per kind in <see cref="Kinds"/> order, then one per boss.</summary>
     public GameObject[] Bodies;
 
     /// <summary>Flat ring that expands under the boss when it slams.</summary>
@@ -46,8 +91,6 @@ public class Monster : NetworkBehaviour
 
     public float LungeDuration = 0.35f;
     public float SlamDuration = 0.6f;
-
-    public const int BossShape = 3;
 
     /// <summary>Which body to show. Replicated, so late joiners see the right creature.</summary>
     public NetworkVariable<int> Shape = new(0, writePerm: NetworkVariableWritePermission.Server);
@@ -75,7 +118,10 @@ public class Monster : NetworkBehaviour
     public int Damage => 6 + Level.Value * 4;
 
     /// <summary>Higher level monsters are visibly bigger, so a tough one reads at a glance.</summary>
-    public float LevelScale => Mathf.Min(1f + 0.04f * (Level.Value - 1), 1.8f) * (Shape.Value == BossShape ? 1.6f : 1f);
+    public float LevelScale => Mathf.Min(1f + 0.04f * (Level.Value - 1), 1.8f) * (IsBossShape ? 1.6f : 1f);
+
+    /// <summary>True while one of the boss bodies is the one on show.</summary>
+    public bool IsBossShape => Shape.Value >= Kinds.Length;
     public int ExpReward => 12 + Level.Value * 8;
     public int GoldReward => 4 + Level.Value * 3;
 
@@ -86,7 +132,6 @@ public class Monster : NetworkBehaviour
     public const int BossLevelOffset = 5;
     public const int BossHpMultiplier = 8;
     public const int BossRewardMultiplier = 6;
-    public const string BossName = "오우거 군주";
 
     public float SlamCooldown = 7f;
     public float SlamRadius = 6f;
@@ -100,8 +145,15 @@ public class Monster : NetworkBehaviour
     float motionEndTime;
     bool motionIsSlam;
     bool motionPlaying;
+    readonly List<WalkPart> walkParts = new();
+    bool walkPartsAreLegs;
+    float hoverHeight;
+    float walkCycle;
+    float walkBlend;
+    Vector3 lastPosition;
     bool boss;
     int levelBonus;
+    int themeIndex;
     int kindIndex;
     float nextSlamTime;
     Vector3 home;
@@ -243,6 +295,204 @@ public class Monster : NetworkBehaviour
         return Bodies[Mathf.Clamp(Shape.Value, 0, Bodies.Length - 1)].transform;
     }
 
+    /// <summary>
+    /// How far each body floats above the ground, per shape. Zero means it walks; anything
+    /// else never touches down, so a ghost drifts and a bat stays in the air.
+    /// </summary>
+    static readonly float[] HoverHeights =
+    {
+        0f, 0f, 0f,         // slime, goblin, orc
+        0f, 0.5f, 0f,       // wolf, wraith, ice golem
+        0f, 0f, 0.45f,      // toad, scorpion, wisp
+        0f, 0f, 0f,         // the three bosses
+    };
+
+    /// <summary>A limb that swings while the monster walks, and where it swings about.</summary>
+    struct WalkPart
+    {
+        public Transform Part;
+        public Vector3 BasePosition;
+        public Quaternion BaseRotation;
+
+        /// <summary>Local point the limb turns around: the top of it, so it swings from the hip.</summary>
+        public Vector3 Pivot;
+
+        public Vector3 Axis;
+        public float Phase;
+        public float Swing;
+    }
+
+    /// <summary>
+    /// Local only: swings whatever the active body has - legs, arms, wings - in time with how
+    /// fast it is actually moving. Bodies with no legs bob instead, so slimes hop and the
+    /// floating ones drift up and down.
+    /// The position is replicated, so this runs the same on every client without an RPC.
+    /// </summary>
+    void UpdateWalkMotion()
+    {
+        Transform body = ActiveBody();
+        if (body == null)
+        {
+            return;
+        }
+
+        float delta = Time.deltaTime;
+        float speed = delta > 0f ? Vector3.Distance(FlatPosition(transform.position), FlatPosition(lastPosition)) / delta : 0f;
+        lastPosition = transform.position;
+
+        if (hoverHeight > 0f)
+        {
+            // Nothing that hovers ever holds still: it drifts on the spot and beats harder
+            // as it closes in.
+            walkBlend = 1f;
+            walkCycle += (3.4f + Mathf.Min(speed, 6f)) * delta * 2.2f;
+        }
+        else
+        {
+            walkBlend = Mathf.MoveTowards(walkBlend, speed > 0.4f ? 1f : 0f, delta * 6f);
+
+            // The cycle runs off distance covered, so a fast monster takes faster steps.
+            walkCycle += Mathf.Min(speed, 8f) * delta * 3.4f;
+        }
+
+        foreach (var part in walkParts)
+        {
+            if (part.Part == null)
+            {
+                continue;
+            }
+
+            float angle = Mathf.Sin(walkCycle + part.Phase) * part.Swing * walkBlend;
+            Quaternion swing = Quaternion.AngleAxis(angle, part.Axis);
+            part.Part.localRotation = swing * part.BaseRotation;
+            part.Part.localPosition = part.Pivot + swing * (part.BasePosition - part.Pivot);
+        }
+
+        if (!walkPartsAreLegs)
+        {
+            // Nothing to step with: rise and fall on the spot instead, and a winged one sits
+            // up off the ground the whole time. Only the height is touched, so an attack
+            // lunge still carries the body forward underneath it.
+            float height = hoverHeight > 0f
+                ? hoverHeight + Mathf.Sin(walkCycle) * 0.16f
+                : Mathf.Abs(Mathf.Sin(walkCycle)) * 0.22f * walkBlend;
+
+            Vector3 position = body.localPosition;
+            body.localPosition = new Vector3(position.x, height, position.z);
+        }
+    }
+
+    /// <summary>Picks out the limbs of the body now on show; called whenever the shape changes.</summary>
+    void CollectWalkParts(Transform body, int shape)
+    {
+        walkParts.Clear();
+        walkPartsAreLegs = false;
+        hoverHeight = HoverHeights[Mathf.Clamp(shape, 0, HoverHeights.Length - 1)];
+        walkCycle = 0f;
+        walkBlend = 0f;
+
+        if (body == null)
+        {
+            return;
+        }
+
+        foreach (var child in body.GetComponentsInChildren<Transform>())
+        {
+            // Trim and cracks are named Detail...; they ride on a limb, they are not one.
+            bool decoration = child.name.StartsWith("Detail");
+            bool leg = !decoration && child.name.Contains("Leg");
+            bool arm = !decoration && (child.name.Contains("Arm") || child.name.Contains("Sleeve"));
+            if (!leg && !arm)
+            {
+                continue;
+            }
+
+            Vector3 position = child.localPosition;
+
+            // Opposite corners move together: left leg with right arm, front left paw with
+            // back right paw.
+            float phase = (position.x < 0f) ^ (position.z < 0f) ? 0f : Mathf.PI;
+            if (arm)
+            {
+                phase += Mathf.PI;
+            }
+
+            walkParts.Add(new WalkPart
+            {
+                Part = child,
+                BasePosition = position,
+                BaseRotation = child.localRotation,
+                Pivot = position + Vector3.up * child.localScale.y * 0.5f,
+                Axis = Vector3.right,
+                Phase = phase,
+                Swing = leg ? 26f : 14f,
+            });
+
+            walkPartsAreLegs |= leg;
+        }
+
+        AttachHands(body);
+    }
+
+    /// <summary>
+    /// Hands, fists and whatever they hold are separate parts sitting where a limb ends, not
+    /// children of it. Give each one the swing of the nearest limb so it travels with the
+    /// arm instead of hanging in the air while the arm moves off.
+    /// </summary>
+    void AttachHands(Transform body)
+    {
+        int limbCount = walkParts.Count;
+        if (limbCount == 0)
+        {
+            return;
+        }
+
+        foreach (var child in body.GetComponentsInChildren<Transform>())
+        {
+            // Claws keep their own colour, paws and feet take the body's, which is why both
+            // spellings exist. Either way they hang off a limb and travel with it.
+            if (!NameHas(child.name, "Claw", "Paw", "Foot"))
+            {
+                continue;
+            }
+
+            Vector3 position = child.localPosition;
+
+            // Nearest limb, but only if it is close enough to be the thing it hangs off -
+            // a scorpion's stinger is nowhere near a leg and must stay where it is.
+            int nearest = -1;
+            float best = 1f;
+            for (int i = 0; i < limbCount; i++)
+            {
+                float distance = Vector3.Distance(walkParts[i].BasePosition, position);
+                if (distance < best)
+                {
+                    best = distance;
+                    nearest = i;
+                }
+            }
+
+            if (nearest < 0)
+            {
+                continue;
+            }
+
+            WalkPart limb = walkParts[nearest];
+            walkParts.Add(new WalkPart
+            {
+                Part = child,
+                BasePosition = position,
+                BaseRotation = child.localRotation,
+
+                // The limb's pivot, so the pair turns as one piece.
+                Pivot = limb.Pivot,
+                Axis = limb.Axis,
+                Phase = limb.Phase,
+                Swing = limb.Swing,
+            });
+        }
+    }
+
     /// <summary>Local only: flash white and squash for a moment after being hit.</summary>
     void UpdateHitFlash()
     {
@@ -270,13 +520,14 @@ public class Monster : NetworkBehaviour
     Color BodyColor => Color.Lerp(Tint.Value, Tint.Value * 0.45f, Mathf.Min((Level.Value - 1) * 0.06f, 1f));
 
     /// <summary>Server side: give the freshly spawned monster its kind, stats and home point.</summary>
-    public void Configure(int kind, int extraLevels = 0, bool isBoss = false)
+    public void Configure(int kind, int extraLevels = 0, bool isBoss = false, int theme = 0)
     {
         kindIndex = Mathf.Clamp(kind, 0, Kinds.Length - 1);
         levelBonus = extraLevels;
         boss = isBoss;
+        themeIndex = Mathf.Clamp(theme, 0, Rosters.Length - 1);
 
-        Shape.Value = boss ? BossShape : kindIndex;
+        Shape.Value = boss ? BossShapeFor(themeIndex) : kindIndex;
 
         if (boss)
         {
@@ -296,17 +547,22 @@ public class Monster : NetworkBehaviour
     /// </summary>
     void ApplyLevel()
     {
-        Kind kind = Kinds[kindIndex];
-        int offset = boss ? BossLevelOffset : kind.LevelOffset;
-        int level = Mathf.Max(1, PlayerLevel() + offset + levelBonus);
+        Kind kind = CurrentKind;
+        int level = WantedLevel;
 
-        MonsterName.Value = NetText.Trim64(boss ? BossName : kind.Name);
+        MonsterName.Value = NetText.Trim64(kind.Name);
         Level.Value = level;
         MaxHp.Value = (20 + level * 26) * (boss ? BossHpMultiplier : 1);
         Hp.Value = MaxHp.Value;
-        Tint.Value = boss ? new Color(0.58f, 0.14f, 0.30f) : kind.Tint;
+        Tint.Value = kind.Tint;
         contributors.Clear();
     }
+
+    /// <summary>What this monster is: its boss entry, or its entry in the kind table.</summary>
+    Kind CurrentKind => boss ? Bosses[themeIndex] : Kinds[kindIndex];
+
+    /// <summary>The level it should be right now, given who is online.</summary>
+    int WantedLevel => Mathf.Max(1, PlayerLevel() + CurrentKind.LevelOffset + levelBonus);
 
     /// <summary>
     /// Out of combat and untouched, so it can quietly re-level. Without this the first batch
@@ -314,8 +570,7 @@ public class Monster : NetworkBehaviour
     /// </summary>
     void RelevelIfIdle()
     {
-        int wanted = Mathf.Max(1, PlayerLevel() + (boss ? BossLevelOffset : Kinds[kindIndex].LevelOffset) + levelBonus);
-        if (wanted != Level.Value && Hp.Value == MaxHp.Value)
+        if (WantedLevel != Level.Value && Hp.Value == MaxHp.Value)
         {
             ApplyLevel();
         }
@@ -373,8 +628,8 @@ public class Monster : NetworkBehaviour
                 }
             }
 
-            ChatSystem.Announce($"{BossName} Lv.{Level.Value} 토벌 성공! 참가자 {contributors.Count}명");
-            TreasureChest.UnlockAll();
+            ChatSystem.Announce($"{MonsterName.Value} Lv.{Level.Value} 토벌 성공! 참가자 {contributors.Count}명");
+            TreasureChest.UnlockNear(transform.position);
             contributors.Clear();
             return;
         }
@@ -432,7 +687,7 @@ public class Monster : NetworkBehaviour
             var stats = playerObject.GetComponent<PlayerStats>();
             if (stats != null)
             {
-                stats.TakeDamage(Damage * 2, $"{BossName}의 내리찍기");
+                stats.TakeDamage(Damage * 2, $"{MonsterName.Value}의 내리찍기");
             }
         }
     }
@@ -475,6 +730,7 @@ public class Monster : NetworkBehaviour
         SyncVisuals();
         UpdateHitFlash();
         UpdateAttackMotion();
+        UpdateWalkMotion();
 
         if (!IsServer || !IsSpawned)
         {
@@ -668,16 +924,20 @@ public class Monster : NetworkBehaviour
             }
         }
 
-        NameTagHeight = shape switch
-        {
-            0 => 1.5f,
-            1 => 2.0f,
-            2 => 2.5f,
-            _ => 3.6f,
-        };
+        NameTagHeight = TagHeights[Mathf.Clamp(shape, 0, TagHeights.Length - 1)];
 
+        CollectWalkParts(ActiveBody(), shape);
         ApplyTint(BodyColor);
     }
+
+    /// <summary>Where the name floats, per body, since they are nowhere near the same size.</summary>
+    static readonly float[] TagHeights =
+    {
+        1.5f, 2.0f, 2.5f,   // slime, goblin, orc
+        1.6f, 2.9f, 2.9f,   // wolf, wraith, ice golem
+        1.4f, 1.5f, 2.75f,  // toad, scorpion, wisp
+        3.6f, 4.0f, 3.4f,   // the three bosses
+    };
 
     /// <summary>Parts named like this keep their own colour: eyes, tusks, horns, claws.</summary>
     static readonly string[] UntintedParts = { "Eye", "Tusk", "Horn", "Claw", "Detail", "Ring" };
@@ -686,7 +946,7 @@ public class Monster : NetworkBehaviour
     {
         foreach (var renderer in renderers)
         {
-            if (renderer == null || !renderer.gameObject.activeInHierarchy || IsUntinted(renderer.name))
+            if (renderer == null || !renderer.gameObject.activeInHierarchy || NameHas(renderer.name, UntintedParts))
             {
                 continue;
             }
@@ -695,9 +955,9 @@ public class Monster : NetworkBehaviour
         }
     }
 
-    static bool IsUntinted(string name)
+    static bool NameHas(string name, params string[] keywords)
     {
-        foreach (string keyword in UntintedParts)
+        foreach (string keyword in keywords)
         {
             if (name.Contains(keyword))
             {

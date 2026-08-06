@@ -35,12 +35,15 @@ public class TreasureChest : NetworkBehaviour
         All.Remove(this);
     }
 
-    /// <summary>Server side: called when a boss dies, so its chamber pays out.</summary>
-    public static void UnlockAll()
+    /// <summary>
+    /// Server side: called when a boss dies, so its own chamber pays out. Range-limited,
+    /// or the first dungeon's boss would open the chests in every other dungeon too.
+    /// </summary>
+    public static void UnlockNear(Vector3 point, float range = 40f)
     {
         foreach (var chest in All)
         {
-            if (chest != null && chest.IsServer)
+            if (chest != null && chest.IsServer && Vector3.Distance(chest.transform.position, point) <= range)
             {
                 chest.Unlocked.Value = true;
             }
