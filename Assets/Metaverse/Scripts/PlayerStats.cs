@@ -61,6 +61,7 @@ public class PlayerStats : NetworkBehaviour
     {
         // Health is readable by everyone, so every peer can play the flinch without an extra RPC.
         Hp.OnValueChanged += OnHpChanged;
+        Level.OnValueChanged += OnLevelChanged;
 
         if (IsServer)
         {
@@ -71,6 +72,7 @@ public class PlayerStats : NetworkBehaviour
     public override void OnNetworkDespawn()
     {
         Hp.OnValueChanged -= OnHpChanged;
+        Level.OnValueChanged -= OnLevelChanged;
 
         if (IsOwner)
         {
@@ -120,6 +122,14 @@ public class PlayerStats : NetworkBehaviour
     bool InVillage =>
         Mathf.Abs(transform.position.x) <= VillageHalfSize &&
         Mathf.Abs(transform.position.z) <= VillageHalfSize;
+
+    void OnLevelChanged(int previous, int current)
+    {
+        if (IsOwner && current > previous)
+        {
+            GameSound.PlayLocal(GameSound.LevelUp);
+        }
+    }
 
     void OnHpChanged(int previous, int current)
     {

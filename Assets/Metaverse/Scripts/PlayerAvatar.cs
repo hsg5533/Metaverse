@@ -48,6 +48,9 @@ public class PlayerAvatar : NetworkBehaviour
     CharacterController controller;
     PlayerBuffs buffs;
     float verticalVelocity;
+    Vector3 lastStepPosition;
+    float stepDistance;
+    bool airborne;
     static GUIStyle nameTagStyle;
 
     void Awake()
@@ -96,6 +99,8 @@ public class PlayerAvatar : NetworkBehaviour
 
     void Update()
     {
+        Footsteps();
+
         if (!IsOwner || !IsSpawned)
         {
             return;
@@ -122,14 +127,25 @@ public class PlayerAvatar : NetworkBehaviour
 
         if (controller.isGrounded)
         {
+            // Coming down from a jump or a fall, not from walking off a step.
+            if (airborne && verticalVelocity < -4f)
+            {
+                GameSound.Play(GameSound.Land, transform.position);
+            }
+
+            airborne = false;
             verticalVelocity = -2f;
+
             if (acceptInput && keyboard.spaceKey.wasPressedThisFrame)
             {
                 verticalVelocity = Mathf.Sqrt(-2f * Gravity * JumpHeight);
+                airborne = true;
+                GameSound.Play(GameSound.Jump, transform.position);
             }
         }
         else
         {
+            airborne = true;
             verticalVelocity += Gravity * Time.deltaTime;
         }
 
@@ -148,6 +164,23 @@ public class PlayerAvatar : NetworkBehaviour
         if (transform.position.y < -20f)
         {
             Teleport(SpawnPointFor(OwnerClientId));
+        }
+    }
+
+    /// <summary>
+    /// Runs for every avatar, not just the owned one: the position is replicated, so each
+    /// client can work out the steps of everybody it can see without a single message.
+    /// </summary>
+    void Footsteps()
+    {
+        var flat = new Vector3(transform.position.x, 0f, transform.position.z);
+        stepDistance += Vector3.Distance(flat, lastStepPosition);
+        lastStepPosition = flat;
+
+        if (stepDistance >= 2.2f)
+        {
+            stepDistance = 0f;
+            GameSound.Play(GameSound.Step, transform.position);
         }
     }
 
@@ -236,6 +269,11 @@ public class PlayerAvatar : NetworkBehaviour
         transform.position = position;
         controller.enabled = true;
         verticalVelocity = 0f;
+
+        // A warp is not a stride: without this the jump across the map counts as one.
+        lastStepPosition = new Vector3(position.x, 0f, position.z);
+        stepDistance = 0f;
+        GameSound.Play(GameSound.Warp, position);
 
         var networkTransform = GetComponent<NetworkTransform>();
         if (IsSpawned && networkTransform != null)

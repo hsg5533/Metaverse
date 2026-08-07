@@ -89,6 +89,8 @@ public class PlayerCombat : NetworkBehaviour
 
     void PlaySwing()
     {
+        GameSound.Play(GameSound.Swing, transform.position);
+
         if (limbAnimator != null)
         {
             limbAnimator.PlayAttack();

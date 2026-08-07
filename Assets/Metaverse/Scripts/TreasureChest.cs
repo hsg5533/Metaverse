@@ -31,11 +31,21 @@ public class TreasureChest : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         All.Add(this);
+        Unlocked.OnValueChanged += OnUnlockedChanged;
     }
 
     public override void OnNetworkDespawn()
     {
         All.Remove(this);
+        Unlocked.OnValueChanged -= OnUnlockedChanged;
+    }
+
+    void OnUnlockedChanged(bool previous, bool current)
+    {
+        if (current)
+        {
+            GameSound.Play(GameSound.Chest, transform.position);
+        }
     }
 
     /// <summary>

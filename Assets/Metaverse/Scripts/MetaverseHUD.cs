@@ -164,7 +164,7 @@ public class MetaverseHUD : MonoBehaviour
     {
         const float size = 44f;
         var button = new Rect(Screen.width - size - 14f, Screen.height - size - 14f, size, size);
-        var panel = new Rect(Screen.width - 366f, Screen.height - 66f - Controls.Length * 20f, 352f, Controls.Length * 20f + 34f);
+        var panel = new Rect(Screen.width - 366f, Screen.height - 66f - Controls.Length * 20f - 26f, 352f, Controls.Length * 20f + 60f);
 
         Vector2 pointer = Event.current.mousePosition;
         PointerOverHud = button.Contains(pointer) || (helpOpen && panel.Contains(pointer));
@@ -180,6 +180,11 @@ public class MetaverseHUD : MonoBehaviour
                 GUI.Label(new Rect(panel.x + 12f, y, 110f, 20f), Controls[i].Keys);
                 GUI.Label(new Rect(panel.x + 128f, y, panel.width - 140f, 20f), Controls[i].What);
             }
+
+            float sliderY = panel.y + 34f + Controls.Length * 20f;
+            GUI.Label(new Rect(panel.x + 12f, sliderY - 4f, 110f, 20f), "소리");
+            AudioListener.volume = GUI.HorizontalSlider(
+                new Rect(panel.x + 128f, sliderY, panel.width - 150f, 20f), AudioListener.volume, 0f, 1f);
         }
 
         if (GUI.Button(button, GUIContent.none))

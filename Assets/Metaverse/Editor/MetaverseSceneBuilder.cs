@@ -1238,7 +1238,6 @@ public static class MetaverseSceneBuilder
         BodyPart(PrimitiveType.Sphere, "Head", body.transform, new Vector3(0f, 0.52f, 0.42f), new Vector3(0.82f, 0.5f, 0.66f), bodyMaterial);
         BodyPart(PrimitiveType.Sphere, "DetailThroat", body.transform, new Vector3(0f, 0.3f, 0.44f), new Vector3(0.56f, 0.36f, 0.44f), emberMaterial);
         BodyPart(PrimitiveType.Cube, "DetailMouth", body.transform, new Vector3(0f, 0.4f, 0.68f), new Vector3(0.62f, 0.11f, 0.16f), emberMaterial);
-        BodyPart(PrimitiveType.Cube, "DetailCrackBack", body.transform, new Vector3(0f, 0.85f, -0.12f), new Vector3(0.14f, 0.06f, 0.7f), emberMaterial);
 
         // Warts across the back, hot enough to show.
         for (int i = 0; i < 5; i++)
@@ -1817,6 +1816,12 @@ public static class MetaverseSceneBuilder
         if (camera.GetComponent<FollowCamera>() == null)
         {
             camera.gameObject.AddComponent<FollowCamera>();
+        }
+
+        // The ear rides with the camera; without it nothing is heard at all.
+        if (camera.GetComponent<AudioListener>() == null)
+        {
+            camera.gameObject.AddComponent<AudioListener>();
         }
     }
 

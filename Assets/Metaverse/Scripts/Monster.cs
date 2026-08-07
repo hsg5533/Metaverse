@@ -198,10 +198,13 @@ public class Monster : NetworkBehaviour
 
     void OnHpChanged(int previous, int current)
     {
-        if (current < previous)
+        if (current >= previous)
         {
-            hitFlashEndTime = Time.time + HitFlashDuration;
+            return;
         }
+
+        hitFlashEndTime = Time.time + HitFlashDuration;
+        GameSound.Play(current > 0 ? GameSound.Hit : GameSound.Death, transform.position);
     }
 
     /// <summary>Attacks are decided on the server, so the motion is announced to everyone.</summary>
@@ -210,6 +213,7 @@ public class Monster : NetworkBehaviour
     {
         motionIsSlam = slam;
         motionEndTime = Time.time + (slam ? SlamDuration : LungeDuration);
+        GameSound.Play(slam ? GameSound.Death : GameSound.Growl, transform.position);
     }
 
     /// <summary>
