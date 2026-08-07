@@ -112,8 +112,10 @@ public class PlayerAvatar : NetworkBehaviour
         bool acceptInput = keyboard != null && !ChatSystem.IsTyping;
 
         // A cast line pins you in place: reel in first, which any click does.
-        Vector2 input = fishing != null && fishing.Casting ? Vector2.zero : MobileInput.Move;
-        if (acceptInput && (fishing == null || !fishing.Casting))
+        bool lineOut = fishing != null && fishing.Casting;
+
+        Vector2 input = lineOut ? Vector2.zero : MobileInput.Move;
+        if (acceptInput && !lineOut)
         {
             if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) input.y += 1f;
             if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed) input.y -= 1f;

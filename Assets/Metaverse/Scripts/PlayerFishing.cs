@@ -282,21 +282,19 @@ public class PlayerFishing : NetworkBehaviour
             Phase.Idle => ("[공격] 찌 던지기", new Color(1f, 0.94f, 0.55f)),
             Phase.Casting => ("찌를 던진다", new Color(0.80f, 0.88f, 1f)),
             Phase.Waiting => ("기다리는 중...", new Color(0.72f, 0.86f, 0.98f)),
-            _ => ("입질! 지금 클릭", new Color(1f, 0.55f, 0.18f)),
+            _ => ("<b>입질! 지금 클릭</b>", new Color(1f, 0.55f, 0.18f)),
         };
 
         // Between the character and the health bar, where the eye already is during a fight.
         var rect = new Rect(MetaverseUi.Width * 0.5f - 140f,
             MetaverseUi.Height - (MobileInput.Active ? 210f : 130f), 280f, 30f);
 
+        // An empty bar is the dark plate this needs; pale text over water reads as nothing.
+        MetaverseUi.Bar(rect, 0f, Color.clear);
+
         Color previous = GUI.color;
-
-        // A dark plate under it, or pale text on pale water is unreadable.
-        GUI.color = new Color(0f, 0f, 0f, 0.45f);
-        GUI.DrawTexture(rect, Texture2D.whiteTexture);
-
         GUI.color = line.Colour;
-        GUI.Label(rect, phase == Phase.Biting ? $"<b>{line.Text}</b>" : line.Text, MetaverseUi.Centered);
+        GUI.Label(rect, line.Text, MetaverseUi.Centered);
         GUI.color = previous;
     }
 }
