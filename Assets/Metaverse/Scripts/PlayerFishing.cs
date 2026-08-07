@@ -41,6 +41,9 @@ public class PlayerFishing : NetworkBehaviour
     /// <summary>The rod is out and there is water in front: the attack button is ours.</summary>
     public bool Ready => gear != null && gear.HoldingRod && FishingSpot.NearAny(transform.position);
 
+    /// <summary>A line is out, so the angler stands still until it comes back.</summary>
+    public bool Casting => phase != Phase.Idle;
+
     void Awake()
     {
         gear = GetComponent<PlayerGear>();
@@ -267,25 +270,33 @@ public class PlayerFishing : NetworkBehaviour
 
     void OnGUI()
     {
-        if (!IsOwner || !IsSpawned || !Ready)
+        if (!IsOwner || !IsSpawned || !Ready || MetaverseUi.WindowOpen)
         {
             return;
         }
 
         MetaverseUi.ApplyFont();
 
-        string text = phase switch
+        (string Text, Color Colour) line = phase switch
         {
-            Phase.Idle => "[공격] 찌 던지기",
-            Phase.Waiting => "기다리는 중...",
-            Phase.Biting => "<b>입질! 지금 클릭</b>",
-            _ => "",
+            Phase.Idle => ("[공격] 찌 던지기", new Color(1f, 0.94f, 0.55f)),
+            Phase.Casting => ("찌를 던진다", new Color(0.80f, 0.88f, 1f)),
+            Phase.Waiting => ("기다리는 중...", new Color(0.72f, 0.86f, 0.98f)),
+            _ => ("입질! 지금 클릭", new Color(1f, 0.55f, 0.18f)),
         };
 
-        if (text.Length > 0)
-        {
-            var rect = new Rect(MetaverseUi.Width * 0.5f - 120f, MetaverseUi.Height * 0.5f + 60f, 240f, 26f);
-            GUI.Label(rect, text, MetaverseUi.Centered);
-        }
+        // Between the character and the health bar, where the eye already is during a fight.
+        var rect = new Rect(MetaverseUi.Width * 0.5f - 140f,
+            MetaverseUi.Height - (MobileInput.Active ? 210f : 130f), 280f, 30f);
+
+        Color previous = GUI.color;
+
+        // A dark plate under it, or pale text on pale water is unreadable.
+        GUI.color = new Color(0f, 0f, 0f, 0.45f);
+        GUI.DrawTexture(rect, Texture2D.whiteTexture);
+
+        GUI.color = line.Colour;
+        GUI.Label(rect, phase == Phase.Biting ? $"<b>{line.Text}</b>" : line.Text, MetaverseUi.Centered);
+        GUI.color = previous;
     }
 }

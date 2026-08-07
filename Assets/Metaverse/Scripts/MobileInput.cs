@@ -71,7 +71,7 @@ public class MobileInput : MonoBehaviour
         }
     }
 
-    const float StickRadius = 68f;
+    const float StickRadius = 88f;
     const float ButtonSize = 111f;
 
     /// <summary>
@@ -319,7 +319,7 @@ public class MobileInput : MonoBehaviour
             new Color(0f, 0f, 0f, stickHeld ? 0.45f : 0.3f));
 
         Vector2 knob = centre + Move * StickRadius * 0.7f;
-        const float knobRadius = 24f;
+        const float knobRadius = 32f;
         DrawDisc(new Rect(knob.x - knobRadius, MetaverseUi.Height - knob.y - knobRadius, knobRadius * 2f, knobRadius * 2f),
             new Color(1f, 1f, 1f, 0.55f));
     }

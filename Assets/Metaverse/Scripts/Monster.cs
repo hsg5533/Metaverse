@@ -1068,6 +1068,7 @@ public class Monster : NetworkBehaviour
         nameTagStyle ??= new GUIStyle(GUI.skin.label)
         {
             alignment = TextAnchor.MiddleCenter,
+            clipping = TextClipping.Overflow,
         };
 
         foreach (var monster in All)
@@ -1103,9 +1104,7 @@ public class Monster : NetworkBehaviour
         float x = screenPoint.x;
         float y = MetaverseUi.Height - screenPoint.y;
 
-        var label = new GUIContent($"{MonsterName.Value} Lv.{Level.Value}");
-        Vector2 size = nameTagStyle.CalcSize(label);
-        GUI.Label(new Rect(x - size.x * 0.5f, y - size.y, size.x, size.y), label, nameTagStyle);
+        GUI.Label(new Rect(x - 110f, y - 20f, 220f, 20f), $"{MonsterName.Value} Lv.{Level.Value}", nameTagStyle);
 
         const float barWidth = 60f;
         float fill = MaxHp.Value > 0 ? Hp.Value / (float)MaxHp.Value : 0f;

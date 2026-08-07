@@ -47,6 +47,7 @@ public class PlayerAvatar : NetworkBehaviour
 
     CharacterController controller;
     PlayerBuffs buffs;
+    PlayerFishing fishing;
     float verticalVelocity;
     Vector3 lastStepPosition;
     float stepDistance;
@@ -57,6 +58,7 @@ public class PlayerAvatar : NetworkBehaviour
     {
         controller = GetComponent<CharacterController>();
         buffs = GetComponent<PlayerBuffs>();
+        fishing = GetComponent<PlayerFishing>();
     }
 
     public override void OnNetworkSpawn()
@@ -109,8 +111,9 @@ public class PlayerAvatar : NetworkBehaviour
         var keyboard = Keyboard.current;
         bool acceptInput = keyboard != null && !ChatSystem.IsTyping;
 
-        Vector2 input = MobileInput.Move;
-        if (acceptInput)
+        // A cast line pins you in place: reel in first, which any click does.
+        Vector2 input = fishing != null && fishing.Casting ? Vector2.zero : MobileInput.Move;
+        if (acceptInput && (fishing == null || !fishing.Casting))
         {
             if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) input.y += 1f;
             if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed) input.y -= 1f;
@@ -210,22 +213,25 @@ public class PlayerAvatar : NetworkBehaviour
         {
             alignment = TextAnchor.MiddleCenter,
             fontStyle = FontStyle.Bold,
+
+            // Never measured, never clipped: a cached style and the font it ends up drawn
+            // with do not always agree on how wide a name is.
+            clipping = TextClipping.Overflow,
         };
 
-        var content = new GUIContent(Nickname.Value.ToString());
-        Vector2 size = nameTagStyle.CalcSize(content);
-        var rect = new Rect(screenPoint.x - size.x * 0.5f, MetaverseUi.Height - screenPoint.y - size.y, size.x, size.y);
+        var rect = new Rect(screenPoint.x - 100f, MetaverseUi.Height - screenPoint.y - 20f, 200f, 20f);
+        float barTop = rect.yMax;
 
         Color previous = GUI.color;
         GUI.color = IsOwner ? new Color(1f, 0.92f, 0.4f) : Color.white;
-        GUI.Label(rect, content, nameTagStyle);
+        GUI.Label(rect, Nickname.Value.ToString(), nameTagStyle);
         GUI.color = previous;
 
         var stats = GetComponent<PlayerStats>();
         if (stats != null && stats.MaxHp > 0)
         {
             const float barWidth = 70f;
-            MetaverseUi.Bar(new Rect(screenPoint.x - barWidth * 0.5f, rect.yMax, barWidth, 5f),
+            MetaverseUi.Bar(new Rect(screenPoint.x - barWidth * 0.5f, barTop, barWidth, 5f),
                 stats.Hp.Value / (float)stats.MaxHp, new Color(0.35f, 0.80f, 0.40f, 0.95f));
         }
     }
