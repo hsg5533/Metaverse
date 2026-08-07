@@ -95,7 +95,7 @@ public class PlayerStats : NetworkBehaviour
         }
 
         var keyboard = Keyboard.current;
-        if (keyboard != null && keyboard.pKey.wasPressedThisFrame)
+        if ((keyboard != null && keyboard.pKey.wasPressedThisFrame) || MobileInput.Pressed(Key.P))
         {
             WindowOpen = !WindowOpen;
         }
@@ -289,7 +289,7 @@ public class PlayerStats : NetworkBehaviour
     void DrawHealthBar()
     {
         const float width = 260f;
-        var rect = new Rect(Screen.width * 0.5f - width * 0.5f, Screen.height - 46f, width, 20f);
+        var rect = new Rect(MetaverseUi.Width * 0.5f - width * 0.5f, MetaverseUi.Height - 46f, width, 20f);
 
         MetaverseUi.Bar(rect, Hp.Value / (float)MaxHp, new Color(0.80f, 0.24f, 0.24f, 0.95f));
         GUI.Label(rect, $"<b>{Hp.Value} / {MaxHp}</b>", MetaverseUi.Centered);
@@ -317,7 +317,7 @@ public class PlayerStats : NetworkBehaviour
             return;
         }
 
-        GUILayout.BeginArea(new Rect(Screen.width - 250, 10, 240, 220), GUI.skin.box);
+        GUILayout.BeginArea(new Rect(MetaverseUi.Width - 250, 10, 240, 220), GUI.skin.box);
         GUILayout.Label($"<b>Lv.{Level.Value}</b>  {Nickname()}   [P] 닫기", MetaverseUi.Rich);
         GUILayout.Label($"체력    {Hp.Value} / {MaxHp}{(InVillage && Hp.Value < MaxHp ? "  (휴식 중)" : "")}");
         GUILayout.Label($"경험치  {Exp.Value} / {ExpToNextLevel}");

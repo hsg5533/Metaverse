@@ -118,7 +118,7 @@ public class WarpPad : MonoBehaviour
         const float rowHeight = 44f;
 
         float height = 76f + Choices.Length * rowHeight;
-        var window = new Rect(Screen.width * 0.5f - width * 0.5f, Screen.height * 0.5f - height * 0.5f, width, height);
+        var window = new Rect(MetaverseUi.Width * 0.5f - width * 0.5f, MetaverseUi.Height * 0.5f - height * 0.5f, width, height);
 
         GUI.Box(window, "");
         GUI.Label(new Rect(window.x + 12f, window.y + 8f, width - 24f, 22f), $"<b>{Label}</b>", MetaverseUi.Rich);

@@ -79,11 +79,11 @@ public class DuelSystem : NetworkBehaviour
             return;
         }
 
-        if (keyboard.gKey.wasPressedThisFrame && !inDuel)
+        if ((keyboard.gKey.wasPressedThisFrame || MobileInput.Pressed(Key.G)) && !inDuel)
         {
             ChallengeRpc();
         }
-        else if (keyboard.hKey.wasPressedThisFrame && inviteFrom.Length > 0)
+        else if ((keyboard.hKey.wasPressedThisFrame || MobileInput.Pressed(Key.H)) && inviteFrom.Length > 0)
         {
             AcceptRpc(inviteFromId);
             inviteFrom = "";
@@ -381,13 +381,13 @@ public class DuelSystem : NetworkBehaviour
                 ? $"준비...  {Mathf.CeilToInt(localStartTime - Time.time)}"
                 : $"결투 vs {opponentName}   {Mathf.FloorToInt(remaining / 60f)}:{Mathf.FloorToInt(remaining % 60f):00}";
 
-            GUI.Box(new Rect(Screen.width * 0.5f - 140f, 34f, 280f, 26f), headline);
+            GUI.Box(new Rect(MetaverseUi.Width * 0.5f - 140f, 34f, 280f, 26f), headline);
             return;
         }
 
         if (inviteFrom.Length > 0 && Time.time < inviteExpiry)
         {
-            GUI.Box(new Rect(Screen.width * 0.5f - 150f, 34f, 300f, 26f), $"{inviteFrom}님이 결투를 신청했습니다  -  [H] 수락");
+            GUI.Box(new Rect(MetaverseUi.Width * 0.5f - 150f, 34f, 300f, 26f), $"{inviteFrom}님이 결투를 신청했습니다  -  [H] 수락");
             return;
         }
 
@@ -396,7 +396,7 @@ public class DuelSystem : NetworkBehaviour
         flat.y = 0f;
         if (flat.magnitude <= ArenaRadius)
         {
-            GUI.Box(new Rect(Screen.width * 0.5f - 130f, 34f, 260f, 26f), "[G] 가장 가까운 상대에게 결투 신청");
+            GUI.Box(new Rect(MetaverseUi.Width * 0.5f - 130f, 34f, 260f, 26f), "[G] 가장 가까운 상대에게 결투 신청");
         }
     }
 }

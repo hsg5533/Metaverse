@@ -22,9 +22,18 @@ public static class GameSound
 
     static readonly AudioClip[] Clips = new AudioClip[11];
 
+    /// <summary>Beyond this a sound is inaudible anyway, and playing it still costs an object.</summary>
+    const float Earshot = 35f;
+
     /// <summary>Plays out in the world, so distance and direction do the rest.</summary>
     public static void Play(int sound, Vector3 position)
     {
+        var listener = Camera.main;
+        if (listener != null && Vector3.Distance(listener.transform.position, position) > Earshot)
+        {
+            return;
+        }
+
         var clip = Clip(sound);
         if (clip != null)
         {

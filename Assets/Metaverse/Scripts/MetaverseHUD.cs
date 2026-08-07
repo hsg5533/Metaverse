@@ -33,6 +33,29 @@ public class MetaverseHUD : MonoBehaviour
         ("Esc", "창 닫기 · 게임 종료"),
     };
 
+    /// <summary>
+    /// What the gear opens on a touch screen: the same shortcuts as buttons. A list of key
+    /// hints is useless without a keyboard, so on a phone it becomes the menu.
+    /// </summary>
+    static readonly (string What, Key Key)[] TouchActions =
+    {
+        ("인벤토리", Key.I),
+        ("캐릭터 정보", Key.P),
+        ("파티 초대", Key.O),
+        ("파티 수락", Key.U),
+        ("파티 나가기", Key.L),
+        ("거래 신청", Key.T),
+        ("거래 수락", Key.Y),
+        ("결투 신청", Key.G),
+        ("결투 수락", Key.H),
+        ("인사", Key.Z),
+        ("춤", Key.X),
+        ("앉기", Key.C),
+    };
+
+    /// <summary>True while the gear panel is up, so the touch controls under it stay quiet.</summary>
+    public static bool MenuOpen;
+
     bool helpOpen;
 
     string address = "127.0.0.1";
@@ -41,6 +64,8 @@ public class MetaverseHUD : MonoBehaviour
 
     void Awake()
     {
+        // Statics outlive a play session when domain reload is off.
+        MenuOpen = false;
         LocalNickname = "Player" + Random.Range(100, 1000);
     }
 
@@ -162,29 +187,56 @@ public class MetaverseHUD : MonoBehaviour
     /// </summary>
     void DrawHelp()
     {
-        const float size = 44f;
-        var button = new Rect(Screen.width - size - 14f, Screen.height - size - 14f, size, size);
-        var panel = new Rect(Screen.width - 366f, Screen.height - 66f - Controls.Length * 20f - 26f, 352f, Controls.Length * 20f + 60f);
+        bool touch = MobileInput.Active;
 
+        // On a phone the gear sits top right: the bottom right corner is all thumb.
+        float size = touch ? 60f : 44f;
+        int rows = touch ? (TouchActions.Length + 1) / 2 : Controls.Length;
+        float rowHeight = touch ? 40f : 20f;
+
+        var button = touch
+            ? new Rect(MetaverseUi.Width - size - 14f, 14f, size, size)
+            : new Rect(MetaverseUi.Width - size - 14f, MetaverseUi.Height - size - 14f, size, size);
+
+        float panelHeight = rows * rowHeight + 36f;
+        var panel = touch
+            ? new Rect(MetaverseUi.Width - 366f, button.yMax + 8f, 352f, panelHeight)
+            : new Rect(MetaverseUi.Width - 366f, MetaverseUi.Height - 66f - panelHeight, 352f, panelHeight);
+
+        // Only meaningful for a mouse: it stops a click on the gear from also swinging the
+        // sword. A touch leaves its last position behind after the finger lifts, which would
+        // latch this on for good, and on a phone the attack comes from its own button anyway.
         Vector2 pointer = Event.current.mousePosition;
-        PointerOverHud = button.Contains(pointer) || (helpOpen && panel.Contains(pointer));
+        PointerOverHud = !MobileInput.Active
+            && (button.Contains(pointer) || (helpOpen && panel.Contains(pointer)));
 
         if (helpOpen)
         {
             GUI.Box(panel, "");
-            GUI.Label(new Rect(panel.x + 10f, panel.y + 6f, panel.width, 20f), "<b>조작</b>", MetaverseUi.Rich);
+            GUI.Label(new Rect(panel.x + 10f, panel.y + 6f, panel.width, 20f), touch ? "<b>메뉴</b>" : "<b>조작</b>", MetaverseUi.Rich);
 
-            for (int i = 0; i < Controls.Length; i++)
+            if (touch)
             {
-                float y = panel.y + 28f + i * 20f;
-                GUI.Label(new Rect(panel.x + 12f, y, 110f, 20f), Controls[i].Keys);
-                GUI.Label(new Rect(panel.x + 128f, y, panel.width - 140f, 20f), Controls[i].What);
+                // Two columns of buttons, each pressing the key it stands for.
+                for (int i = 0; i < TouchActions.Length; i++)
+                {
+                    var cell = new Rect(panel.x + 12f + (i % 2) * 168f, panel.y + 28f + (i / 2) * rowHeight, 160f, rowHeight - 6f);
+                    if (GUI.Button(cell, TouchActions[i].What))
+                    {
+                        MobileInput.Press(TouchActions[i].Key);
+                        helpOpen = false;
+                    }
+                }
             }
-
-            float sliderY = panel.y + 34f + Controls.Length * 20f;
-            GUI.Label(new Rect(panel.x + 12f, sliderY - 4f, 110f, 20f), "소리");
-            AudioListener.volume = GUI.HorizontalSlider(
-                new Rect(panel.x + 128f, sliderY, panel.width - 150f, 20f), AudioListener.volume, 0f, 1f);
+            else
+            {
+                for (int i = 0; i < Controls.Length; i++)
+                {
+                    float y = panel.y + 28f + i * 20f;
+                    GUI.Label(new Rect(panel.x + 12f, y, 110f, 20f), Controls[i].Keys);
+                    GUI.Label(new Rect(panel.x + 128f, y, panel.width - 140f, 20f), Controls[i].What);
+                }
+            }
         }
 
         if (GUI.Button(button, GUIContent.none))
@@ -192,46 +244,38 @@ public class MetaverseHUD : MonoBehaviour
             helpOpen = !helpOpen;
         }
 
+        MenuOpen = helpOpen;
+
         DrawGear(button.center, size * 0.32f, helpOpen ? new Color(1f, 0.92f, 0.4f) : Color.white);
     }
 
+    /// <summary>
+    /// Eight teeth around a body, placed with sin and cos. Not by turning the GUI matrix:
+    /// that matrix already carries the interface scale, and rotating it there sends the
+    /// pieces flying across the screen.
+    /// </summary>
     static void DrawGear(Vector2 centre, float radius, Color colour)
     {
-        Color previousColour = GUI.color;
-        Matrix4x4 previousMatrix = GUI.matrix;
+        Color previous = GUI.color;
         GUI.color = colour;
 
-        // Eight teeth around the rim.
+        float tooth = radius * 0.34f;
         for (int i = 0; i < 8; i++)
         {
-            GUI.DrawTexture(new Rect(centre.x - 2.5f, centre.y - radius - 5f, 5f, 7f), Texture2D.whiteTexture);
-            GUIUtility.RotateAroundPivot(45f, centre);
+            float angle = i * 45f * Mathf.Deg2Rad;
+            GUI.DrawTexture(new Rect(
+                centre.x + Mathf.Cos(angle) * radius * 1.15f - tooth * 0.5f,
+                centre.y + Mathf.Sin(angle) * radius * 1.15f - tooth * 0.5f,
+                tooth, tooth), Texture2D.whiteTexture);
         }
 
-        GUI.matrix = previousMatrix;
+        GUI.DrawTexture(new Rect(centre.x - radius, centre.y - radius, radius * 2f, radius * 2f), Texture2D.whiteTexture);
 
-        // Body: a square plus a turned square makes a passable disc at this size.
-        DrawOctagon(centre, radius, colour);
-        DrawOctagon(centre, radius * 0.42f, new Color(0.16f, 0.16f, 0.18f));
+        GUI.color = new Color(0.16f, 0.16f, 0.18f);
+        float hole = radius * 0.42f;
+        GUI.DrawTexture(new Rect(centre.x - hole, centre.y - hole, hole * 2f, hole * 2f), Texture2D.whiteTexture);
 
-        GUI.color = previousColour;
-        GUI.matrix = previousMatrix;
-    }
-
-    static void DrawOctagon(Vector2 centre, float radius, Color colour)
-    {
-        Color previousColour = GUI.color;
-        Matrix4x4 previousMatrix = GUI.matrix;
-        GUI.color = colour;
-
-        for (int i = 0; i < 2; i++)
-        {
-            GUI.DrawTexture(new Rect(centre.x - radius, centre.y - radius, radius * 2f, radius * 2f), Texture2D.whiteTexture);
-            GUIUtility.RotateAroundPivot(45f, centre);
-        }
-
-        GUI.matrix = previousMatrix;
-        GUI.color = previousColour;
+        GUI.color = previous;
     }
 
     void DrawConnectMenu(NetworkManager manager)

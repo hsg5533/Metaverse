@@ -72,7 +72,7 @@ public class ShopNpc : MonoBehaviour
 
     void DrawShop(PlayerStats stats)
     {
-        var area = new Rect(Screen.width * 0.5f - 190f, Screen.height * 0.5f - 140f, 380f, 280f);
+        var area = new Rect(MetaverseUi.Width * 0.5f - 190f, MetaverseUi.Height * 0.5f - 140f, 380f, 280f);
         GUILayout.BeginArea(area, GUI.skin.box);
 
         GUILayout.Label($"<b>{ShopName}</b>", MetaverseUi.Rich);

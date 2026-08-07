@@ -109,7 +109,7 @@ public class PlayerAvatar : NetworkBehaviour
         var keyboard = Keyboard.current;
         bool acceptInput = keyboard != null && !ChatSystem.IsTyping;
 
-        Vector2 input = Vector2.zero;
+        Vector2 input = MobileInput.Move;
         if (acceptInput)
         {
             if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) input.y += 1f;
@@ -136,7 +136,7 @@ public class PlayerAvatar : NetworkBehaviour
             airborne = false;
             verticalVelocity = -2f;
 
-            if (acceptInput && keyboard.spaceKey.wasPressedThisFrame)
+            if ((acceptInput && keyboard.spaceKey.wasPressedThisFrame) || MobileInput.ConsumeJump())
             {
                 verticalVelocity = Mathf.Sqrt(-2f * Gravity * JumpHeight);
                 airborne = true;
@@ -200,7 +200,7 @@ public class PlayerAvatar : NetworkBehaviour
             return;
         }
 
-        Vector3 screenPoint = camera.WorldToScreenPoint(transform.position + Vector3.up * NameTagHeight);
+        Vector3 screenPoint = MetaverseUi.ScreenPoint(camera, transform.position + Vector3.up * NameTagHeight);
         if (screenPoint.z <= 0f)
         {
             return;
@@ -214,7 +214,7 @@ public class PlayerAvatar : NetworkBehaviour
 
         var content = new GUIContent(Nickname.Value.ToString());
         Vector2 size = nameTagStyle.CalcSize(content);
-        var rect = new Rect(screenPoint.x - size.x * 0.5f, Screen.height - screenPoint.y - size.y, size.x, size.y);
+        var rect = new Rect(screenPoint.x - size.x * 0.5f, MetaverseUi.Height - screenPoint.y - size.y, size.x, size.y);
 
         Color previous = GUI.color;
         GUI.color = IsOwner ? new Color(1f, 0.92f, 0.4f) : Color.white;
@@ -246,6 +246,9 @@ public class PlayerAvatar : NetworkBehaviour
         ApplyColor(current);
     }
 
+    static MaterialPropertyBlock colorBlock;
+    static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
+
     void ApplyColor(Color color)
     {
         if (ColoredParts == null)
@@ -253,11 +256,16 @@ public class PlayerAvatar : NetworkBehaviour
             return;
         }
 
+        // A property block instead of renderer.material, which would clone the material and
+        // take the part out of every batch it was in.
+        colorBlock ??= new MaterialPropertyBlock();
+        colorBlock.SetColor(BaseColor, color);
+
         foreach (var part in ColoredParts)
         {
             if (part != null)
             {
-                part.material.color = color;
+                part.SetPropertyBlock(colorBlock);
             }
         }
     }

@@ -164,6 +164,19 @@ public static class MetaverseSceneBuilder
         SetupCamera();
         SetupLight();
 
+        // Scenery never moves, so Unity is allowed to fold it into a handful of draw calls.
+        // Anything spawned or animated carries a NetworkObject and is left alone.
+        foreach (var root in scene.GetRootGameObjects())
+        {
+            foreach (var renderer in root.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                if (renderer.GetComponentInParent<NetworkObject>() == null)
+                {
+                    renderer.gameObject.isStatic = true;
+                }
+            }
+        }
+
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene, ScenePath);
 

@@ -70,7 +70,7 @@ public class PlayerBuffs : NetworkBehaviour
             return;
         }
 
-        GUILayout.BeginArea(new Rect(Screen.width - 250, 238, 240, 28), GUI.skin.box);
+        GUILayout.BeginArea(new Rect(MetaverseUi.Width - 250, 238, 240, 28), GUI.skin.box);
         GUILayout.Label($"{NameOf(Kind.Value)}   {Mathf.CeilToInt(Remaining)}초 남음");
         GUILayout.EndArea();
     }

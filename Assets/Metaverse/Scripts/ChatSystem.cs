@@ -74,10 +74,16 @@ public class ChatSystem : NetworkBehaviour
             Event.current.Use();
         }
 
-        var area = new Rect(10, Screen.height - 210, 380, 200);
+        // On a touch screen the log shrinks to three lines and sits centred just above the
+        // health bar: the bottom left is the stick and the bottom right is the buttons.
+        bool touch = MobileInput.Active;
+        float height = touch ? 112f : 200f;
+        var area = touch
+            ? new Rect(MetaverseUi.Width * 0.5f - 190f, MetaverseUi.Height - 54f - height, 380f, height)
+            : new Rect(10f, MetaverseUi.Height - 210f, 380f, height);
         GUILayout.BeginArea(area, GUI.skin.box);
 
-        scroll = GUILayout.BeginScrollView(scroll, GUILayout.Height(150));
+        scroll = GUILayout.BeginScrollView(scroll, GUILayout.Height(touch ? 62f : 150f));
         foreach (string line in lines)
         {
             GUILayout.Label(line, ChatLabel());

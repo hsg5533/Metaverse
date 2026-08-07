@@ -13,6 +13,9 @@ public class FollowCamera : MonoBehaviour
     public float FocusHeight = 1.5f;
     public float Sensitivity = 0.15f;
 
+    /// <summary>How much harder a finger drag turns the camera than a mouse drag.</summary>
+    public float TouchSensitivity = 3f;
+
     float yaw;
     float pitch = 15f;
 
@@ -46,6 +49,15 @@ public class FollowCamera : MonoBehaviour
             {
                 Distance = Mathf.Clamp(Distance - scroll * 0.01f, 2.5f, 14f);
             }
+        }
+
+        // A thumb travels a fraction of what a mouse does, and the drag arrives already
+        // divided by the interface scale, so it needs a good deal more per pixel.
+        Vector2 drag = MobileInput.Look * TouchSensitivity;
+        if (drag.sqrMagnitude > 0f)
+        {
+            yaw += drag.x * Sensitivity;
+            pitch = Mathf.Clamp(pitch - drag.y * Sensitivity, -20f, 70f);
         }
 
         Quaternion rotation = Quaternion.Euler(pitch, yaw, 0f);

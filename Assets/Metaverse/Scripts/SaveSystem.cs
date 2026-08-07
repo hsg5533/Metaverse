@@ -62,11 +62,18 @@ public class SaveSystem : MonoBehaviour
     /// The project folder in the editor, and the folder holding the executable in a build:
     /// both are the parent of Application.dataPath. Keeping the save here means it sits next
     /// to the game instead of hiding under AppData.
+    /// A phone has no such folder - the app is installed read-only - so it uses the one place
+    /// the system does let it write.
     /// </summary>
     static string RootFolder
     {
         get
         {
+            if (Application.isMobilePlatform)
+            {
+                return Application.persistentDataPath;
+            }
+
             var parent = Directory.GetParent(Application.dataPath);
             return parent != null ? parent.FullName : Application.persistentDataPath;
         }

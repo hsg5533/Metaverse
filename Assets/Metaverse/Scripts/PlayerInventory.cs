@@ -184,7 +184,7 @@ public class PlayerInventory : NetworkBehaviour
         }
 
         // The bag cannot be opened on top of a shop, and Escape always closes it.
-        if (keyboard.iKey.wasPressedThisFrame && (WindowOpen || !ShopNpc.PanelOpen))
+        if ((keyboard.iKey.wasPressedThisFrame || MobileInput.Pressed(Key.I)) && (WindowOpen || !ShopNpc.PanelOpen))
         {
             SetWindow(!WindowOpen);
         }
@@ -228,7 +228,7 @@ public class PlayerInventory : NetworkBehaviour
         float gridWidth = columns * (slotSize + padding) + padding;
         float width = gearWidth + gridWidth;
         float height = Mathf.Max(rows * (slotSize + padding) + padding + 96f, 300f);
-        var window = new Rect(Screen.width * 0.5f - width * 0.5f, Screen.height * 0.5f - height * 0.5f, width, height);
+        var window = new Rect(MetaverseUi.Width * 0.5f - width * 0.5f, MetaverseUi.Height * 0.5f - height * 0.5f, width, height);
 
         GUI.Box(window, "");
         GUI.Label(new Rect(window.x + padding, window.y + 6f, width, 22f), "<b>인벤토리</b>   [I] 닫기", MetaverseUi.Rich);

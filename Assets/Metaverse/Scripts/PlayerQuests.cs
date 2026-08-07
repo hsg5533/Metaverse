@@ -143,7 +143,7 @@ public class PlayerQuests : NetworkBehaviour
         }
 
         var quest = Board[Quest.Value];
-        GUILayout.BeginArea(new Rect(Screen.width - 250, 270, 240, 28), GUI.skin.box);
+        GUILayout.BeginArea(new Rect(MetaverseUi.Width - 250, 270, 240, 28), GUI.skin.box);
         GUILayout.Label($"{quest.Text}  {Progress.Value}/{quest.Target}");
         GUILayout.EndArea();
     }

@@ -54,11 +54,11 @@ public class TradeSystem : NetworkBehaviour
             return;
         }
 
-        if (keyboard.tKey.wasPressedThisFrame && !open)
+        if ((keyboard.tKey.wasPressedThisFrame || MobileInput.Pressed(Key.T)) && !open)
         {
             RequestNearestRpc();
         }
-        else if (keyboard.yKey.wasPressedThisFrame && inviteFrom.Length > 0)
+        else if ((keyboard.yKey.wasPressedThisFrame || MobileInput.Pressed(Key.Y)) && inviteFrom.Length > 0)
         {
             AcceptRpc(inviteFromId);
             inviteFrom = "";
@@ -353,13 +353,13 @@ public class TradeSystem : NetworkBehaviour
         {
             if (inviteFrom.Length > 0 && Time.time < inviteExpiry)
             {
-                var box = new Rect(Screen.width * 0.5f - 140f, 90f, 280f, 26f);
+                var box = new Rect(MetaverseUi.Width * 0.5f - 140f, 90f, 280f, 26f);
                 GUI.Box(box, $"{inviteFrom}님이 거래를 신청했습니다  —  [Y] 수락");
             }
             return;
         }
 
-        var area = new Rect(Screen.width * 0.5f - 200f, Screen.height * 0.5f - 130f, 400f, 260f);
+        var area = new Rect(MetaverseUi.Width * 0.5f - 200f, MetaverseUi.Height * 0.5f - 130f, 400f, 260f);
         GUILayout.BeginArea(area, GUI.skin.box);
 
         GUILayout.Label($"<b>{partnerName}님과 거래 중</b>", MetaverseUi.Rich);

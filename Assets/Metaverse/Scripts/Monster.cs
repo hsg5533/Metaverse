@@ -740,6 +740,7 @@ public class Monster : NetworkBehaviour
 
     void Update()
     {
+        TrimBodies();
         SyncVisuals();
         UpdateHitFlash();
         UpdateAttackMotion();
@@ -887,6 +888,39 @@ public class Monster : NetworkBehaviour
         return position;
     }
 
+    bool bodiesTrimmed;
+
+    /// <summary>
+    /// The prefab holds every body so one network prefab covers every creature, which leaves
+    /// a spawned monster carrying eleven it will never show - about 240 objects of dead
+    /// weight each, and there are fifty of them.
+    /// The shape is decided once, in Configure, and never changes after; waiting a frame lets
+    /// that value arrive on the clients too.
+    /// </summary>
+    void TrimBodies()
+    {
+        if (bodiesTrimmed || Bodies == null || !IsSpawned)
+        {
+            return;
+        }
+
+        bodiesTrimmed = true;
+
+        for (int i = 0; i < Bodies.Length; i++)
+        {
+            if (i != Shape.Value && Bodies[i] != null)
+            {
+                Destroy(Bodies[i]);
+            }
+        }
+
+        // Only the body that stayed. Collecting the whole hierarchy again would pick the
+        // doomed ones straight back up: Destroy does not take effect until the end of the
+        // frame, and from the next frame those references throw when touched.
+        Transform body = ActiveBody();
+        renderers = body != null ? body.GetComponentsInChildren<Renderer>(true) : System.Array.Empty<Renderer>();
+    }
+
     void SyncVisuals()
     {
         bool alive = IsAlive;
@@ -898,11 +932,18 @@ public class Monster : NetworkBehaviour
         visualsAlive = alive;
         foreach (var renderer in renderers)
         {
-            renderer.enabled = alive;
+            if (renderer != null)
+            {
+                renderer.enabled = alive;
+            }
         }
+
         foreach (var collider in colliders)
         {
-            collider.enabled = alive;
+            if (collider != null)
+            {
+                collider.enabled = alive;
+            }
         }
     }
 
@@ -956,11 +997,22 @@ public class Monster : NetworkBehaviour
     /// <summary>Parts named like this keep their own colour: eyes, tusks, horns, claws.</summary>
     static readonly string[] UntintedParts = { "Eye", "Tusk", "Horn", "Claw", "Detail", "Ring" };
 
+    static MaterialPropertyBlock tintBlock;
+    static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
+
+    /// <summary>
+    /// Through a property block rather than renderer.material: touching that clones the
+    /// material, and a cloned material batches with nothing. Fifty monsters of fifteen parts
+    /// each is fifty times fifteen draw calls the phone did not need.
+    /// </summary>
     void ApplyTint(Color color)
     {
+        tintBlock ??= new MaterialPropertyBlock();
+        tintBlock.SetColor(BaseColor, color);
+
         foreach (var renderer in tintTargets)
         {
-            renderer.material.color = color;
+            renderer.SetPropertyBlock(tintBlock);
         }
     }
 
@@ -1009,13 +1061,20 @@ public class Monster : NetworkBehaviour
             return;
         }
 
+        // Off screen there is nothing to label, and this runs for every monster in the world
+        // twice a frame.
+        if (tintTargets.Length == 0 || !tintTargets[0].isVisible)
+        {
+            return;
+        }
+
         var camera = Camera.main;
         if (camera == null || Vector3.Distance(camera.transform.position, transform.position) > 40f)
         {
             return;
         }
 
-        Vector3 screenPoint = camera.WorldToScreenPoint(transform.position + Vector3.up * NameTagHeight);
+        Vector3 screenPoint = MetaverseUi.ScreenPoint(camera, transform.position + Vector3.up * NameTagHeight);
         if (screenPoint.z <= 0f)
         {
             return;
@@ -1027,7 +1086,7 @@ public class Monster : NetworkBehaviour
         };
 
         float x = screenPoint.x;
-        float y = Screen.height - screenPoint.y;
+        float y = MetaverseUi.Height - screenPoint.y;
 
         var label = new GUIContent($"{MonsterName.Value} Lv.{Level.Value}");
         Vector2 size = nameTagStyle.CalcSize(label);

@@ -54,16 +54,16 @@ public class PartySystem : NetworkBehaviour
             return;
         }
 
-        if (keyboard.oKey.wasPressedThisFrame)
+        if (keyboard.oKey.wasPressedThisFrame || MobileInput.Pressed(Key.O))
         {
             InviteRpc();
         }
-        else if (keyboard.uKey.wasPressedThisFrame && inviteFrom.Length > 0)
+        else if ((keyboard.uKey.wasPressedThisFrame || MobileInput.Pressed(Key.U)) && inviteFrom.Length > 0)
         {
             AcceptRpc(inviteFromId);
             inviteFrom = "";
         }
-        else if (keyboard.lKey.wasPressedThisFrame && members.Length > 0)
+        else if ((keyboard.lKey.wasPressedThisFrame || MobileInput.Pressed(Key.L)) && members.Length > 0)
         {
             LeaveRpc();
         }
@@ -302,7 +302,7 @@ public class PartySystem : NetworkBehaviour
 
         if (inviteFrom.Length > 0 && Time.time < inviteExpiry && members.Length == 0)
         {
-            GUI.Box(new Rect(Screen.width * 0.5f - 150f, 66f, 300f, 26f), $"{inviteFrom}님의 파티 초대  -  [U] 수락");
+            GUI.Box(new Rect(MetaverseUi.Width * 0.5f - 150f, 66f, 300f, 26f), $"{inviteFrom}님의 파티 초대  -  [U] 수락");
         }
 
         if (members.Length == 0)

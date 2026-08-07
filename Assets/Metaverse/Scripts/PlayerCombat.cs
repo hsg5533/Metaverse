@@ -31,12 +31,14 @@ public class PlayerCombat : NetworkBehaviour
         }
 
         var mouse = Mouse.current;
-        if (mouse == null || !mouse.leftButton.wasPressedThisFrame || Time.time < nextAttackTime)
+        bool pressed = (mouse != null && mouse.leftButton.wasPressedThisFrame) || MobileInput.ConsumeAttack();
+        if (!pressed || Time.time < nextAttackTime)
         {
             return;
         }
 
         nextAttackTime = Time.time + Cooldown;
+        GetComponent<PlayerEmotes>()?.Stop();
         PlaySwing();
         AttackRpc();
     }
