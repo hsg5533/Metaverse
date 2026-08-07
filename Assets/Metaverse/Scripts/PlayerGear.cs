@@ -64,10 +64,7 @@ public class PlayerGear : NetworkBehaviour
     }
 
     /// <summary>What the shop pays for a piece: worth about two levels of the upgrade it saves.</summary>
-    public static int PriceOf(int piece)
-    {
-        return Valid(piece) ? Pieces[piece].Bonus * 12 : 0;
-    }
+    public static int PriceOf(int piece) => Pieces[piece].Bonus * 12;
 
     /// <summary>Which piece a saved name refers to, or -1 when it is not gear.</summary>
     public static int IndexOf(string name)

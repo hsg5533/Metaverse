@@ -46,8 +46,9 @@ public class ShopNpc : MonoBehaviour
     {
         sellScroll = GUILayout.BeginScrollView(sellScroll, GUILayout.Height(120f));
 
+        // The player prefab always carries all three; the builder adds them together.
         var inventory = stats.GetComponent<PlayerInventory>();
-        for (int i = 0; inventory != null && i < PlayerInventory.Slots.Length; i++)
+        for (int i = 0; i < PlayerInventory.Slots.Length; i++)
         {
             int count = inventory.CountOf(i);
             if (count > 0 && GUILayout.Button($"{PlayerInventory.Slots[i]} {count}개  →  {count * PlayerInventory.MaterialPrices[i]} 골드"))
@@ -57,7 +58,7 @@ public class ShopNpc : MonoBehaviour
         }
 
         var gear = stats.GetComponent<PlayerGear>();
-        for (int i = 0; gear != null && i < gear.Bag.Count; i++)
+        for (int i = 0; i < gear.Bag.Count; i++)
         {
             int piece = gear.Bag[i];
             if (GUILayout.Button($"{PlayerGear.Pieces[piece].Name}  →  {PlayerGear.PriceOf(piece)} 골드"))

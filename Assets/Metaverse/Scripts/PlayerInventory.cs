@@ -166,9 +166,10 @@ public class PlayerInventory : NetworkBehaviour
             return;
         }
 
-        Spend(material == 0 ? count : 0, material == 1 ? count : 0, material == 2 ? count : 0);
-        stats.Gold.Value += count * MaterialPrices[material];
-        NoticeRpc(NetText.Trim512($"{Slots[material]} {count}개를 {count * MaterialPrices[material]} 골드에 팔았습니다."));
+        int paid = count * MaterialPrices[material];
+        SetAll(material == 0 ? 0 : Ore.Value, material == 1 ? 0 : Herb.Value, material == 2 ? 0 : Wood.Value);
+        stats.Gold.Value += paid;
+        NoticeRpc(NetText.Trim512($"{Slots[material]} {count}개를 {paid} 골드에 팔았습니다."));
     }
 
     /// <summary>Server side: used by the save file.</summary>

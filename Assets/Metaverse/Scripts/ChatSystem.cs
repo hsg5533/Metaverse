@@ -76,15 +76,10 @@ public class ChatSystem : NetworkBehaviour
 
         // A window on top would be clicked through: the field underneath still takes the
         // touch and the soft keyboard comes up over a shop nobody asked to leave.
-        bool covered = ShopNpc.PanelOpen || PlayerInventory.WindowOpen || MetaverseHUD.MenuOpen;
-        if (covered)
+        if (ShopNpc.PanelOpen || PlayerInventory.WindowOpen || MetaverseHUD.MenuOpen)
         {
             IsTyping = false;
-            if (focused)
-            {
-                GUI.FocusControl(null);
-            }
-
+            GUI.FocusControl(null);
             return;
         }
 
@@ -117,17 +112,16 @@ public class ChatSystem : NetworkBehaviour
 
         GUILayout.EndArea();
 
-        if (sent)
+        if (sent || (enterPressed && focused))
         {
             Submit();
             GUI.FocusControl(null);
             IsTyping = false;
-        }
 
-        if (enterPressed && focused)
-        {
-            Submit();
-            Event.current.Use();
+            if (enterPressed)
+            {
+                Event.current.Use();
+            }
         }
     }
 
