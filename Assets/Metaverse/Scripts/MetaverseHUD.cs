@@ -24,11 +24,10 @@ public class MetaverseHUD : MonoBehaviour
         ("E", "상점 · 모루 · 모닥불 · 게시판 · 채집 · 워프"),
         ("P", "캐릭터 정보"),
         ("I", "인벤토리"),
-        ("T / Y", "거래 신청 / 수락"),
         ("G / H", "아레나 결투 신청 / 수락"),
         ("O / U / L", "파티 초대 / 수락 / 나가기"),
         ("Z X C", "인사 · 춤 · 앉기"),
-        ("우클릭 드래그", "시점 회전, 휠 확대"),
+        ("우클릭 드래그", "시점 회전"),
         ("Enter", "채팅"),
         ("Esc", "창 닫기 · 게임 종료"),
     };
@@ -44,8 +43,6 @@ public class MetaverseHUD : MonoBehaviour
         ("파티 초대", Key.O),
         ("파티 수락", Key.U),
         ("파티 나가기", Key.L),
-        ("거래 신청", Key.T),
-        ("거래 수락", Key.Y),
         ("결투 신청", Key.G),
         ("결투 수락", Key.H),
         ("인사", Key.Z),
@@ -177,6 +174,11 @@ public class MetaverseHUD : MonoBehaviour
             DrawConnectMenu(manager);
         }
         GUILayout.EndArea();
+
+        // One pass for every monster in the world; they used to each own an OnGUI.
+        GUI.depth = MetaverseUi.WorldDepth;
+        Monster.DrawTags();
+        GUI.depth = 0;
 
         DrawHelp();
     }

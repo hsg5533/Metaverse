@@ -38,8 +38,6 @@ public class PlayerGear : NetworkBehaviour
         new("용암 갑옷", false, 16, 2),
     };
 
-    public const int BagSize = 12;
-
     /// <summary>The bare sword first, then one weapon per theme.</summary>
     public GameObject[] WeaponModels;
 
@@ -63,6 +61,12 @@ public class PlayerGear : NetworkBehaviour
     public static string NameOf(int piece)
     {
         return Valid(piece) ? Pieces[piece].Name : "";
+    }
+
+    /// <summary>What the shop pays for a piece: worth about two levels of the upgrade it saves.</summary>
+    public static int PriceOf(int piece)
+    {
+        return Valid(piece) ? Pieces[piece].Bonus * 12 : 0;
     }
 
     /// <summary>Which piece a saved name refers to, or -1 when it is not gear.</summary>
@@ -111,12 +115,7 @@ public class PlayerGear : NetworkBehaviour
             return;
         }
 
-        if (Bag.Count >= BagSize)
-        {
-            NoticeRpc(NetText.Trim512("가방이 가득 찼습니다."));
-            return;
-        }
-
+        // ponytail: no cap. The bag scrolls, and a runaway could only come from a bug.
         Bag.Add(piece);
         NoticeRpc(NetText.Trim512($"{Pieces[piece].Name}을(를) 획득했습니다."));
     }
@@ -137,7 +136,7 @@ public class PlayerGear : NetworkBehaviour
         {
             foreach (int piece in bag)
             {
-                if (Valid(piece) && Bag.Count < BagSize)
+                if (Valid(piece))
                 {
                     Bag.Add(piece);
                 }
@@ -177,14 +176,29 @@ public class PlayerGear : NetworkBehaviour
             return;
         }
 
-        if (Bag.Count >= BagSize)
+        Bag.Add(slot.Value);
+        slot.Value = -1;
+    }
+
+    /// <summary>Sell a bag item to the shopkeeper. Worn gear has to come off first.</summary>
+    [Rpc(SendTo.Server)]
+    public void SellRpc(int bagIndex, RpcParams rpcParams = default)
+    {
+        if (rpcParams.Receive.SenderClientId != OwnerClientId || bagIndex < 0 || bagIndex >= Bag.Count)
         {
-            NoticeRpc(NetText.Trim512("가방이 가득 찼습니다."));
             return;
         }
 
-        Bag.Add(slot.Value);
-        slot.Value = -1;
+        int piece = Bag[bagIndex];
+        Bag.RemoveAt(bagIndex);
+
+        var stats = GetComponent<PlayerStats>();
+        if (stats != null)
+        {
+            stats.Gold.Value += PriceOf(piece);
+        }
+
+        NoticeRpc(NetText.Trim512($"{Pieces[piece].Name}을(를) {PriceOf(piece)} 골드에 팔았습니다."));
     }
 
     [Rpc(SendTo.Owner)]

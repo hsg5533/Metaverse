@@ -35,20 +35,11 @@ public class FollowCamera : MonoBehaviour
         }
 
         var mouse = Mouse.current;
-        if (mouse != null)
+        if (mouse != null && mouse.rightButton.isPressed)
         {
-            if (mouse.rightButton.isPressed)
-            {
-                Vector2 delta = mouse.delta.ReadValue();
-                yaw += delta.x * Sensitivity;
-                pitch = Mathf.Clamp(pitch - delta.y * Sensitivity, -20f, 70f);
-            }
-
-            float scroll = mouse.scroll.ReadValue().y;
-            if (Mathf.Abs(scroll) > 0.01f)
-            {
-                Distance = Mathf.Clamp(Distance - scroll * 0.01f, 2.5f, 14f);
-            }
+            Vector2 delta = mouse.delta.ReadValue();
+            yaw += delta.x * Sensitivity;
+            pitch = Mathf.Clamp(pitch - delta.y * Sensitivity, -20f, 70f);
         }
 
         // A thumb travels a fraction of what a mouse does, and the drag arrives already

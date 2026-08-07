@@ -1779,10 +1779,6 @@ public static class MetaverseSceneBuilder
         chatObject.AddComponent<NetworkObject>();
         chatObject.AddComponent<ChatSystem>();
 
-        var tradeObject = new GameObject("TradeSystem");
-        tradeObject.AddComponent<NetworkObject>();
-        tradeObject.AddComponent<TradeSystem>();
-
         var partyObject = new GameObject("PartySystem");
         partyObject.AddComponent<NetworkObject>();
         partyObject.AddComponent<PartySystem>();
@@ -1893,6 +1889,10 @@ public static class MetaverseSceneBuilder
 
         material.shader = shader;
         material.color = color;
+
+        // Monsters and players are painted through property blocks, which only batch when the
+        // material allows instancing.
+        material.enableInstancing = true;
         if (material.HasProperty("_BaseColor"))
         {
             material.SetColor("_BaseColor", color);

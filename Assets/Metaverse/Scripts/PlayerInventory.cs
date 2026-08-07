@@ -57,6 +57,7 @@ public class PlayerInventory : NetworkBehaviour
     /// <summary>Which material stacks are actually carried, so empty ones take no slot.</summary>
     readonly int[] heldMaterials = new int[3];
     int heldCount;
+    Vector2 bagScroll;
 
     void Awake()
     {
@@ -147,7 +148,30 @@ public class PlayerInventory : NetworkBehaviour
         ChatSystem.Local(text.ToString());
     }
 
-    /// <summary>Server side: used by the save file and by trading.</summary>
+    /// <summary>What the shop pays for one of each material, in Slots order.</summary>
+    public static readonly int[] MaterialPrices = { 12, 8, 6 };
+
+    /// <summary>Sell one stack to the shopkeeper.</summary>
+    [Rpc(SendTo.Server)]
+    public void SellRpc(int material, RpcParams rpcParams = default)
+    {
+        if (rpcParams.Receive.SenderClientId != OwnerClientId || material < 0 || material >= Slots.Length)
+        {
+            return;
+        }
+
+        int count = CountOf(material);
+        if (count <= 0)
+        {
+            return;
+        }
+
+        Spend(material == 0 ? count : 0, material == 1 ? count : 0, material == 2 ? count : 0);
+        stats.Gold.Value += count * MaterialPrices[material];
+        NoticeRpc(NetText.Trim512($"{Slots[material]} {count}개를 {count * MaterialPrices[material]} 골드에 팔았습니다."));
+    }
+
+    /// <summary>Server side: used by the save file.</summary>
     public void SetAll(int ore, int herb, int wood)
     {
         if (!IsServer)
@@ -252,22 +276,26 @@ public class PlayerInventory : NetworkBehaviour
             }
         }
 
-        float gridLeft = window.x + gearWidth;
-        for (int row = 0; row < rows; row++)
+        // Three rows are on show and the rest is scrolled to: the bag itself has no limit.
+        int carried = heldCount + (gear != null ? gear.Bag.Count : 0);
+        int contentRows = Mathf.Max(rows, Mathf.CeilToInt(carried / (float)columns));
+
+        var view = new Rect(window.x + gearWidth, contentTop, gridWidth, rows * (slotSize + padding));
+        var content = new Rect(0f, 0f, gridWidth - 20f, contentRows * (slotSize + padding));
+
+        bagScroll = GUI.BeginScrollView(view, bagScroll, content);
+        for (int index = 0; index < contentRows * columns; index++)
         {
-            for (int column = 0; column < columns; column++)
-            {
-                int index = row * columns + column;
-                var slot = new Rect(
-                    gridLeft + column * (slotSize + padding),
-                    contentTop + row * (slotSize + padding),
-                    slotSize, slotSize);
+            var slot = new Rect(
+                (index % columns) * (slotSize + padding),
+                (index / columns) * (slotSize + padding),
+                slotSize, slotSize);
 
-                DrawSlot(slot, index);
-            }
+            DrawSlot(slot, index);
         }
+        GUI.EndScrollView();
 
-        GUI.Label(new Rect(gridLeft, window.y + height - 26f, gridWidth, 22f),
+        GUI.Label(new Rect(window.x + gearWidth, window.y + height - 26f, gridWidth, 22f),
             "가방의 장비를 누르면 착용, 장비 칸을 누르면 벗는다.");
     }
 

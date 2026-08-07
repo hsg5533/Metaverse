@@ -74,12 +74,27 @@ public class ChatSystem : NetworkBehaviour
             Event.current.Use();
         }
 
+        // A window on top would be clicked through: the field underneath still takes the
+        // touch and the soft keyboard comes up over a shop nobody asked to leave.
+        bool covered = ShopNpc.PanelOpen || PlayerInventory.WindowOpen || MetaverseHUD.MenuOpen;
+        if (covered)
+        {
+            IsTyping = false;
+            if (focused)
+            {
+                GUI.FocusControl(null);
+            }
+
+            return;
+        }
+
         // On a touch screen the log shrinks to three lines and sits centred just above the
         // health bar: the bottom left is the stick and the bottom right is the buttons.
+        // While typing it moves to the top, out from under the soft keyboard.
         bool touch = MobileInput.Active;
         float height = touch ? 112f : 200f;
         var area = touch
-            ? new Rect(MetaverseUi.Width * 0.5f - 190f, MetaverseUi.Height - 54f - height, 380f, height)
+            ? new Rect(MetaverseUi.Width * 0.5f - 190f, IsTyping ? 16f : MetaverseUi.Height - 54f - height, 380f, height)
             : new Rect(10f, MetaverseUi.Height - 210f, 380f, height);
         GUILayout.BeginArea(area, GUI.skin.box);
 
@@ -90,11 +105,24 @@ public class ChatSystem : NetworkBehaviour
         }
         GUILayout.EndScrollView();
 
+        GUILayout.BeginHorizontal();
         GUI.SetNextControlName(ControlName);
         draft = GUILayout.TextField(draft, 120);
+
+        // No Enter key on a phone, so the field needs a button beside it.
+        bool sent = touch && GUILayout.Button("보내기", GUILayout.Width(70f));
+        GUILayout.EndHorizontal();
+
         IsTyping = GUI.GetNameOfFocusedControl() == ControlName;
 
         GUILayout.EndArea();
+
+        if (sent)
+        {
+            Submit();
+            GUI.FocusControl(null);
+            IsTyping = false;
+        }
 
         if (enterPressed && focused)
         {

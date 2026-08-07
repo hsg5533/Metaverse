@@ -514,7 +514,13 @@ public class Monster : NetworkBehaviour
 
         if (remaining <= 0f)
         {
-            transform.localScale = bodyScale;
+            // Only when it actually differs: assigning a transform every frame dirties the
+            // whole hierarchy, and most of these monsters are standing still.
+            if (transform.localScale != bodyScale)
+            {
+                transform.localScale = bodyScale;
+            }
+
             if (flashing)
             {
                 flashing = false;
@@ -1051,25 +1057,43 @@ public class Monster : NetworkBehaviour
         return false;
     }
 
-    void OnGUI()
+    /// <summary>
+    /// Every monster's tag, drawn from one place. As an OnGUI of its own this ran twice a
+    /// frame per monster, and there are fifty of them standing around six fields.
+    /// </summary>
+    public static void DrawTags()
     {
-        MetaverseUi.ApplyFont();
-        GUI.depth = MetaverseUi.WorldDepth;
-
-        if (!IsSpawned || !IsAlive)
-        {
-            return;
-        }
-
-        // Off screen there is nothing to label, and this runs for every monster in the world
-        // twice a frame.
-        if (tintTargets.Length == 0 || !tintTargets[0].isVisible)
-        {
-            return;
-        }
-
         var camera = Camera.main;
-        if (camera == null || Vector3.Distance(camera.transform.position, transform.position) > 40f)
+        if (camera == null)
+        {
+            return;
+        }
+
+        nameTagStyle ??= new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+        };
+
+        foreach (var monster in All)
+        {
+            if (monster != null)
+            {
+                monster.DrawTag(camera);
+            }
+        }
+    }
+
+    void DrawTag(Camera camera)
+    {
+        // Off screen there is nothing to label, and the areas are open enough that a monster
+        // a hundred metres away is still inside the frustum: the village would read every tag
+        // in the hunting fields.
+        if (!IsSpawned || !IsAlive || tintTargets.Length == 0 || !tintTargets[0].isVisible)
+        {
+            return;
+        }
+
+        if (Vector3.Distance(camera.transform.position, transform.position) > 40f)
         {
             return;
         }
@@ -1079,11 +1103,6 @@ public class Monster : NetworkBehaviour
         {
             return;
         }
-
-        nameTagStyle ??= new GUIStyle(GUI.skin.label)
-        {
-            alignment = TextAnchor.MiddleCenter,
-        };
 
         float x = screenPoint.x;
         float y = MetaverseUi.Height - screenPoint.y;
