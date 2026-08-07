@@ -276,7 +276,6 @@ public static class MetaverseSceneBuilder
             BuildHouse(world.transform, $"House{i}", houses[i].position, houses[i].size);
         }
 
-        BuildPlatforms(world.transform);
         BuildMonument(world.transform, accentMaterial, buildingMaterial);
 
         BuildShopNpc(world.transform);
@@ -351,42 +350,6 @@ public static class MetaverseSceneBuilder
         CreatePrimitive(PrimitiveType.Cube, "Tip", monument.transform, new Vector3(0f, 6.4f, 0f), new Vector3(0.9f, 0.9f, 0.9f), accentMaterial, Quaternion.Euler(45f, 0f, 45f));
     }
 
-    /// <summary>Platforms south of the plaza to jump across. No rules, just a climb.</summary>
-    static void BuildPlatforms(Transform parent)
-    {
-        Material stepMaterial = CreateMaterial("Platform", new Color(0.90f, 0.62f, 0.25f));
-        Material topMaterial = CreateMaterial("PlatformTop", new Color(0.30f, 0.75f, 0.45f));
-
-        var course = new GameObject("Platforms");
-        course.transform.SetParent(parent, false);
-
-        var steps = new[]
-        {
-            new Vector3(-11.6f, 0.6f, -6f),
-            new Vector3(-8.8f, 1.1f, -7.6f),
-            new Vector3(-6f, 1.6f, -6f),
-            new Vector3(-3.2f, 2.1f, -7.6f),
-            new Vector3(-0.4f, 2.6f, -6f),
-            new Vector3(2.4f, 3.1f, -7.6f),
-            new Vector3(5.2f, 3.6f, -6f),
-            new Vector3(8f, 4f, -7.2f),
-        };
-
-        for (int i = 0; i < steps.Length; i++)
-        {
-            CreatePrimitive(PrimitiveType.Cube, $"Platform{i}", course.transform, steps[i], new Vector3(2.2f, 0.4f, 2.2f), stepMaterial);
-        }
-
-        // A wider platform at the top, worth the climb.
-        CreatePrimitive(PrimitiveType.Cube, "PlatformTop", course.transform, new Vector3(11.4f, 4.2f, -6.6f), new Vector3(3.2f, 0.4f, 3.2f), topMaterial);
-    }
-
-
-
-    /// <summary>
-    /// Fourth area: the duelling arena. A raised ring with a low wall, two corner marks and
-    /// seating around it. <see cref="DuelSystem"/> only lets a match start inside the ring.
-    /// </summary>
     static void BuildArena()
     {
         var arena = new GameObject("Arena");
