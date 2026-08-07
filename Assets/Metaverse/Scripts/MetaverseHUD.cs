@@ -59,11 +59,13 @@ public class MetaverseHUD : MonoBehaviour
     string port = "7777";
     string message = "";
 
+    const string NicknamePrefKey = "Metaverse.LocalNickname";
+
     void Awake()
     {
         // Statics outlive a play session when domain reload is off.
         MenuOpen = false;
-        LocalNickname = "Player" + Random.Range(100, 1000);
+        LocalNickname = PlayerPrefs.GetString(NicknamePrefKey, "Player" + Random.Range(100, 1000));
     }
 
     void Start()
@@ -338,6 +340,8 @@ public class MetaverseHUD : MonoBehaviour
             message = "포트는 숫자여야 합니다.";
             return;
         }
+
+        PlayerPrefs.SetString(NicknamePrefKey, LocalNickname);
 
         var transport = manager.GetComponent<UnityTransport>();
         if (transport != null)
