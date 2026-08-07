@@ -256,6 +256,13 @@ public class SaveSystem : MonoBehaviour
                 record.gearArmor = PlayerGear.NameOf(gear.Armor.Value);
                 foreach (int piece in gear.Bag)
                 {
+                    // Negative entries are material-carried markers, not gear; the materials
+                    // themselves are already saved above from the inventory counts.
+                    if (piece < 0)
+                    {
+                        continue;
+                    }
+
                     record.bag.Add(new BagEntry { item = PlayerGear.Pieces[piece].Name });
                 }
             }
