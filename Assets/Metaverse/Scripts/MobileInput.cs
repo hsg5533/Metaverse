@@ -57,13 +57,15 @@ public class MobileInput : MonoBehaviour
             return;
         }
 
-        // Landscape, always. Setting it here rather than in the player settings, which the
-        // open editor overwrites from its own state whenever it feels like it.
+        // Landscape, always, and always the same way round, so the front camera and whatever
+        // it punches out of the display stay on the left. Setting it here rather than in the
+        // player settings, which the open editor overwrites from its own state whenever it
+        // feels like it.
         Screen.autorotateToPortrait = false;
         Screen.autorotateToPortraitUpsideDown = false;
         Screen.autorotateToLandscapeLeft = true;
-        Screen.autorotateToLandscapeRight = true;
-        Screen.orientation = ScreenOrientation.AutoRotation;
+        Screen.autorotateToLandscapeRight = false;
+        Screen.orientation = ScreenOrientation.LandscapeLeft;
 
         if (FindAnyObjectByType<MobileInput>() == null)
         {
