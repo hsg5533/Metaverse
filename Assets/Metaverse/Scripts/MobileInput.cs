@@ -246,7 +246,7 @@ public class MobileInput : MonoBehaviour
             // Attack under the thumb, jump beside it with room between, and interact set
             // well clear of both: pressing E mid fight is worse than reaching for it.
             0 => new Rect(right - ButtonSize, bottom - ButtonSize, ButtonSize, ButtonSize),
-            1 => new Rect(right - ButtonSize * 2.35f, bottom - ButtonSize * 0.85f, ButtonSize, ButtonSize),
+            1 => new Rect(right - ButtonSize * 2.25f, bottom - ButtonSize * 0.85f, ButtonSize, ButtonSize),
             _ => new Rect(right - ButtonSize, bottom - ButtonSize * 2.2f, ButtonSize, ButtonSize),
         };
     }
