@@ -37,7 +37,13 @@ public class PlayerInventory : NetworkBehaviour
     public static bool WindowOpen;
 
     /// <summary>What each material slot holds, in the same order as the preview models.</summary>
-    static readonly string[] Slots = { "광석", "약초", "나무" };
+    public static readonly string[] Slots = { "광석", "약초", "나무" };
+
+    /// <summary>Which stack a saved name refers to, or -1 when it is not a material.</summary>
+    public static int IndexOf(string name)
+    {
+        return System.Array.IndexOf(Slots, name);
+    }
 
     public NetworkVariable<int> Ore = new(0, writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<int> Herb = new(0, writePerm: NetworkVariableWritePermission.Server);
@@ -46,11 +52,17 @@ public class PlayerInventory : NetworkBehaviour
 
     PlayerStats stats;
     PlayerBuffs buffs;
+    PlayerGear gear;
+
+    /// <summary>Which material stacks are actually carried, so empty ones take no slot.</summary>
+    readonly int[] heldMaterials = new int[3];
+    int heldCount;
 
     void Awake()
     {
         stats = GetComponent<PlayerStats>();
         buffs = GetComponent<PlayerBuffs>();
+        gear = GetComponent<PlayerGear>();
     }
 
     /// <summary>Server side.</summary>
@@ -188,7 +200,7 @@ public class PlayerInventory : NetworkBehaviour
         ShopNpc.PanelOpen = open;
     }
 
-    int CountOf(int slot)
+    public int CountOf(int slot)
     {
         return slot switch
         {
@@ -221,7 +233,6 @@ public class PlayerInventory : NetworkBehaviour
         GUI.Box(window, "");
         GUI.Label(new Rect(window.x + padding, window.y + 6f, width, 22f), "<b>인벤토리</b>   [I] 닫기", MetaverseUi.Rich);
 
-        var stats = GetComponent<PlayerStats>();
         if (stats != null)
         {
             GUI.Label(new Rect(window.x + padding, window.y + 28f, width, 22f),
@@ -230,6 +241,16 @@ public class PlayerInventory : NetworkBehaviour
 
         float contentTop = window.y + 54f;
         DrawEquipment(new Rect(window.x + padding, contentTop, gearWidth - padding * 2f, height - 62f), stats);
+
+        // One bag: the stacks that are actually held come first, then the gear pieces.
+        heldCount = 0;
+        for (int i = 0; i < Slots.Length; i++)
+        {
+            if (CountOf(i) > 0)
+            {
+                heldMaterials[heldCount++] = i;
+            }
+        }
 
         float gridLeft = window.x + gearWidth;
         for (int row = 0; row < rows; row++)
@@ -247,7 +268,7 @@ public class PlayerInventory : NetworkBehaviour
         }
 
         GUI.Label(new Rect(gridLeft, window.y + height - 26f, gridWidth, 22f),
-            "모루는 광석과 나무로 장비를, 모닥불은 약초로 요리를 만든다.");
+            "가방의 장비를 누르면 착용, 장비 칸을 누르면 벗는다.");
     }
 
     /// <summary>
@@ -270,16 +291,23 @@ public class PlayerInventory : NetworkBehaviour
             $"+{stats.ArmorBonus} DEF", GearPreview.Armor);
 
         GUI.Label(new Rect(area.x, area.y + 170f, area.width, 60f),
-            "상점이나 모루에서\n강화한다.");
+            "상점과 모루에서 강화하고,\n몬스터에게서 얻는다.");
     }
 
-    static void DrawGearSlot(Rect slot, string label, string name, string bonus, int preview)
+    void DrawGearSlot(Rect slot, string label, string name, string bonus, int preview)
     {
         var icon = new Rect(slot.x, slot.y, 60f, 60f);
         DrawSlotBackground(icon);
 
         // The real models, turning slowly, rendered by GearPreview.
         GearPreview.Draw(icon, preview);
+
+        // Clicking what is worn takes it off; the plain sword comes back and the piece
+        // returns to the bag.
+        if (GUI.Button(icon, GUIContent.none, GUIStyle.none) && gear != null)
+        {
+            gear.UnequipRpc(preview == GearPreview.Weapon);
+        }
 
         GUI.Label(new Rect(slot.x + 66f, slot.y + 4f, slot.width - 66f, 18f), label);
         GUI.Label(new Rect(slot.x + 66f, slot.y + 22f, slot.width - 66f, 18f), name);
@@ -296,28 +324,47 @@ public class PlayerInventory : NetworkBehaviour
         GUI.Box(slot, GUIContent.none);
     }
 
-    /// <summary>One material stack: a coloured block, its name and how many are held.</summary>
+    /// <summary>A material stack, or a piece of dropped gear waiting to be worn.</summary>
     void DrawSlot(Rect slot, int index)
     {
         DrawSlotBackground(slot);
 
-        if (index >= Slots.Length)
+        if (index < heldCount)
+        {
+            DrawMaterialSlot(slot, heldMaterials[index]);
+            return;
+        }
+
+        DrawBagSlot(slot, index - heldCount);
+    }
+
+    /// <summary>One stack of ore, herb or wood, with how many are held.</summary>
+    void DrawMaterialSlot(Rect slot, int material)
+    {
+        // Materials are modelled the same way the gear is: slot 0 and 1 are the weapon and
+        // the armour, so the material models start after them.
+        GearPreview.Draw(new Rect(slot.x + 6f, slot.y + 2f, slot.width - 12f, slot.height - 20f), GearPreview.Ore + material);
+
+        GUI.Label(new Rect(slot.x + 4f, slot.y + slot.height - 20f, slot.width - 8f, 18f), Slots[material]);
+        GUI.Label(new Rect(slot.x, slot.y + slot.height - 20f, slot.width - 6f, 18f), CountOf(material).ToString(), RightAligned());
+    }
+
+    /// <summary>One dropped piece; clicking the slot puts it on.</summary>
+    void DrawBagSlot(Rect slot, int bagIndex)
+    {
+        if (gear == null || bagIndex >= gear.Bag.Count)
         {
             return;
         }
 
-        int count = CountOf(index);
-        if (count <= 0)
+        int piece = gear.Bag[bagIndex];
+        GearPreview.Draw(new Rect(slot.x + 4f, slot.y, slot.width - 8f, slot.height - 18f), GearPreview.Piece + piece);
+        GUI.Label(new Rect(slot.x + 4f, slot.y + slot.height - 20f, slot.width - 8f, 18f), PlayerGear.Pieces[piece].Name);
+
+        if (GUI.Button(slot, GUIContent.none, GUIStyle.none))
         {
-            return;
+            gear.EquipRpc(bagIndex);
         }
-
-        // Ore, herb and wood are modelled the same way the gear is: index 0 and 1 are the
-        // weapon and the armour, so the material slots start after them.
-        GearPreview.Draw(new Rect(slot.x + 6f, slot.y + 2f, slot.width - 12f, slot.height - 20f), GearPreview.Ore + index);
-
-        GUI.Label(new Rect(slot.x + 4f, slot.y + slot.height - 20f, slot.width - 8f, 18f), Slots[index]);
-        GUI.Label(new Rect(slot.x, slot.y + slot.height - 20f, slot.width - 6f, 18f), count.ToString(), RightAligned());
     }
 
     static GUIStyle rightAligned;

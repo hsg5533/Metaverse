@@ -18,6 +18,9 @@ public class TreasureChest : NetworkBehaviour
     public int Gold = 90;
     public int Ore = 2;
     public int Exp = 40;
+
+    /// <summary>The piece of gear inside; -1 for a chest that only holds gold and ore.</summary>
+    public int Piece = -1;
     public float InteractRange = 3f;
     public float PromptHeight = 1.4f;
 
@@ -108,9 +111,16 @@ public class TreasureChest : NetworkBehaviour
             inventory.Add(GatherKind.Ore, Ore);
         }
 
+        var gear = player.GetComponent<PlayerGear>();
+        if (gear != null)
+        {
+            gear.Give(Piece);
+        }
+
         var avatar = player.GetComponent<PlayerAvatar>();
         string who = avatar != null ? avatar.Nickname.Value.ToString() : "누군가";
-        ChatSystem.Announce($"{who}님이 보물상자를 열었습니다. (골드 {Gold}, 광석 {Ore})");
+        string haul = Piece >= 0 ? $", {PlayerGear.NameOf(Piece)}" : "";
+        ChatSystem.Announce($"{who}님이 보물상자를 열었습니다. (골드 {Gold}, 광석 {Ore}{haul})");
     }
 
     bool InRange()
@@ -127,7 +137,8 @@ public class TreasureChest : NetworkBehaviour
             return;
         }
 
+        string label = Piece >= 0 ? $"[E] 보물상자 열기  ({PlayerGear.NameOf(Piece)})" : "[E] 보물상자 열기";
         MetaverseUi.WorldPrompt(transform.position + Vector3.up * PromptHeight,
-            Unlocked.Value ? "[E] 보물상자 열기" : "보스를 처치해야 열린다");
+            Unlocked.Value ? label : "보스를 처치해야 열린다");
     }
 }

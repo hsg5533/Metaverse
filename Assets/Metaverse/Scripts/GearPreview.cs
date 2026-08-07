@@ -15,23 +15,36 @@ public class GearPreview : MonoBehaviour
     public const int Herb = 3;
     public const int Wood = 4;
 
-    /// <summary>Far below the map, so nothing else lands in a preview camera's frustum.</summary>
-    static readonly Vector3 RigOrigin = new Vector3(0f, -1000f, 0f);
+    /// <summary>One slot per carried piece of gear, after the five fixed ones.</summary>
+    public const int Piece = 5;
 
-    /// <summary>How wide a view each slot needs, and how far its model leans on the tilt.</summary>
-    static readonly float[] ViewSizes = { 0.62f, 0.46f, 0.4f, 0.4f, 0.4f };
+    /// <summary>
+    /// Far below the map, so nothing else lands in a preview camera's frustum. The rig picks
+    /// its own spot down there: a rig that outlived a reload cannot be found or destroyed
+    /// (FindObjectsByType skips HideAndDontSave), so the only defence is not to stand where
+    /// it stands.
+    /// </summary>
+    Vector3 rigOrigin;
 
     static GearPreview instance;
 
     class Slot
     {
-        public Transform Model;
+        /// <summary>Fixed stand in front of the camera; whatever is shown hangs under it.</summary>
+        public Transform Mount;
+
         public Camera View;
         public RenderTexture Texture;
         public Vector3 Pivot;
+
+        /// <summary>The avatar model this slot was cloned from, so a swap is noticed.</summary>
+        public GameObject Source;
+
+        /// <summary>Set the moment something asks to draw it; nothing else is built or rendered.</summary>
+        public bool Wanted;
     }
 
-    readonly Slot[] slots = new Slot[ViewSizes.Length];
+    readonly Slot[] slots = new Slot[Piece + PlayerGear.Pieces.Length];
 
     /// <summary>Draws one slot's model into a rect.</summary>
     public static void Draw(Rect rect, int slot)
@@ -39,25 +52,50 @@ public class GearPreview : MonoBehaviour
         // Unity's fake-null: a plain ??= would keep a destroyed rig from a previous session.
         if (instance == null)
         {
-            var host = new GameObject("GearPreview") { hideFlags = HideFlags.HideAndDontSave };
+            // A recompile resets the static but leaves the rig itself alive. Keep the first
+            // one and bin the rest: two rigs sit at the same spot and every camera films both,
+            // which reads as the old gear refusing to go away.
+            var rigs = FindObjectsByType<GearPreview>(FindObjectsSortMode.None);
+            for (int i = 1; i < rigs.Length; i++)
+            {
+                Destroy(rigs[i].gameObject);
+            }
+
+            instance = rigs.Length > 0 ? rigs[0] : null;
+        }
+
+        if (instance == null)
+        {
+            var host = new GameObject("GearPreview") { hideFlags = HideFlags.HideInHierarchy };
             instance = host.AddComponent<GearPreview>();
         }
 
-        var texture = instance.slots[Mathf.Clamp(slot, 0, instance.slots.Length - 1)].Texture;
-        if (texture != null)
+        Slot entry = instance.slots[Mathf.Clamp(slot, 0, instance.slots.Length - 1)];
+        entry.Wanted = true;
+
+        if (entry.Texture != null)
         {
-            GUI.DrawTexture(rect, texture, ScaleMode.ScaleToFit, true);
+            GUI.DrawTexture(rect, entry.Texture, ScaleMode.ScaleToFit, true);
         }
     }
 
     void Awake()
     {
-        transform.position = RigOrigin;
+        foreach (var other in FindObjectsByType<GearPreview>(FindObjectsSortMode.None))
+        {
+            if (other != this)
+            {
+                Destroy(other.gameObject);
+            }
+        }
+
+        rigOrigin = new Vector3(Random.Range(-4000f, 4000f), -1000f, Random.Range(-4000f, 4000f));
+        transform.position = rigOrigin;
 
         // Ten apart, so no camera can see the model belonging to the slot next door.
         for (int i = 0; i < slots.Length; i++)
         {
-            slots[i] = Setup(new Vector3(i * 10f, 0f, 0f), ViewSizes[i]);
+            slots[i] = Setup(new Vector3(i * 10f, 0f, 0f), ViewSize(i));
         }
     }
 
@@ -73,17 +111,36 @@ public class GearPreview : MonoBehaviour
         }
     }
 
+    static float ViewSize(int slot)
+    {
+        return slot switch
+        {
+            Weapon => 0.62f,
+            Armor => 0.5f,
+            Ore or Herb or Wood => 0.4f,
+            _ => PlayerGear.Pieces[slot - Piece].Weapon ? 0.62f : 0.5f,
+        };
+    }
+
     void LateUpdate()
     {
-        bool visible = PlayerInventory.WindowOpen;
-        foreach (var slot in slots)
+        // ponytail: the rig lives only while the bag is open. Rebuilding a dozen cubes on
+        // every open is cheaper than reasoning about what survives a domain reload, and it
+        // makes leftovers from an earlier session impossible.
+        if (!PlayerInventory.WindowOpen)
         {
-            slot.View.enabled = visible;
+            if (instance == this)
+            {
+                instance = null;
+            }
+
+            Destroy(gameObject);
+            return;
         }
 
-        if (!visible)
+        foreach (var slot in slots)
         {
-            return;
+            slot.View.enabled = slot.Wanted;
         }
 
         BuildModels();
@@ -92,18 +149,21 @@ public class GearPreview : MonoBehaviour
         var spin = Quaternion.Euler(14f, Time.time * 45f, 0f);
         for (int i = 0; i < slots.Length; i++)
         {
-            if (slots[i].Model != null)
-            {
-                slots[i].Model.localRotation = i == Weapon ? spin * Quaternion.Euler(0f, 0f, 22f) : spin;
-            }
+            bool blade = i == Weapon || (i >= Piece && PlayerGear.Pieces[i - Piece].Weapon);
+            slots[i].Mount.localRotation = blade ? spin * Quaternion.Euler(0f, 0f, 22f) : spin;
         }
     }
 
     Slot Setup(Vector3 pivot, float size)
     {
+        var mount = new GameObject("Mount").transform;
+        mount.SetParent(transform, false);
+        mount.localPosition = pivot;
+
         var slot = new Slot
         {
             Pivot = pivot,
+            Mount = mount,
             Texture = new RenderTexture(160, 160, 16) { name = "GearPreview", antiAliasing = 2 },
         };
 
@@ -124,54 +184,110 @@ public class GearPreview : MonoBehaviour
 
     void BuildModels()
     {
-        if (slots[Weapon].Model == null)
+        for (int i = 0; i < slots.Length; i++)
         {
-            var sword = FindSword();
-            if (sword != null)
+            if (!slots[i].Wanted)
             {
-                slots[Weapon].Model = Mount(Instantiate(sword, transform), slots[Weapon].Pivot);
+                continue;
             }
-        }
 
-        for (int i = Armor; i < slots.Length; i++)
-        {
-            if (slots[i].Model == null)
+            GameObject[] parts = WornParts(i);
+            GameObject worn = parts.Length > 0 ? parts[0] : null;
+
+            // Gear can be swapped at any moment: if the body is wearing something else than
+            // the copy was taken from, the stand is emptied and a fresh copy hung on it.
+            if (slots[i].Mount.childCount > 0 && slots[i].Source == worn)
             {
-                slots[i].Model = Mount(BuildModel(i), slots[i].Pivot);
+                continue;
             }
-        }
-    }
 
-    /// <summary>The sword the avatar is actually holding, so the icon never drifts from the model.</summary>
-    static GameObject FindSword()
-    {
-        var avatar = PlayerAvatar.Local;
-        if (avatar == null)
-        {
-            return null;
-        }
+            Clear(slots[i].Mount);
 
-        foreach (var child in avatar.GetComponentsInChildren<Transform>(true))
-        {
-            if (child.name == "Sword")
+            // Only the armour and the material stacks have a model of their own to fall back
+            // on; the rest wait for the avatar to exist.
+            bool buildsItsOwn = i == Armor || i == Ore || i == Herb || i == Wood;
+            if (worn == null && !buildsItsOwn)
             {
-                return child.gameObject;
+                continue;
             }
-        }
 
-        return null;
+            GameObject model = worn != null ? Assemble(parts) : BuildModel(i);
+            if (model == null)
+            {
+                continue;
+            }
+
+            model.SetActive(true);
+            Hang(model, slots[i].Mount);
+            slots[i].Source = worn;
+        }
     }
 
     /// <summary>
-    /// Hangs the model under a mount sitting on its camera's axis, shifted so the model's own
-    /// centre is on the mount. Turning the mount then spins the model in place.
+    /// The models on the avatar this slot should copy, so an icon never drifts from what the
+    /// character is actually wearing. Empty means the slot builds its own little model.
     /// </summary>
-    Transform Mount(GameObject model, Vector3 pivot)
+    static GameObject[] WornParts(int slot)
     {
-        var mount = new GameObject("Mount").transform;
-        mount.SetParent(transform, false);
-        mount.localPosition = pivot;
+        var avatar = PlayerAvatar.Local;
+        var gear = avatar != null ? avatar.GetComponent<PlayerGear>() : null;
+        if (gear == null)
+        {
+            return System.Array.Empty<GameObject>();
+        }
 
+        return slot switch
+        {
+            Weapon => gear.EquippedParts(true),
+            Armor => gear.EquippedParts(false),
+            Ore or Herb or Wood => System.Array.Empty<GameObject>(),
+            _ => gear.PartsFor(slot - Piece),
+        };
+    }
+
+    /// <summary>
+    /// Copies every part of a piece into one group, keeping how they sit relative to each
+    /// other, so a suit of armour shows its shoulders and not just the breastplate.
+    /// </summary>
+    GameObject Assemble(GameObject[] parts)
+    {
+        var group = new GameObject("Preview").transform;
+        group.SetParent(transform, false);
+
+        foreach (var part in parts)
+        {
+            if (part == null)
+            {
+                continue;
+            }
+
+            // A piece sitting in the bag is switched off on the body; the copy has to show.
+            var clone = Instantiate(part, group, true);
+            clone.SetActive(true);
+        }
+
+        return group.gameObject;
+    }
+
+    /// <summary>
+    /// Empties a stand for good: switched off first, because Destroy only takes effect at the
+    /// end of the frame and until then it would render on top of the replacement.
+    /// </summary>
+    static void Clear(Transform mount)
+    {
+        foreach (Transform child in mount)
+        {
+            child.gameObject.SetActive(false);
+            Destroy(child.gameObject);
+        }
+    }
+
+    /// <summary>
+    /// Hangs the model on its stand, shifted so the model's own centre is on it. Turning the
+    /// stand then spins the model in place.
+    /// </summary>
+    static void Hang(GameObject model, Transform mount)
+    {
         // Keeps the world scale the model already has, so the sword shows at its real size.
         model.transform.SetParent(mount, true);
         model.transform.localPosition = Vector3.zero;
@@ -188,8 +304,6 @@ public class GearPreview : MonoBehaviour
 
             model.transform.position += mount.position - bounds.center;
         }
-
-        return mount;
     }
 
     GameObject BuildModel(int slot)

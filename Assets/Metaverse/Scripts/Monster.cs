@@ -140,6 +140,7 @@ public class Monster : NetworkBehaviour
     readonly System.Collections.Generic.Dictionary<ulong, PlayerStats> contributors = new();
 
     Renderer[] renderers;
+    Renderer[] tintTargets = System.Array.Empty<Renderer>();
     Collider[] colliders;
     CharacterController controller;
     float motionEndTime;
@@ -333,6 +334,14 @@ public class Monster : NetworkBehaviour
         Transform body = ActiveBody();
         if (body == null)
         {
+            return;
+        }
+
+        // Off screen there is nobody to see the legs move; the pose catches up on the first
+        // frame it comes back into view.
+        if (tintTargets.Length > 0 && !tintTargets[0].isVisible)
+        {
+            lastPosition = transform.position;
             return;
         }
 
@@ -927,6 +936,7 @@ public class Monster : NetworkBehaviour
         NameTagHeight = TagHeights[Mathf.Clamp(shape, 0, TagHeights.Length - 1)];
 
         CollectWalkParts(ActiveBody(), shape);
+        CollectTintTargets(ActiveBody());
         ApplyTint(BodyColor);
     }
 
@@ -944,15 +954,32 @@ public class Monster : NetworkBehaviour
 
     void ApplyTint(Color color)
     {
-        foreach (var renderer in renderers)
+        foreach (var renderer in tintTargets)
         {
-            if (renderer == null || !renderer.gameObject.activeInHierarchy || NameHas(renderer.name, UntintedParts))
-            {
-                continue;
-            }
-
             renderer.material.color = color;
         }
+    }
+
+    /// <summary>
+    /// The parts of the body on show that take the monster's colour. Collected when the shape
+    /// changes: a hit flash tints every frame, and the prefab carries a dozen bodies worth of
+    /// renderers to sift through.
+    /// </summary>
+    void CollectTintTargets(Transform body)
+    {
+        var found = new List<Renderer>();
+        if (body != null)
+        {
+            foreach (var renderer in body.GetComponentsInChildren<Renderer>(true))
+            {
+                if (!NameHas(renderer.name, UntintedParts))
+                {
+                    found.Add(renderer);
+                }
+            }
+        }
+
+        tintTargets = found.ToArray();
     }
 
     static bool NameHas(string name, params string[] keywords)

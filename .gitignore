@@ -68,3 +68,6 @@ Thumbs.db
 /.utmp/
 /*_BurstDebugInformation_DoNotShip/
 /*_BackUpThisFolder_ButDontShipItWithYourGame/
+
+# Screenshots dropped in the project root while testing.
+/*.png

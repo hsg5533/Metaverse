@@ -453,7 +453,7 @@ public static class MetaverseSceneBuilder
     /// A chest: a box with a hinged lid. The lid hangs off its own pivot at the back edge,
     /// so rotating that pivot opens it rather than sinking it into the body.
     /// </summary>
-    static void BuildChest(Transform parent, string name, Vector3 localPosition, int gold, int exp, int ore)
+    static void BuildChest(Transform parent, string name, Vector3 localPosition, int gold, int exp, int ore, int piece)
     {
         Material woodMaterial = CreateMaterial("ChestWood", new Color(0.42f, 0.28f, 0.16f));
         Material bandMaterial = CreateMaterial("ChestBand", new Color(0.80f, 0.66f, 0.28f));
@@ -479,6 +479,7 @@ public static class MetaverseSceneBuilder
         treasure.Gold = gold;
         treasure.Exp = exp;
         treasure.Ore = ore;
+        treasure.Piece = piece;
     }
 
     /// <summary>Anvil, campfire and quest board, all within sight of the plaza.</summary>
@@ -798,9 +799,12 @@ public static class MetaverseSceneBuilder
         guardSpawner.LevelBonus = area.GuardBonus;
         guardSpawner.Theme = area.Theme;
 
-        // Two chests flanking the pedestal, shut until the boss goes down.
-        BuildChest(dungeon.transform, "ChestLeft", new Vector3(-4.5f, 0.3f, 14f), area.ChestGold, area.ChestExp, area.ChestOre);
-        BuildChest(dungeon.transform, "ChestRight", new Vector3(4.5f, 0.3f, 14f), area.ChestGold, area.ChestExp, area.ChestOre);
+        // Two chests flanking the pedestal, shut until the boss goes down: the weapon of this
+        // ground on the left, its armour on the right.
+        BuildChest(dungeon.transform, "ChestLeft", new Vector3(-4.5f, 0.3f, 14f), area.ChestGold, area.ChestExp, area.ChestOre,
+            PlayerGear.PieceFor(area.Theme, true));
+        BuildChest(dungeon.transform, "ChestRight", new Vector3(4.5f, 0.3f, 14f), area.ChestGold, area.ChestExp, area.ChestOre,
+            PlayerGear.PieceFor(area.Theme, false));
 
         var bossPoint = new GameObject("BossSpawner");
         bossPoint.transform.SetParent(dungeon.transform, false);
@@ -1502,7 +1506,39 @@ public static class MetaverseSceneBuilder
         Material faceMaterial = CreateMaterial("PlayerFace", new Color(0.12f, 0.14f, 0.18f));
 
         var humanoid = BuildHumanoid(root.transform, shirtMaterial, skinMaterial, pantsMaterial, faceMaterial);
-        BuildSword(humanoid.RightArm);
+
+        // Every piece of gear lives in the prefab and is switched on by PlayerGear, the same
+        // way a monster picks one of its bodies.
+        var weaponModels = new[]
+        {
+            BuildSword(humanoid.RightArm, "Sword", new Color(0.78f, 0.80f, 0.86f), new Color(0.80f, 0.66f, 0.28f)),
+            BuildSword(humanoid.RightArm, "SwordSteel", new Color(0.86f, 0.88f, 0.92f), new Color(0.62f, 0.64f, 0.70f)),
+            BuildSword(humanoid.RightArm, "SwordFrost", new Color(0.70f, 0.88f, 1f), new Color(0.42f, 0.66f, 0.88f)),
+            BuildSword(humanoid.RightArm, "SwordEmber", new Color(0.42f, 0.30f, 0.28f), new Color(1f, 0.48f, 0.14f)),
+        };
+
+        var armorSets = new[]
+        {
+            BuildArmorSet(humanoid, "ArmorSteel", new Color(0.72f, 0.74f, 0.78f), new Color(0.52f, 0.54f, 0.58f)),
+            BuildArmorSet(humanoid, "ArmorFrost", new Color(0.72f, 0.86f, 0.96f), new Color(0.44f, 0.68f, 0.88f)),
+            BuildArmorSet(humanoid, "ArmorEmber", new Color(0.36f, 0.26f, 0.24f), new Color(1f, 0.48f, 0.14f)),
+        };
+
+        var armorModels = System.Array.ConvertAll(armorSets, set => set.Body);
+        var armorLeftArms = System.Array.ConvertAll(armorSets, set => set.LeftArm);
+        var armorRightArms = System.Array.ConvertAll(armorSets, set => set.RightArm);
+
+        for (int i = 1; i < weaponModels.Length; i++)
+        {
+            weaponModels[i].SetActive(false);
+        }
+
+        foreach (var set in armorSets)
+        {
+            set.Body.SetActive(false);
+            set.LeftArm.SetActive(false);
+            set.RightArm.SetActive(false);
+        }
 
         var controller = root.AddComponent<CharacterController>();
         controller.height = 1.95f;
@@ -1535,6 +1571,12 @@ public static class MetaverseSceneBuilder
             humanoid.RightArm.GetComponentInChildren<Renderer>(),
         };
         avatar.NameTagHeight = humanoid.Head.transform.localPosition.y + 0.55f;
+
+        var gear = root.AddComponent<PlayerGear>();
+        gear.WeaponModels = weaponModels;
+        gear.ArmorModels = armorModels;
+        gear.ArmorLeftArmModels = armorLeftArms;
+        gear.ArmorRightArmModels = armorRightArms;
 
         root.AddComponent<PlayerStats>();
         root.AddComponent<PlayerCombat>();
@@ -1591,19 +1633,19 @@ public static class MetaverseSceneBuilder
     /// Sword held in the right hand. It hangs under the arm pivot, so the limb animator's
     /// attack swing carries it along without any extra bone.
     /// </summary>
-    static void BuildSword(Transform armPivot)
+    static GameObject BuildSword(Transform armPivot, string name, Color blade, Color trim)
     {
         Material gripMaterial = CreateMaterial("SwordGrip", new Color(0.32f, 0.22f, 0.16f));
-        Material bladeMaterial = CreateMaterial("SwordBlade", new Color(0.78f, 0.80f, 0.86f));
+        Material bladeMaterial = CreateMaterial(name + "Blade", blade);
 
-        var sword = new GameObject("Sword");
+        var sword = new GameObject(name);
         sword.transform.SetParent(armPivot, false);
         sword.transform.localPosition = new Vector3(0f, -0.62f, 0.06f);
         // Tilted forward so the blade points ahead instead of dragging through the ground.
         sword.transform.localRotation = Quaternion.Euler(-40f, 0f, 0f);
 
-        Material trimMaterial = CreateMaterial("SwordTrim", new Color(0.80f, 0.66f, 0.28f));
-        Material fullerMaterial = CreateMaterial("SwordFuller", new Color(0.52f, 0.55f, 0.62f));
+        Material trimMaterial = CreateMaterial(name + "Trim", trim);
+        Material fullerMaterial = CreateMaterial(name + "Fuller", blade * 0.7f);
 
         // Hilt: pommel, wrapped grip, crossguard with turned tips.
         BodyPart(PrimitiveType.Cube, "Pommel", sword.transform, new Vector3(0f, 0.07f, 0f), new Vector3(0.11f, 0.09f, 0.11f), trimMaterial);
@@ -1625,6 +1667,43 @@ public static class MetaverseSceneBuilder
         BodyPart(PrimitiveType.Cube, "Fuller", sword.transform, new Vector3(0f, -0.5f, 0.024f), new Vector3(0.032f, 0.5f, 0.012f), fullerMaterial);
 
         BodyPart(PrimitiveType.Cube, "Point", sword.transform, new Vector3(0f, -0.81f, 0f), new Vector3(0.062f, 0.062f, 0.036f), bladeMaterial, Quaternion.Euler(0f, 0f, 45f));
+        return sword;
+    }
+
+    /// <summary>
+    /// A set of armour: breastplate, collar and belt over the torso, and a shoulder piece
+    /// hanging off each arm pivot so it swings when the arm does.
+    /// </summary>
+    static (GameObject Body, GameObject LeftArm, GameObject RightArm) BuildArmorSet(Humanoid humanoid, string name, Color plate, Color trim)
+    {
+        Material plateMaterial = CreateMaterial(name + "Plate", plate);
+        Material trimMaterial = CreateMaterial(name + "Trim", trim);
+
+        var armor = new GameObject(name);
+        armor.transform.SetParent(humanoid.Rig, false);
+
+        BodyPart(PrimitiveType.Cube, "Chest", armor.transform, new Vector3(0f, 1.18f, 0f), new Vector3(0.68f, 0.62f, 0.4f), plateMaterial);
+        BodyPart(PrimitiveType.Cube, "Ridge", armor.transform, new Vector3(0f, 1.18f, 0.2f), new Vector3(0.1f, 0.6f, 0.04f), trimMaterial);
+        BodyPart(PrimitiveType.Cube, "Collar", armor.transform, new Vector3(0f, 1.48f, 0f), new Vector3(0.5f, 0.1f, 0.42f), trimMaterial);
+        BodyPart(PrimitiveType.Cube, "Belt", armor.transform, new Vector3(0f, 0.86f, 0f), new Vector3(0.7f, 0.1f, 0.42f), trimMaterial);
+
+        var sleeves = new GameObject[2];
+        for (int i = 0; i < 2; i++)
+        {
+            float side = i == 0 ? -1f : 1f;
+            Transform arm = i == 0 ? humanoid.LeftArm : humanoid.RightArm;
+
+            // Under the arm pivot, which is the thing the attack swings.
+            var sleeve = new GameObject(name + (i == 0 ? "LeftArm" : "RightArm"));
+            sleeve.transform.SetParent(arm, false);
+
+            BodyPart(PrimitiveType.Cube, "Pauldron", sleeve.transform, new Vector3(-side * 0.02f, -0.03f, 0f),
+                new Vector3(0.26f, 0.22f, 0.4f), plateMaterial, Quaternion.Euler(0f, 0f, side * 12f));
+
+            sleeves[i] = sleeve;
+        }
+
+        return (armor, sleeves[0], sleeves[1]);
     }
 
     /// <summary>Static body part with its primitive collider removed.</summary>

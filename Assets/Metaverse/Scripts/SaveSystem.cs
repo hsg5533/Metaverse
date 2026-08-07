@@ -13,6 +13,17 @@ public class SaveSystem : MonoBehaviour
 {
     public float SaveInterval = 15f;
 
+    /// <summary>
+    /// One line of the bag. Named rather than numbered so the file stays readable and can be
+    /// edited by hand; materials carry their count, a piece of gear is always one.
+    /// </summary>
+    [Serializable]
+    class BagEntry
+    {
+        public string item;
+        public int count = 1;
+    }
+
     [Serializable]
     class Record
     {
@@ -23,13 +34,13 @@ public class SaveSystem : MonoBehaviour
         public int weapon;
         public int armor;
         public int hp = -1;
-        public int ore;
-        public int herb;
-        public int wood;
         public int quest = -1;
         public int questProgress;
         public int duelWins;
         public int duelLosses;
+        public string gearWeapon = "";
+        public string gearArmor = "";
+        public List<BagEntry> bag = new();
     }
 
     [Serializable]
@@ -121,16 +132,41 @@ public class SaveSystem : MonoBehaviour
             stats.RestoreDuels(record.duelWins, record.duelLosses);
         }
 
+        // The bag holds both: stacks of material and pieces of gear, told apart by name.
+        var counts = new int[PlayerInventory.Slots.Length];
+        var pieces = new List<int>();
+        foreach (var entry in record.bag)
+        {
+            int material = PlayerInventory.IndexOf(entry.item);
+            if (material >= 0)
+            {
+                counts[material] += Mathf.Max(0, entry.count);
+                continue;
+            }
+
+            int piece = PlayerGear.IndexOf(entry.item);
+            for (int i = 0; i < Mathf.Max(1, entry.count) && piece >= 0; i++)
+            {
+                pieces.Add(piece);
+            }
+        }
+
         var inventory = avatar.GetComponent<PlayerInventory>();
         if (inventory != null)
         {
-            inventory.SetAll(record.ore, record.herb, record.wood);
+            inventory.SetAll(counts[0], counts[1], counts[2]);
         }
 
         var quests = avatar.GetComponent<PlayerQuests>();
         if (quests != null)
         {
             quests.Restore(record.quest, record.questProgress);
+        }
+
+        var gear = avatar.GetComponent<PlayerGear>();
+        if (gear != null)
+        {
+            gear.Restore(PlayerGear.IndexOf(record.gearWeapon), PlayerGear.IndexOf(record.gearArmor), pieces);
         }
 
         Debug.Log($"[Metaverse] loaded save for {record.name} (Lv.{record.level}, {record.gold} G)");
@@ -181,12 +217,19 @@ public class SaveSystem : MonoBehaviour
             record.duelWins = stats.DuelWins.Value;
             record.duelLosses = stats.DuelLosses.Value;
 
+            record.bag.Clear();
+
             var inventory = player.GetComponent<PlayerInventory>();
             if (inventory != null)
             {
-                record.ore = inventory.Ore.Value;
-                record.herb = inventory.Herb.Value;
-                record.wood = inventory.Wood.Value;
+                for (int i = 0; i < PlayerInventory.Slots.Length; i++)
+                {
+                    int count = inventory.CountOf(i);
+                    if (count > 0)
+                    {
+                        record.bag.Add(new BagEntry { item = PlayerInventory.Slots[i], count = count });
+                    }
+                }
             }
 
             var quests = player.GetComponent<PlayerQuests>();
@@ -194,6 +237,17 @@ public class SaveSystem : MonoBehaviour
             {
                 record.quest = quests.Quest.Value;
                 record.questProgress = quests.Progress.Value;
+            }
+
+            var gear = player.GetComponent<PlayerGear>();
+            if (gear != null)
+            {
+                record.gearWeapon = PlayerGear.NameOf(gear.Weapon.Value);
+                record.gearArmor = PlayerGear.NameOf(gear.Armor.Value);
+                foreach (int piece in gear.Bag)
+                {
+                    record.bag.Add(new BagEntry { item = PlayerGear.Pieces[piece].Name });
+                }
             }
         }
 

@@ -29,23 +29,24 @@ public class PlayerStats : NetworkBehaviour
 
 
     public int MaxHp => 100 + (Level.Value - 1) * 20;
-    public int AttackPower => 8 + (Level.Value - 1) * 3 + WeaponLevel.Value * 4 + (buffs != null ? buffs.AttackBonus : 0);
-    public int Defense => 8 + (Level.Value - 1) * 2 + ArmorLevel.Value * 3 + (buffs != null ? buffs.DefenseBonus : 0);
+    public int AttackPower => 8 + (Level.Value - 1) * 3 + WeaponBonus + (buffs != null ? buffs.AttackBonus : 0);
+    public int Defense => 8 + (Level.Value - 1) * 2 + ArmorBonus + (buffs != null ? buffs.DefenseBonus : 0);
     public int ExpToNextLevel => 40 + (Level.Value - 1) * 30;
     public int WeaponPrice => 60 * (WeaponLevel.Value + 1);
     public int ArmorPrice => 50 * (ArmorLevel.Value + 1);
 
-    /// <summary>Gear is named by the level it has been upgraded to, the same number the shop quotes.</summary>
-    public string WeaponName => $"검 Lv.{WeaponLevel.Value}";
-    public string ArmorName => $"방어구 Lv.{ArmorLevel.Value}";
+    /// <summary>A dropped piece is named; the plain sword is named by its upgrade level.</summary>
+    public string WeaponName => gear != null && gear.WeaponName != null ? gear.WeaponName : $"검 Lv.{WeaponLevel.Value}";
+    public string ArmorName => gear != null && gear.ArmorName != null ? gear.ArmorName : $"방어구 Lv.{ArmorLevel.Value}";
 
-    /// <summary>What the gear adds on its own, without the level or a buff behind it.</summary>
-    public int WeaponBonus => WeaponLevel.Value * 4;
-    public int ArmorBonus => ArmorLevel.Value * 3;
+    /// <summary>What the gear adds on its own: the upgrade level plus whatever is worn.</summary>
+    public int WeaponBonus => WeaponLevel.Value * 4 + (gear != null ? gear.AttackBonus : 0);
+    public int ArmorBonus => ArmorLevel.Value * 3 + (gear != null ? gear.DefenseBonus : 0);
 
     PlayerAvatar avatar;
     AvatarLimbAnimator limbAnimator;
     PlayerBuffs buffs;
+    PlayerGear gear;
     float nextRegenTime;
 
     void Awake()
@@ -53,6 +54,7 @@ public class PlayerStats : NetworkBehaviour
         avatar = GetComponent<PlayerAvatar>();
         limbAnimator = GetComponent<AvatarLimbAnimator>();
         buffs = GetComponent<PlayerBuffs>();
+        gear = GetComponent<PlayerGear>();
     }
 
     public override void OnNetworkSpawn()
