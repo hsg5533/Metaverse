@@ -15,17 +15,25 @@ public class PlayerCombat : NetworkBehaviour
 
     PlayerStats stats;
     AvatarLimbAnimator limbAnimator;
+    PlayerFishing fishing;
     float nextAttackTime;
 
     void Awake()
     {
         stats = GetComponent<PlayerStats>();
         limbAnimator = GetComponent<AvatarLimbAnimator>();
+        fishing = GetComponent<PlayerFishing>();
     }
 
     void Update()
     {
         if (!IsOwner || !IsSpawned || ChatSystem.IsTyping || ShopNpc.PanelOpen || MetaverseHUD.PointerOverHud)
+        {
+            return;
+        }
+
+        // Holding a rod over water: the button casts a line instead of swinging.
+        if (fishing != null && fishing.Ready)
         {
             return;
         }

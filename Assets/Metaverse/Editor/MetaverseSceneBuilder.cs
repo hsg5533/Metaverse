@@ -65,7 +65,9 @@ public static class MetaverseSceneBuilder
         public Vector3 Arrival => Center + new Vector3(0f, 1f, -22.5f);
     }
 
-    // Areas are 60 wide, so 80 apart leaves a gap nobody can see or wander across.
+    // A three by three grid with the village in the middle, 120 apart: the areas are 60
+    // across, so that is a clear 60 between any two of them, and every trip is the same
+    // distance from home.
     static readonly FieldArea[] FieldAreas =
     {
         new FieldArea
@@ -78,7 +80,7 @@ public static class MetaverseSceneBuilder
         },
         new FieldArea
         {
-            Name = "서리 설원", Key = "Frost", Center = new Vector3(120f, 0f, 80f),
+            Name = "서리 설원", Key = "Frost", Center = new Vector3(120f, 0f, 120f),
             Bonus = 4, Theme = 1, Required = 10,
             Ground = new Color(0.78f, 0.84f, 0.90f), Wall = new Color(0.58f, 0.66f, 0.74f),
             Rock = new Color(0.62f, 0.70f, 0.78f), Wood = new Color(0.42f, 0.46f, 0.54f),
@@ -87,7 +89,7 @@ public static class MetaverseSceneBuilder
         },
         new FieldArea
         {
-            Name = "용암 지대", Key = "Ember", Center = new Vector3(120f, 0f, 160f),
+            Name = "용암 지대", Key = "Ember", Center = new Vector3(120f, 0f, -120f),
             Bonus = 8, Theme = 2, Required = 20,
             Ground = new Color(0.22f, 0.18f, 0.17f), Wall = new Color(0.26f, 0.21f, 0.20f),
             Rock = new Color(0.31f, 0.27f, 0.26f), Wood = new Color(0.16f, 0.14f, 0.14f),
@@ -108,7 +110,7 @@ public static class MetaverseSceneBuilder
         },
         new DungeonArea
         {
-            Name = "서리 묘지", Key = "FrostCrypt", Center = new Vector3(-120f, 0f, 80f),
+            Name = "서리 묘지", Key = "FrostCrypt", Center = new Vector3(-120f, 0f, 120f),
             GuardBonus = 7, BossBonus = 4, Theme = 1, Required = 15,
             ChestGold = 180, ChestExp = 90, ChestOre = 3,
             Floor = new Color(0.36f, 0.42f, 0.50f), Stone = new Color(0.48f, 0.56f, 0.66f),
@@ -116,7 +118,7 @@ public static class MetaverseSceneBuilder
         },
         new DungeonArea
         {
-            Name = "용암 심연", Key = "EmberDepths", Center = new Vector3(-120f, 0f, 160f),
+            Name = "용암 심연", Key = "EmberDepths", Center = new Vector3(-120f, 0f, -120f),
             GuardBonus = 11, BossBonus = 8, Theme = 2, Required = 25,
             ChestGold = 320, ChestExp = 160, ChestOre = 5,
             Floor = new Color(0.18f, 0.14f, 0.14f), Stone = new Color(0.28f, 0.22f, 0.22f),
@@ -137,6 +139,15 @@ public static class MetaverseSceneBuilder
     // The dungeon gate stands on the far side of the plaza from the hunting gate.
     static readonly Vector3 VillageDungeonPad = new(-10f, 0.05f, -12f);
     static readonly Vector3 VillageDungeonArrival = new(-13.5f, 1f, -12f);
+
+    // The lake, and the gate to it: tucked between the two houses behind the shopkeeper.
+    static readonly Vector3 LakeCentre = new(0f, 0f, -120f);
+    static readonly Vector3 VillageLakePad = new(-17f, 0.05f, 4f);
+
+    // Beside the arch rather than in front of it: the gate faces along the gap now, and the
+    // tree behind it is something to walk into.
+    static readonly Vector3 VillageLakeArrival = new(-13.5f, 1f, 2f);
+    static readonly Vector3 LakeArrival = new(0f, 1f, -142f);
 
     [MenuItem("Tools/Metaverse/Build World Scene")]
     public static void Build()
@@ -159,6 +170,7 @@ public static class MetaverseSceneBuilder
         }
 
         BuildArena();
+        BuildLake();
         GameObject playerPrefab = BuildPlayerPrefab();
         BuildNetworking(playerPrefab, monsterPrefab);
         SetupCamera();
@@ -298,6 +310,8 @@ public static class MetaverseSceneBuilder
         });
 
         BuildWarpPad(world.transform, "WarpPadArena", VillageArenaPad, "아레나", ArenaArrival, "PortalArena", new Color(0.90f, 0.30f, 0.35f));
+        var lakePad = BuildWarpPad(world.transform, "WarpPadLake", VillageLakePad, "호수", LakeArrival, "PortalLake", new Color(0.25f, 0.62f, 0.95f));
+        lakePad.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
 
         BuildStations(world.transform);
         BuildVillageNodes(world.transform);
@@ -348,6 +362,84 @@ public static class MetaverseSceneBuilder
         CreatePrimitive(PrimitiveType.Cube, "BaseUpper", monument.transform, new Vector3(0f, 0.75f, 0f), new Vector3(2.8f, 0.5f, 2.8f), stoneMaterial);
         CreatePrimitive(PrimitiveType.Cube, "Shaft", monument.transform, new Vector3(0f, 3.5f, 0f), new Vector3(1.2f, 5f, 1.2f), stoneMaterial);
         CreatePrimitive(PrimitiveType.Cube, "Tip", monument.transform, new Vector3(0f, 6.4f, 0f), new Vector3(0.9f, 0.9f, 0.9f), accentMaterial, Quaternion.Euler(45f, 0f, 45f));
+    }
+
+    /// <summary>
+    /// The lake: a basin sunk below the shore with a sheet of water laid over it, a jetty to
+    /// stand on and nothing to fight. Walking in leaves you knee deep, which is as much
+    /// swimming as this game needs.
+    /// </summary>
+    static void BuildLake()
+    {
+        var lake = new GameObject("Lake");
+        lake.transform.position = LakeCentre;
+
+        Material shoreMaterial = CreateMaterial("LakeShore", new Color(0.74f, 0.68f, 0.50f));
+        Material waterMaterial = CreateMaterial("LakeWater", new Color(0.20f, 0.45f, 0.70f));
+        Material bedMaterial = CreateMaterial("LakeBed", new Color(0.32f, 0.30f, 0.26f));
+        Material reedMaterial = CreateMaterial("LakeReed", new Color(0.38f, 0.62f, 0.30f));
+
+        const float half = 30f;
+        const float lakeRadius = 17f;
+        const float lakeZ = 4f;
+
+        // The field is square; only the hole in it is round. A ring of slabs turned to face
+        // the middle makes the round edge, and four slabs fill the square out to the walls.
+        const int segments = 32;
+        const float ringOuter = 25f;
+        for (int i = 0; i < segments; i++)
+        {
+            float angle = i * 360f / segments;
+            float radians = angle * Mathf.Deg2Rad;
+            float middle = (lakeRadius + ringOuter) * 0.5f;
+
+            CreatePrimitive(PrimitiveType.Cube, $"Bank{i}", lake.transform,
+                new Vector3(Mathf.Cos(radians) * middle, -0.5f, lakeZ + Mathf.Sin(radians) * middle),
+                new Vector3(ringOuter - lakeRadius, 1f, 2f * Mathf.PI * ringOuter / segments + 1f), shoreMaterial,
+                Quaternion.Euler(0f, -angle, 0f));
+        }
+
+        // Everything outside a square that the ring already covers to its corners.
+        const float inner = ringOuter * 0.70f;
+        CreatePrimitive(PrimitiveType.Cube, "ShoreNorth", lake.transform, new Vector3(0f, -0.5f, (lakeZ + inner + half) * 0.5f),
+            new Vector3(half * 2f, 1f, half - lakeZ - inner), shoreMaterial);
+        CreatePrimitive(PrimitiveType.Cube, "ShoreSouth", lake.transform, new Vector3(0f, -0.5f, (lakeZ - inner - half) * 0.5f),
+            new Vector3(half * 2f, 1f, half + lakeZ - inner), shoreMaterial);
+        CreatePrimitive(PrimitiveType.Cube, "ShoreWest", lake.transform, new Vector3((-inner - half) * 0.5f, -0.5f, lakeZ),
+            new Vector3(half - inner, 1f, inner * 2f), shoreMaterial);
+        CreatePrimitive(PrimitiveType.Cube, "ShoreEast", lake.transform, new Vector3((inner + half) * 0.5f, -0.5f, lakeZ),
+            new Vector3(half - inner, 1f, inner * 2f), shoreMaterial);
+        Material wallMaterial = CreateMaterial("Wall", new Color(0.30f, 0.32f, 0.38f));
+        CreatePrimitive(PrimitiveType.Cube, "WallNorth", lake.transform, new Vector3(0f, 2f, half), new Vector3(60f, 4f, 1f), wallMaterial);
+        CreatePrimitive(PrimitiveType.Cube, "WallSouth", lake.transform, new Vector3(0f, 2f, -half), new Vector3(60f, 4f, 1f), wallMaterial);
+        CreatePrimitive(PrimitiveType.Cube, "WallEast", lake.transform, new Vector3(half, 2f, 0f), new Vector3(1f, 4f, 60f), wallMaterial);
+        CreatePrimitive(PrimitiveType.Cube, "WallWest", lake.transform, new Vector3(-half, 2f, 0f), new Vector3(1f, 4f, 60f), wallMaterial);
+
+        // The water: a disc lying on the ground, and a darker one under it for depth. Neither
+        // has a collider, so you wade through rather than walk on top.
+        // The bed is square and solid; every corner of it hides under the ring above, and it
+        // is what stops you falling through the lake.
+        CreatePrimitive(PrimitiveType.Cube, "Bed", lake.transform, new Vector3(0f, -1.5f, lakeZ),
+            new Vector3(lakeRadius * 2f, 1f, lakeRadius * 2f), bedMaterial);
+
+        // The surface: a disc with no collider, so you wade in instead of walking over.
+        CreateDisc("Water", lake.transform, new Vector3(0f, FishingSpot.WaterHeight, lakeZ), lakeRadius * 2f, waterMaterial);
+
+        // Reeds along the bank, on the shore side of the waterline.
+        for (int i = 0; i < 24; i++)
+        {
+            float radians = i * 15f * Mathf.Deg2Rad;
+            BodyPart(PrimitiveType.Cube, $"Reed{i}", lake.transform,
+                new Vector3(Mathf.Cos(radians) * (lakeRadius + 0.7f), 0.5f, lakeZ + Mathf.Sin(radians) * (lakeRadius + 0.7f)),
+                new Vector3(0.18f, 1f, 0.18f), reedMaterial, Quaternion.Euler(i % 3 * 6f, i * 24f, i % 5 * 5f));
+        }
+
+        var spot = new GameObject("FishingSpot");
+        spot.transform.SetParent(lake.transform, false);
+        spot.transform.localPosition = new Vector3(0f, 0f, lakeZ);
+        spot.AddComponent<FishingSpot>();
+
+        BuildWarpPad(lake.transform, "WarpPadLakeExit", new Vector3(0f, 0.05f, -25f), "마을", VillageLakeArrival, "PortalVillage", new Color(0.30f, 0.80f, 0.85f));
     }
 
     static void BuildArena()
@@ -1490,6 +1582,7 @@ public static class MetaverseSceneBuilder
             BuildSword(humanoid.RightArm, "SwordSteel", new Color(0.86f, 0.88f, 0.92f), new Color(0.62f, 0.64f, 0.70f)),
             BuildSword(humanoid.RightArm, "SwordFrost", new Color(0.70f, 0.88f, 1f), new Color(0.42f, 0.66f, 0.88f)),
             BuildSword(humanoid.RightArm, "SwordEmber", new Color(0.42f, 0.30f, 0.28f), new Color(1f, 0.48f, 0.14f)),
+            BuildRod(humanoid.RightArm),
         };
 
         var armorSets = new[]
@@ -1499,7 +1592,19 @@ public static class MetaverseSceneBuilder
             BuildArmorSet(humanoid, "ArmorEmber", new Color(0.36f, 0.26f, 0.24f), new Color(1f, 0.48f, 0.14f)),
         };
 
-        var armorModels = System.Array.ConvertAll(armorSets, set => set.Body);
+        // The catch rides in the armour list past the three sets: never worn, so the only
+        // thing that ever asks for these is the inventory icon.
+        var fish = new[]
+        {
+            BuildFish(humanoid.Rig, "FishCrucian", new Color(0.62f, 0.66f, 0.52f), new Color(0.44f, 0.48f, 0.38f)),
+            BuildFish(humanoid.Rig, "FishCarp", new Color(0.72f, 0.56f, 0.34f), new Color(0.52f, 0.38f, 0.22f)),
+            BuildFish(humanoid.Rig, "FishCatfish", new Color(0.36f, 0.36f, 0.34f), new Color(0.26f, 0.26f, 0.24f)),
+            BuildFish(humanoid.Rig, "FishTrout", new Color(0.58f, 0.70f, 0.78f), new Color(0.86f, 0.42f, 0.44f)),
+            BuildFish(humanoid.Rig, "FishGolden", new Color(0.94f, 0.78f, 0.26f), new Color(1f, 0.58f, 0.14f)),
+        };
+
+        var armorModels = new List<GameObject>(System.Array.ConvertAll(armorSets, set => set.Body));
+        armorModels.AddRange(fish);
         var armorLeftArms = System.Array.ConvertAll(armorSets, set => set.LeftArm);
         var armorRightArms = System.Array.ConvertAll(armorSets, set => set.RightArm);
 
@@ -1513,6 +1618,11 @@ public static class MetaverseSceneBuilder
             set.Body.SetActive(false);
             set.LeftArm.SetActive(false);
             set.RightArm.SetActive(false);
+        }
+
+        foreach (var caught in fish)
+        {
+            caught.SetActive(false);
         }
 
         var controller = root.AddComponent<CharacterController>();
@@ -1549,7 +1659,7 @@ public static class MetaverseSceneBuilder
 
         var gear = root.AddComponent<PlayerGear>();
         gear.WeaponModels = weaponModels;
-        gear.ArmorModels = armorModels;
+        gear.ArmorModels = armorModels.ToArray();
         gear.ArmorLeftArmModels = armorLeftArms;
         gear.ArmorRightArmModels = armorRightArms;
 
@@ -1558,6 +1668,7 @@ public static class MetaverseSceneBuilder
         root.AddComponent<PlayerBuffs>();
         root.AddComponent<PlayerInventory>();
         root.AddComponent<PlayerQuests>();
+        root.AddComponent<PlayerFishing>();
         root.AddComponent<PlayerEmotes>();
 
         GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
@@ -1643,6 +1754,91 @@ public static class MetaverseSceneBuilder
 
         BodyPart(PrimitiveType.Cube, "Point", sword.transform, new Vector3(0f, -0.81f, 0f), new Vector3(0.062f, 0.062f, 0.036f), bladeMaterial, Quaternion.Euler(0f, 0f, 45f));
         return sword;
+    }
+
+    /// <summary>A fish: body, tail, fins and an eye. Only ever seen in the inventory.</summary>
+    static GameObject BuildFish(Transform rig, string name, Color body, Color fin)
+    {
+        Material bodyMaterial = CreateMaterial(name + "Body", body);
+        Material finMaterial = CreateMaterial(name + "Fin", fin);
+        Material eyeMaterial = CreateMaterial("FishEye", new Color(0.08f, 0.08f, 0.10f));
+
+        var caught = new GameObject(name);
+        caught.transform.SetParent(rig, false);
+        caught.transform.localPosition = new Vector3(0f, 1.2f, 0.5f);
+
+        Material bellyMaterial = CreateMaterial(name + "Belly", Color.Lerp(body, Color.white, 0.45f));
+
+        // Two lumps so it has shoulders and tapers to the tail, pale underneath.
+        BodyPart(PrimitiveType.Sphere, "Body", caught.transform, Vector3.zero, new Vector3(0.44f, 0.26f, 0.2f), bodyMaterial);
+        BodyPart(PrimitiveType.Sphere, "Waist", caught.transform, new Vector3(-0.2f, 0f, 0f), new Vector3(0.26f, 0.16f, 0.12f), bodyMaterial);
+        BodyPart(PrimitiveType.Sphere, "Belly", caught.transform, new Vector3(-0.02f, -0.07f, 0f), new Vector3(0.36f, 0.14f, 0.17f), bellyMaterial);
+        BodyPart(PrimitiveType.Sphere, "Head", caught.transform, new Vector3(0.24f, 0.01f, 0f), new Vector3(0.22f, 0.21f, 0.19f), bodyMaterial);
+        BodyPart(PrimitiveType.Cube, "Mouth", caught.transform, new Vector3(0.35f, -0.02f, 0f), new Vector3(0.06f, 0.04f, 0.1f), finMaterial);
+        BodyPart(PrimitiveType.Cube, "Gill", caught.transform, new Vector3(0.15f, 0f, 0f), new Vector3(0.02f, 0.17f, 0.17f), finMaterial);
+
+        // Forked tail, and the fins that say which way is up.
+        BodyPart(PrimitiveType.Cube, "TailStem", caught.transform, new Vector3(-0.3f, 0f, 0f), new Vector3(0.08f, 0.08f, 0.04f), bodyMaterial);
+        BodyPart(PrimitiveType.Cube, "TailUpper", caught.transform, new Vector3(-0.38f, 0.08f, 0f), new Vector3(0.17f, 0.15f, 0.025f), finMaterial, Quaternion.Euler(0f, 0f, 32f));
+        BodyPart(PrimitiveType.Cube, "TailLower", caught.transform, new Vector3(-0.38f, -0.08f, 0f), new Vector3(0.17f, 0.15f, 0.025f), finMaterial, Quaternion.Euler(0f, 0f, -32f));
+        BodyPart(PrimitiveType.Cube, "FinTop", caught.transform, new Vector3(-0.02f, 0.16f, 0f), new Vector3(0.2f, 0.13f, 0.02f), finMaterial, Quaternion.Euler(0f, 0f, 16f));
+        BodyPart(PrimitiveType.Cube, "FinBottom", caught.transform, new Vector3(-0.1f, -0.13f, 0f), new Vector3(0.12f, 0.09f, 0.02f), finMaterial, Quaternion.Euler(0f, 0f, -20f));
+
+        foreach (float side in new[] { -1f, 1f })
+        {
+            BodyPart(PrimitiveType.Cube, side < 0f ? "FinLeft" : "FinRight", caught.transform,
+                new Vector3(0.08f, -0.05f, side * 0.09f), new Vector3(0.13f, 0.05f, 0.1f), finMaterial,
+                Quaternion.Euler(side * 22f, 0f, -14f));
+            BodyPart(PrimitiveType.Sphere, side < 0f ? "EyeLeft" : "EyeRight", caught.transform,
+                new Vector3(0.3f, 0.05f, side * 0.075f), new Vector3(0.06f, 0.06f, 0.05f), eyeMaterial);
+        }
+
+        return caught;
+    }
+
+    /// <summary>A fishing rod: cork grip, a tapering pole and a line hanging off the tip.</summary>
+    static GameObject BuildRod(Transform armPivot)
+    {
+        Material gripMaterial = CreateMaterial("RodGrip", new Color(0.42f, 0.28f, 0.18f));
+        Material poleMaterial = CreateMaterial("RodPole", new Color(0.30f, 0.26f, 0.24f));
+        Material lineMaterial = CreateMaterial("RodLine", new Color(0.86f, 0.88f, 0.90f));
+
+        var rod = new GameObject("Rod");
+        rod.transform.SetParent(armPivot, false);
+        rod.transform.localPosition = new Vector3(0f, -0.62f, 0.06f);
+        rod.transform.localRotation = Quaternion.Euler(-62f, 0f, 0f);
+
+        Material trimMaterial = CreateMaterial("RodTrim", new Color(0.72f, 0.60f, 0.30f));
+
+        // Butt cap, cork grip with two bindings, then the reel seat.
+        BodyPart(PrimitiveType.Cube, "Butt", rod.transform, new Vector3(0f, 0.11f, 0f), new Vector3(0.085f, 0.05f, 0.085f), trimMaterial);
+        BodyPart(PrimitiveType.Cube, "Grip", rod.transform, new Vector3(0f, -0.02f, 0f), new Vector3(0.07f, 0.24f, 0.07f), gripMaterial);
+        BodyPart(PrimitiveType.Cube, "BindUpper", rod.transform, new Vector3(0f, 0.05f, 0f), new Vector3(0.08f, 0.02f, 0.08f), trimMaterial);
+        BodyPart(PrimitiveType.Cube, "BindLower", rod.transform, new Vector3(0f, -0.11f, 0f), new Vector3(0.08f, 0.02f, 0.08f), trimMaterial);
+
+        // The reel: a drum on a foot with a handle out of the side.
+        BodyPart(PrimitiveType.Cube, "ReelFoot", rod.transform, new Vector3(0f, -0.15f, 0.04f), new Vector3(0.05f, 0.06f, 0.05f), poleMaterial);
+        BodyPart(PrimitiveType.Cylinder, "ReelDrum", rod.transform, new Vector3(0f, -0.19f, 0.09f), new Vector3(0.12f, 0.03f, 0.12f), trimMaterial, Quaternion.Euler(0f, 0f, 90f));
+        BodyPart(PrimitiveType.Cube, "ReelHandle", rod.transform, new Vector3(0.09f, -0.19f, 0.09f), new Vector3(0.09f, 0.02f, 0.02f), poleMaterial);
+        BodyPart(PrimitiveType.Cube, "ReelKnob", rod.transform, new Vector3(0.14f, -0.19f, 0.09f), new Vector3(0.03f, 0.04f, 0.03f), gripMaterial);
+
+        // Three tapering sections with a guide ring at each joint.
+        BodyPart(PrimitiveType.Cube, "PoleLower", rod.transform, new Vector3(0f, -0.42f, 0f), new Vector3(0.05f, 0.42f, 0.05f), poleMaterial);
+        BodyPart(PrimitiveType.Cube, "PoleMiddle", rod.transform, new Vector3(0f, -0.78f, 0f), new Vector3(0.036f, 0.34f, 0.036f), poleMaterial);
+        BodyPart(PrimitiveType.Cube, "PoleTip", rod.transform, new Vector3(0f, -1.06f, 0f), new Vector3(0.022f, 0.26f, 0.022f), poleMaterial);
+
+        for (int i = 0; i < 3; i++)
+        {
+            float y = -0.5f - i * 0.28f;
+            BodyPart(PrimitiveType.Cube, $"Guide{i}", rod.transform, new Vector3(0f, y, 0.05f), new Vector3(0.05f, 0.012f, 0.05f), trimMaterial);
+            BodyPart(PrimitiveType.Cube, $"GuideStem{i}", rod.transform, new Vector3(0f, y, 0.028f), new Vector3(0.012f, 0.012f, 0.03f), trimMaterial);
+        }
+
+        // Line down the guides and a hook swinging off the tip.
+        BodyPart(PrimitiveType.Cube, "Line", rod.transform, new Vector3(0f, -0.72f, 0.05f), new Vector3(0.008f, 0.56f, 0.008f), lineMaterial);
+        BodyPart(PrimitiveType.Cube, "LineDrop", rod.transform, new Vector3(0f, -1.26f, 0.03f), new Vector3(0.008f, 0.16f, 0.008f), lineMaterial);
+        BodyPart(PrimitiveType.Cube, "Hook", rod.transform, new Vector3(0f, -1.35f, 0.05f), new Vector3(0.012f, 0.05f, 0.05f), trimMaterial, Quaternion.Euler(35f, 0f, 0f));
+        return rod;
     }
 
     /// <summary>

@@ -54,9 +54,15 @@ public class PlayerInventory : NetworkBehaviour
     PlayerBuffs buffs;
     PlayerGear gear;
 
-    /// <summary>Which material stacks are actually carried, so empty ones take no slot.</summary>
-    readonly int[] heldMaterials = new int[3];
-    int heldCount;
+    /// <summary>Server side: the bag list carries a marker for every stack that is held.</summary>
+    void Reorder()
+    {
+        for (int i = 0; i < Slots.Length; i++)
+        {
+            gear.Mark(i, CountOf(i) > 0);
+        }
+    }
+
     Vector2 bagScroll;
 
     void Awake()
@@ -80,6 +86,8 @@ public class PlayerInventory : NetworkBehaviour
             case GatherKind.Herb: Herb.Value += amount; break;
             default: Wood.Value += amount; break;
         }
+
+        Reorder();
     }
 
     /// <summary>Server side: takes the materials only if all of them are there.</summary>
@@ -93,6 +101,8 @@ public class PlayerInventory : NetworkBehaviour
         Ore.Value -= ore;
         Herb.Value -= herb;
         Wood.Value -= wood;
+
+        Reorder();
         return true;
     }
 
@@ -183,6 +193,8 @@ public class PlayerInventory : NetworkBehaviour
         Ore.Value = Mathf.Max(0, ore);
         Herb.Value = Mathf.Max(0, herb);
         Wood.Value = Mathf.Max(0, wood);
+
+        Reorder();
     }
 
 
@@ -267,18 +279,8 @@ public class PlayerInventory : NetworkBehaviour
         float contentTop = window.y + 54f;
         DrawEquipment(new Rect(window.x + padding, contentTop, gearWidth - padding * 2f, height - 62f), stats);
 
-        // One bag: the stacks that are actually held come first, then the gear pieces.
-        heldCount = 0;
-        for (int i = 0; i < Slots.Length; i++)
-        {
-            if (CountOf(i) > 0)
-            {
-                heldMaterials[heldCount++] = i;
-            }
-        }
-
         // Three rows are on show and the rest is scrolled to: the bag itself has no limit.
-        int carried = heldCount + (gear != null ? gear.Bag.Count : 0);
+        int carried = gear != null ? gear.Bag.Count : 0;
         int contentRows = Mathf.Max(rows, Mathf.CeilToInt(carried / (float)columns));
 
         var view = new Rect(window.x + gearWidth, contentTop, gridWidth, rows * (slotSize + padding));
@@ -353,18 +355,28 @@ public class PlayerInventory : NetworkBehaviour
         GUI.Box(slot, GUIContent.none);
     }
 
-    /// <summary>A material stack, or a piece of dropped gear waiting to be worn.</summary>
+    /// <summary>
+    /// One place in the bag, in the order it was picked up. A negative entry is a stack of
+    /// material, which keeps its count elsewhere; anything else is a piece.
+    /// </summary>
     void DrawSlot(Rect slot, int index)
     {
         DrawSlotBackground(slot);
 
-        if (index < heldCount)
+        if (gear == null || index >= gear.Bag.Count)
         {
-            DrawMaterialSlot(slot, heldMaterials[index]);
             return;
         }
 
-        DrawBagSlot(slot, index - heldCount);
+        int entry = gear.Bag[index];
+        if (entry < 0)
+        {
+            DrawMaterialSlot(slot, PlayerGear.MaterialOf(entry));
+        }
+        else
+        {
+            DrawBagSlot(slot, index, entry);
+        }
     }
 
     /// <summary>One stack of ore, herb or wood, with how many are held.</summary>
@@ -378,15 +390,9 @@ public class PlayerInventory : NetworkBehaviour
         GUI.Label(new Rect(slot.x, slot.y + slot.height - 20f, slot.width - 6f, 18f), CountOf(material).ToString(), RightAligned());
     }
 
-    /// <summary>One dropped piece; clicking the slot puts it on.</summary>
-    void DrawBagSlot(Rect slot, int bagIndex)
+    /// <summary>One piece; clicking the slot puts it on.</summary>
+    void DrawBagSlot(Rect slot, int bagIndex, int piece)
     {
-        if (gear == null || bagIndex >= gear.Bag.Count)
-        {
-            return;
-        }
-
-        int piece = gear.Bag[bagIndex];
         GearPreview.Draw(new Rect(slot.x + 4f, slot.y, slot.width - 8f, slot.height - 18f), GearPreview.Piece + piece);
         GUI.Label(new Rect(slot.x + 4f, slot.y + slot.height - 20f, slot.width - 8f, 18f), PlayerGear.Pieces[piece].Name);
 

@@ -17,10 +17,12 @@ public static class GameSound
     public const int Chest = 8;
     public const int Jump = 9;
     public const int Land = 10;
+    public const int Cast = 11;
+    public const int Bite = 12;
 
     const int Rate = 22050;
 
-    static readonly AudioClip[] Clips = new AudioClip[11];
+    static readonly AudioClip[] Clips = new AudioClip[13];
 
     /// <summary>Beyond this a sound is inaudible anyway, and playing it still costs an object.</summary>
     const float Earshot = 35f;
@@ -78,6 +80,8 @@ public static class GameSound
             Warp => Sweep("warp", 0.35f, 200f, 1400f, 0.3f, 0.3f),
             Jump => Sweep("jump", 0.14f, 260f, 620f, 0.25f, 0.25f),
             Land => Sweep("land", 0.12f, 160f, 70f, 0.6f, 0.28f),
+            Cast => Sweep("cast", 0.22f, 900f, 180f, 0.75f, 0.22f),
+            Bite => Chime("bite", new[] { 880f, 1320f }, 0.06f, 0.34f),
             _ => Chime("chest", new[] { 392f, 523f, 784f }, 0.09f, 0.32f),
         };
     }

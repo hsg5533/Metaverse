@@ -24,6 +24,7 @@ public class PlayerStats : NetworkBehaviour
     public NetworkVariable<int> Hp = new(100, writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<int> WeaponLevel = new(0, writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<int> ArmorLevel = new(0, writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<int> BestFish = new(0, writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<int> DuelWins = new(0, writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<int> DuelLosses = new(0, writePerm: NetworkVariableWritePermission.Server);
 
@@ -98,6 +99,15 @@ public class PlayerStats : NetworkBehaviour
         if ((keyboard != null && keyboard.pKey.wasPressedThisFrame) || MobileInput.Pressed(Key.P))
         {
             WindowOpen = !WindowOpen;
+        }
+    }
+
+    /// <summary>Server side: the biggest one caught, which is the whole point of fishing.</summary>
+    public void RecordFish(int size)
+    {
+        if (IsServer && size > BestFish.Value)
+        {
+            BestFish.Value = size;
         }
     }
 
@@ -324,6 +334,11 @@ public class PlayerStats : NetworkBehaviour
         GUILayout.Label($"골드    {Gold.Value}");
         GUILayout.Label($"공격력  {AttackPower}  ({WeaponName})");
         GUILayout.Label($"방어력  {Defense}  ({ArmorName})");
+        if (BestFish.Value > 0)
+        {
+            GUILayout.Label($"최대어    {BestFish.Value}cm");
+        }
+
         if (DuelWins.Value + DuelLosses.Value > 0)
         {
             GUILayout.Label($"결투 {DuelWins.Value}승 {DuelLosses.Value}패");

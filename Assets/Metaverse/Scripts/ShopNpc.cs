@@ -57,13 +57,18 @@ public class ShopNpc : MonoBehaviour
             }
         }
 
-        var gear = stats.GetComponent<PlayerGear>();
-        for (int i = 0; i < gear.Bag.Count; i++)
+        var bag = stats.GetComponent<PlayerGear>();
+        for (int i = 0; i < bag.Bag.Count; i++)
         {
-            int piece = gear.Bag[i];
+            int piece = bag.Bag[i];
+            if (piece < 0)
+            {
+                continue;
+            }
+
             if (GUILayout.Button($"{PlayerGear.Pieces[piece].Name}  →  {PlayerGear.PriceOf(piece)} 골드"))
             {
-                gear.SellRpc(i);
+                bag.SellRpc(i);
                 break;
             }
         }
@@ -121,6 +126,12 @@ public class ShopNpc : MonoBehaviour
         if (GUILayout.Button($"방어구 Lv.{stats.ArmorLevel.Value} → Lv.{stats.ArmorLevel.Value + 1}  (골드 {stats.ArmorPrice})  방어 +3"))
         {
             stats.BuyArmorRpc();
+        }
+
+        var gear = stats.GetComponent<PlayerGear>();
+        if (GUILayout.Button($"낚싯대  (골드 {PlayerGear.RodPrice})  호수에서 쓴다"))
+        {
+            gear.BuyRodRpc();
         }
 
         GUILayout.Space(8);

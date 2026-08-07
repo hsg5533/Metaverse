@@ -18,12 +18,16 @@ public class PlayerGear : NetworkBehaviour
         /// <summary>The ground it drops on, which is also the model to show.</summary>
         public readonly int Theme;
 
-        public Piece(string name, bool weapon, int bonus, int theme)
+        /// <summary>False for a fish: it sits in the bag and is sold, never worn.</summary>
+        public readonly bool Wearable;
+
+        public Piece(string name, bool weapon, int bonus, int theme, bool wearable = true)
         {
             Name = name;
             Weapon = weapon;
             Bonus = bonus;
             Theme = theme;
+            Wearable = wearable;
         }
     }
 
@@ -36,7 +40,55 @@ public class PlayerGear : NetworkBehaviour
         new("서리 갑옷", false, 10, 1),
         new("용암 검", true, 20, 2),
         new("용암 갑옷", false, 16, 2),
+
+        // Past here nothing is dropped by a monster: PieceFor only reaches the themed pairs.
+        new("낚싯대", true, 0, 3),
+
+        // The catch. Not worn, so its "armour model" slot is only ever used by the icon.
+        new("붕어", false, 3, 3, false),
+        new("잉어", false, 6, 4, false),
+        new("메기", false, 9, 5, false),
+        new("무지개송어", false, 12, 6, false),
+        new("황금잉어", false, 33, 7, false),
     };
+
+    /// <summary>The rod, which the shop sells and the lake needs.</summary>
+    public const int Rod = 6;
+
+    /// <summary>The first fish; the rest follow it in order.</summary>
+    public const int FirstFish = 7;
+
+    /// <summary>
+    /// A material stack keeps its count in PlayerInventory, but takes a place in this list so
+    /// everything the player owns sits in one order: the order it was picked up in.
+    /// Negative, so it can never be mistaken for a piece.
+    /// </summary>
+    public static int MarkOf(int material) => -1 - material;
+
+    public static int MaterialOf(int entry) => -1 - entry;
+
+    /// <summary>Server side: the stack just went from nothing to something, or back.</summary>
+    public void Mark(int material, bool carried)
+    {
+        if (!IsServer)
+        {
+            return;
+        }
+
+        int mark = MarkOf(material);
+        int at = Bag.IndexOf(mark);
+
+        if (carried && at < 0)
+        {
+            Bag.Add(mark);
+        }
+        else if (!carried && at >= 0)
+        {
+            Bag.RemoveAt(at);
+        }
+    }
+
+    public bool HoldingRod => Weapon.Value == Rod;
 
     /// <summary>The bare sword first, then one weapon per theme.</summary>
     public GameObject[] WeaponModels;
@@ -80,10 +132,10 @@ public class PlayerGear : NetworkBehaviour
         return -1;
     }
 
-    /// <summary>The piece index a monster of this ground drops.</summary>
+    /// <summary>The piece index a monster of this ground drops: the themed pairs only.</summary>
     public static int PieceFor(int theme, bool weapon)
     {
-        return Mathf.Clamp(theme, 0, Pieces.Length / 2 - 1) * 2 + (weapon ? 0 : 1);
+        return Mathf.Clamp(theme, 0, 2) * 2 + (weapon ? 0 : 1);
     }
 
     public override void OnNetworkSpawn()
@@ -151,6 +203,12 @@ public class PlayerGear : NetworkBehaviour
         }
 
         int piece = Bag[bagIndex];
+        if (piece < 0 || !Pieces[piece].Wearable)
+        {
+            NoticeRpc(NetText.Trim512($"{Pieces[piece].Name}은(는) 입을 수 없습니다. 상인에게 파세요."));
+            return;
+        }
+
         var slot = Pieces[piece].Weapon ? Weapon : Armor;
         int previous = slot.Value;
 
@@ -162,6 +220,28 @@ public class PlayerGear : NetworkBehaviour
             Bag.Add(previous);
         }
     }
+
+    /// <summary>Server side: the shopkeeper hands one over for gold.</summary>
+    [Rpc(SendTo.Server)]
+    public void BuyRodRpc(RpcParams rpcParams = default)
+    {
+        var stats = GetComponent<PlayerStats>();
+        if (rpcParams.Receive.SenderClientId != OwnerClientId || stats == null)
+        {
+            return;
+        }
+
+        if (stats.Gold.Value < RodPrice)
+        {
+            NoticeRpc(NetText.Trim512("골드가 부족합니다."));
+            return;
+        }
+
+        stats.Gold.Value -= RodPrice;
+        Give(Rod);
+    }
+
+    public const int RodPrice = 120;
 
     /// <summary>Take a piece off: it goes back to the bag and the plain gear comes back.</summary>
     [Rpc(SendTo.Server)]
@@ -187,6 +267,11 @@ public class PlayerGear : NetworkBehaviour
         }
 
         int piece = Bag[bagIndex];
+        if (piece < 0)
+        {
+            return;
+        }
+
         Bag.RemoveAt(bagIndex);
 
         var stats = GetComponent<PlayerStats>();

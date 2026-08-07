@@ -158,11 +158,7 @@ public class SaveSystem : MonoBehaviour
             }
         }
 
-        var inventory = avatar.GetComponent<PlayerInventory>();
-        if (inventory != null)
-        {
-            inventory.SetAll(counts[0], counts[1], counts[2]);
-        }
+
 
         var quests = avatar.GetComponent<PlayerQuests>();
         if (quests != null)
@@ -170,10 +166,17 @@ public class SaveSystem : MonoBehaviour
             quests.Restore(record.quest, record.questProgress);
         }
 
+        // Gear first: restoring it empties the bag, and the stacks put their markers back in.
         var gear = avatar.GetComponent<PlayerGear>();
         if (gear != null)
         {
             gear.Restore(PlayerGear.IndexOf(record.gearWeapon), PlayerGear.IndexOf(record.gearArmor), pieces);
+        }
+
+        var inventory = avatar.GetComponent<PlayerInventory>();
+        if (inventory != null)
+        {
+            inventory.SetAll(counts[0], counts[1], counts[2]);
         }
 
         Debug.Log($"[Metaverse] loaded save for {record.name} (Lv.{record.level}, {record.gold} G)");

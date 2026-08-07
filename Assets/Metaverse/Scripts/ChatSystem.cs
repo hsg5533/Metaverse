@@ -76,7 +76,7 @@ public class ChatSystem : NetworkBehaviour
 
         // A window on top would be clicked through: the field underneath still takes the
         // touch and the soft keyboard comes up over a shop nobody asked to leave.
-        if (ShopNpc.PanelOpen || PlayerInventory.WindowOpen || MetaverseHUD.MenuOpen)
+        if (MetaverseUi.WindowOpen)
         {
             IsTyping = false;
             GUI.FocusControl(null);

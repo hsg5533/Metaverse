@@ -141,7 +141,6 @@ public class Monster : NetworkBehaviour
 
     Renderer[] renderers;
     Renderer[] tintTargets = System.Array.Empty<Renderer>();
-    Collider[] colliders;
     CharacterController controller;
     float motionEndTime;
     bool motionIsSlam;
@@ -169,7 +168,6 @@ public class Monster : NetworkBehaviour
     void Awake()
     {
         renderers = GetComponentsInChildren<Renderer>(true);
-        colliders = GetComponentsInChildren<Collider>(true);
         controller = GetComponent<CharacterController>();
         home = transform.position;
         baseScale = transform.localScale;
@@ -944,12 +942,10 @@ public class Monster : NetworkBehaviour
             }
         }
 
-        foreach (var collider in colliders)
+        // The only collider is the controller on the root; the bodies are built without any.
+        if (controller != null)
         {
-            if (collider != null)
-            {
-                collider.enabled = alive;
-            }
+            controller.enabled = alive;
         }
     }
 

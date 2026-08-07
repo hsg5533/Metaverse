@@ -170,6 +170,12 @@ public static class MetaverseUi
         GUI.Box(new Rect(screenPoint.x - size.x * 0.5f, Height - screenPoint.y, size.x, size.y), content);
     }
 
+    /// <summary>
+    /// A window is up, so the world underneath it takes no input: the shop, the bag, a warp
+    /// list or the menu behind the gear.
+    /// </summary>
+    public static bool WindowOpen => ShopNpc.PanelOpen || PlayerInventory.WindowOpen || MetaverseHUD.MenuOpen;
+
     /// <summary>E on the keyboard. Every station and node reads this one check.</summary>
     public static bool InteractPressed =>
         (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame) || MobileInput.ConsumeInteract();

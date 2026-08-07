@@ -107,7 +107,7 @@ public class MobileInput : MonoBehaviour
         }
 
         // A window covers the controls; a tap meant for it must not also swing or interact.
-        if (ShopNpc.PanelOpen || PlayerInventory.WindowOpen || MetaverseHUD.MenuOpen)
+        if (MetaverseUi.WindowOpen)
         {
             Move = Vector2.zero;
             Look = Vector2.zero;
@@ -292,8 +292,7 @@ public class MobileInput : MonoBehaviour
 
     void OnGUI()
     {
-        if (!Active || PlayerAvatar.Local == null
-            || ShopNpc.PanelOpen || PlayerInventory.WindowOpen || MetaverseHUD.MenuOpen)
+        if (!Active || PlayerAvatar.Local == null || MetaverseUi.WindowOpen)
         {
             return;
         }
