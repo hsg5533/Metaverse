@@ -1126,8 +1126,9 @@ public static class MetaverseSceneBuilder
         BodyPart(PrimitiveType.Cube, "EarRight", body.transform, new Vector3(0.34f, 1.5f, 0f), new Vector3(0.3f, 0.12f, 0.1f), bodyMaterial);
         BodyPart(PrimitiveType.Sphere, "EyeLeft", body.transform, new Vector3(-0.14f, 1.45f, 0.24f), new Vector3(0.13f, 0.13f, 0.08f), eyeMaterial);
         BodyPart(PrimitiveType.Sphere, "EyeRight", body.transform, new Vector3(0.14f, 1.45f, 0.24f), new Vector3(0.13f, 0.13f, 0.08f), eyeMaterial);
-        BodyPart(PrimitiveType.Cube, "ArmLeft", body.transform, new Vector3(-0.42f, 0.77f, 0.08f), new Vector3(0.16f, 0.78f, 0.18f), bodyMaterial);
-        BodyPart(PrimitiveType.Cube, "ArmRight", body.transform, new Vector3(0.42f, 0.77f, 0.08f), new Vector3(0.16f, 0.78f, 0.18f), bodyMaterial);
+        // Pulled in from the torso's side so the shoulder does not float clear of it.
+        BodyPart(PrimitiveType.Cube, "ArmLeft", body.transform, new Vector3(-0.36f, 0.77f, 0.08f), new Vector3(0.16f, 0.78f, 0.18f), bodyMaterial);
+        BodyPart(PrimitiveType.Cube, "ArmRight", body.transform, new Vector3(0.36f, 0.77f, 0.08f), new Vector3(0.16f, 0.78f, 0.18f), bodyMaterial);
         BodyPart(PrimitiveType.Cube, "LegLeft", body.transform, new Vector3(-0.17f, 0.25f, 0f), new Vector3(0.2f, 0.5f, 0.22f), bodyMaterial);
         BodyPart(PrimitiveType.Cube, "LegRight", body.transform, new Vector3(0.17f, 0.25f, 0f), new Vector3(0.2f, 0.5f, 0.22f), bodyMaterial);
         return body;
@@ -1501,7 +1502,7 @@ public static class MetaverseSceneBuilder
         BodyPart(PrimitiveType.Cube, "Torso", body.transform, new Vector3(0f, 1.75f, 0f), new Vector3(1.5f, 1.5f, 0.9f), bodyMaterial);
         BodyPart(PrimitiveType.Cube, "Hips", body.transform, new Vector3(0f, 0.95f, 0f), new Vector3(1.1f, 0.55f, 0.8f), bodyMaterial);
         BodyPart(PrimitiveType.Sphere, "Head", body.transform, new Vector3(0f, 2.9f, 0.1f), new Vector3(0.85f, 0.82f, 0.85f), bodyMaterial);
-        BodyPart(PrimitiveType.Cube, "DetailBeard", body.transform, new Vector3(0f, 2.62f, 0.42f), new Vector3(0.5f, 0.5f, 0.28f), iceMaterial);
+        BodyPart(PrimitiveType.Cube, "DetailBeard", body.transform, new Vector3(0f, 2.62f, 0.42f), new Vector3(0.5f, 0.25f, 0.28f), iceMaterial);
 
         // Crown of shards, and a ridge of them down the back.
         for (int i = 0; i < 5; i++)
@@ -1523,7 +1524,8 @@ public static class MetaverseSceneBuilder
         {
             string suffix = side < 0f ? "Left" : "Right";
             BodyPart(PrimitiveType.Sphere, "EyeGlow" + suffix, body.transform, new Vector3(side * 0.25f, 2.98f, 0.42f), new Vector3(0.19f, 0.19f, 0.1f), iceMaterial);
-            BodyPart(PrimitiveType.Cube, "Arm" + suffix, body.transform, new Vector3(side * 1.12f, 1.6f, 0.05f), new Vector3(0.45f, 1.9f, 0.46f), bodyMaterial);
+            // Pulled in from the torso's side so the shoulder does not float clear of it.
+            BodyPart(PrimitiveType.Cube, "Arm" + suffix, body.transform, new Vector3(side * 0.95f, 1.6f, 0.05f), new Vector3(0.45f, 1.9f, 0.46f), bodyMaterial);
             BodyPart(PrimitiveType.Cube, "Leg" + suffix, body.transform, new Vector3(side * 0.42f, 0.45f, 0f), new Vector3(0.5f, 0.9f, 0.52f), bodyMaterial);
         }
 
@@ -1537,6 +1539,9 @@ public static class MetaverseSceneBuilder
         body.transform.SetParent(parent, false);
 
         BodyPart(PrimitiveType.Cube, "Torso", body.transform, new Vector3(0f, 1.35f, 0f), new Vector3(1.9f, 1.2f, 1.15f), bodyMaterial);
+        // Bridges the torso down to where the legs meet it, so the two do not read as a box
+        // stacked on two boxes.
+        BodyPart(PrimitiveType.Cube, "Hips", body.transform, new Vector3(0f, 0.75f, 0f), new Vector3(1.4f, 0.4f, 1.0f), bodyMaterial);
         BodyPart(PrimitiveType.Sphere, "Hump", body.transform, new Vector3(0f, 2.0f, -0.35f), new Vector3(1.55f, 0.95f, 1.15f), bodyMaterial);
         BodyPart(PrimitiveType.Sphere, "Head", body.transform, new Vector3(0f, 2.05f, 0.6f), new Vector3(0.9f, 0.72f, 0.85f), bodyMaterial);
         BodyPart(PrimitiveType.Cube, "Jaw", body.transform, new Vector3(0f, 1.8f, 0.72f), new Vector3(0.72f, 0.26f, 0.62f), bodyMaterial);
@@ -1559,7 +1564,9 @@ public static class MetaverseSceneBuilder
             BodyPart(PrimitiveType.Cube, "Tusk" + suffix, body.transform, new Vector3(side * 0.26f, 1.88f, 0.92f), new Vector3(0.1f, 0.24f, 0.1f), clawMaterial);
             BodyPart(PrimitiveType.Cube, "Arm" + suffix, body.transform, new Vector3(side * 1.22f, 1.15f, 0.1f), new Vector3(0.52f, 1.7f, 0.56f), bodyMaterial);
             BodyPart(PrimitiveType.Cube, "DetailClawCrack" + suffix, body.transform, new Vector3(side * 1.22f, 1.35f, 0.4f), new Vector3(0.4f, 0.14f, 0.06f), emberMaterial);
-            BodyPart(PrimitiveType.Cube, "Leg" + suffix, body.transform, new Vector3(side * 0.52f, 0.32f, 0f), new Vector3(0.56f, 0.64f, 0.62f), bodyMaterial);
+            // Pulled up so the leg's top actually reaches the torso's underside instead of
+            // stopping short of it.
+            BodyPart(PrimitiveType.Cube, "Leg" + suffix, body.transform, new Vector3(side * 0.52f, 0.46f, 0f), new Vector3(0.56f, 0.64f, 0.62f), bodyMaterial);
         }
 
         return body;
