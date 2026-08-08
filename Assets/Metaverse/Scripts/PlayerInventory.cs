@@ -26,14 +26,16 @@ public class PlayerInventory : NetworkBehaviour
     };
 
     /// <summary>
-    /// Cooking recipes: materials in, one of the campfire's dishes out (see
-    /// <see cref="PlayerGear.FoodFirst"/> for the matching name and buff), in the same order.
+    /// Cooking recipes: materials in (Fish is a PlayerGear piece index, or -1 for none), one of
+    /// the campfire's dishes out (see <see cref="PlayerGear.FoodFirst"/> for the matching name
+    /// and buff), in the same order.
     /// </summary>
-    public static readonly (int Ore, int Herb, int Wood)[] CookRecipes =
+    public static readonly (int Ore, int Herb, int Wood, int Fish)[] CookRecipes =
     {
-        (0, 2, 1),
-        (1, 1, 1),
-        (0, 2, 0),
+        (0, 2, 1, -1),
+        (1, 1, 1, -1),
+        (0, 2, 0, -1),
+        (0, 0, 1, PlayerGear.FirstFish),
     };
 
     /// <summary>True while the local player has the bag open; other panels stay shut.</summary>
@@ -143,10 +145,21 @@ public class PlayerInventory : NetworkBehaviour
         }
 
         var entry = CookRecipes[recipe];
+        if (entry.Fish >= 0 && !gear.HasInBag(entry.Fish))
+        {
+            NoticeRpc(NetText.Trim512("재료가 부족합니다."));
+            return;
+        }
+
         if (!Spend(entry.Ore, entry.Herb, entry.Wood))
         {
             NoticeRpc(NetText.Trim512("재료가 부족합니다."));
             return;
+        }
+
+        if (entry.Fish >= 0)
+        {
+            gear.TakeFromBag(entry.Fish);
         }
 
         // The dish goes to the bag instead of applying on the spot; gear.Give sends its own notice.

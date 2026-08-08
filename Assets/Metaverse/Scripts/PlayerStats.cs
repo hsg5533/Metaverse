@@ -203,13 +203,13 @@ public class PlayerStats : NetworkBehaviour
         int price = ArmorPrice;
         if (Gold.Value < price)
         {
-            NoticeRpc(NetText.Trim512("골드가 부족합니다."));
+            NoticeRpc(NetText.Trim512("골드가 부족합니다."), sound: true);
             return;
         }
 
         Gold.Value -= price;
         ArmorLevel.Value++;
-        NoticeRpc(NetText.Trim512($"방어구 Lv.{ArmorLevel.Value}! 방어력 {Defense}"));
+        NoticeRpc(NetText.Trim512($"방어구 Lv.{ArmorLevel.Value}! 방어력 {Defense}"), sound: true);
     }
 
     [Rpc(SendTo.Server)]
@@ -223,13 +223,13 @@ public class PlayerStats : NetworkBehaviour
         int price = WeaponPrice;
         if (Gold.Value < price)
         {
-            NoticeRpc(NetText.Trim512("골드가 부족합니다."));
+            NoticeRpc(NetText.Trim512("골드가 부족합니다."), sound: true);
             return;
         }
 
         Gold.Value -= price;
         WeaponLevel.Value++;
-        NoticeRpc(NetText.Trim512($"검 Lv.{WeaponLevel.Value}! 공격력 {AttackPower}"));
+        NoticeRpc(NetText.Trim512($"검 Lv.{WeaponLevel.Value}! 공격력 {AttackPower}"), sound: true);
     }
 
     /// <summary>
@@ -306,9 +306,13 @@ public class PlayerStats : NetworkBehaviour
     }
 
     [Rpc(SendTo.Owner)]
-    void NoticeRpc(FixedString512Bytes text)
+    void NoticeRpc(FixedString512Bytes text, bool sound = false)
     {
         ChatSystem.Local(text.ToString());
+        if (sound)
+        {
+            GameSound.PlayLocal(GameSound.Pickup);
+        }
     }
 
     void OnGUI()

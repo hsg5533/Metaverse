@@ -5,10 +5,10 @@ public class Campfire : InteractStation
 {
     void Awake()
     {
-        // Three icon rows plus the resource line and up to three buff lines need more room
-        // than the text-only stations: tall enough that nothing clips against the box edge
-        // even with every buff running at once.
-        PanelSize = new Vector2(380f, 420f);
+        // One icon row per recipe plus the resource line and up to three buff lines need more
+        // room than the text-only stations: tall enough that nothing clips against the box
+        // edge even with every buff running at once.
+        PanelSize = new Vector2(380f, 160f + PlayerInventory.CookRecipes.Length * 64f);
     }
 
     protected override void DrawPanel(PlayerAvatar player)
@@ -38,7 +38,7 @@ public class Campfire : InteractStation
 
             var slot = GUILayoutUtility.GetRect(PanelSize.x - 24f, 64f);
             string effect = $"{PlayerBuffs.NameOf(food.Buff)}  {Mathf.RoundToInt(food.BuffSeconds / 60f)}분";
-            string cost = $"만들기  ({Cost(recipe.Ore, recipe.Herb, recipe.Wood)})";
+            string cost = $"만들기  ({Cost(recipe.Ore, recipe.Herb, recipe.Wood, recipe.Fish)})";
 
             int index = i;
             MetaverseUi.ItemRow(slot, GearPreview.Piece + piece, food.Name, effect, cost, () => inventory.CookRpc(index));
@@ -57,9 +57,9 @@ public class Campfire : InteractStation
         }
     }
 
-    static string Cost(int ore, int herb, int wood)
+    static string Cost(int ore, int herb, int wood, int fish)
     {
-        string text = "";
+        string text = fish >= 0 ? $"{PlayerGear.Pieces[fish].Name}1 " : "";
         if (ore > 0)
         {
             text += $"광석{ore} ";

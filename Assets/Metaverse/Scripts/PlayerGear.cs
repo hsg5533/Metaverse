@@ -77,6 +77,7 @@ public class PlayerGear : NetworkBehaviour
         new("약초 스튜", false, 0, -1, false, PlayerBuffs.Attack, 180f),
         new("철분 수프", false, 0, -1, false, PlayerBuffs.Defense, 180f),
         new("여행자의 차", false, 0, -1, false, PlayerBuffs.Speed, 120f),
+        new("생선구이", false, 0, -1, false, PlayerBuffs.Attack, 180f),
     };
 
     /// <summary>The rod, which the shop sells and the lake needs.</summary>
@@ -210,6 +211,22 @@ public class PlayerGear : NetworkBehaviour
         // ponytail: no cap. The bag scrolls, and a runaway could only come from a bug.
         Bag.Add(piece);
         NoticeRpc(NetText.Trim512($"{Pieces[piece].Name}을(를) 획득했습니다."));
+    }
+
+    /// <summary>Server side: a recipe checking whether it has the fish it needs.</summary>
+    public bool HasInBag(int piece) => Bag.IndexOf(piece) >= 0;
+
+    /// <summary>Server side: a recipe spending the fish it needed. False if it was already gone.</summary>
+    public bool TakeFromBag(int piece)
+    {
+        int at = IsServer ? Bag.IndexOf(piece) : -1;
+        if (at < 0)
+        {
+            return false;
+        }
+
+        Bag.RemoveAt(at);
+        return true;
     }
 
     /// <summary>Server side: used by the save file.</summary>

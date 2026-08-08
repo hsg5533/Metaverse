@@ -336,7 +336,7 @@ public class GearPreview : MonoBehaviour
 
         if (slot >= Piece && PlayerGear.Pieces[slot - Piece].IsFood)
         {
-            BuildFood(root, PlayerGear.Pieces[slot - Piece].Buff);
+            BuildFood(root, slot - Piece - PlayerGear.FoodFirst);
             return root.gameObject;
         }
 
@@ -359,24 +359,80 @@ public class GearPreview : MonoBehaviour
         return root.gameObject;
     }
 
-    /// <summary>A bowl of something hot: base, filling and a wisp of steam. Colour follows the buff.</summary>
-    static void BuildFood(Transform root, int buffKind)
+    /// <summary>Dish index within <see cref="PlayerGear.FoodFirst"/>: a distinct shape per recipe, not just a recolour.</summary>
+    static void BuildFood(Transform root, int foodIndex)
     {
-        Color fillColor = buffKind switch
+        switch (foodIndex)
         {
-            PlayerBuffs.Attack => new Color(0.74f, 0.32f, 0.20f),
-            PlayerBuffs.Defense => new Color(0.30f, 0.46f, 0.62f),
-            _ => new Color(0.52f, 0.72f, 0.40f),
-        };
+            case 0:
+                BuildStew(root);
+                break;
+            case 1:
+                BuildSoup(root);
+                break;
+            case 2:
+                BuildTea(root);
+                break;
+            default:
+                BuildGrilledFish(root);
+                break;
+        }
+    }
 
-        Material bowl = Paint(new Color(0.82f, 0.78f, 0.70f));
-        Material fill = Paint(fillColor);
-        Material steam = Paint(new Color(0.88f, 0.88f, 0.88f));
+    /// <summary>A bowl with chunks poking out of the broth.</summary>
+    static void BuildStew(Transform root)
+    {
+        Material bowl = Paint(new Color(0.80f, 0.76f, 0.68f));
+        Material rim = Paint(new Color(0.60f, 0.54f, 0.44f));
+        Material broth = Paint(new Color(0.74f, 0.32f, 0.20f));
+        Material chunk = Paint(new Color(0.86f, 0.62f, 0.30f));
 
-        Part(root, "Bowl", new Vector3(0f, -0.14f, 0f), new Vector3(0.4f, 0.16f, 0.4f), bowl);
-        Part(root, "Filling", new Vector3(0f, -0.04f, 0f), new Vector3(0.32f, 0.06f, 0.32f), fill);
-        Part(root, "SteamLeft", new Vector3(-0.08f, 0.2f, 0f), new Vector3(0.05f, 0.22f, 0.05f), steam, new Vector3(0f, 0f, -12f));
-        Part(root, "SteamRight", new Vector3(0.08f, 0.22f, 0f), new Vector3(0.05f, 0.26f, 0.05f), steam, new Vector3(0f, 0f, 10f));
+        Part(root, "Bowl", new Vector3(0f, -0.16f, 0f), new Vector3(0.42f, 0.14f, 0.42f), bowl);
+        Part(root, "Rim", new Vector3(0f, -0.09f, 0f), new Vector3(0.46f, 0.04f, 0.46f), rim);
+        Part(root, "Broth", new Vector3(0f, -0.05f, 0f), new Vector3(0.34f, 0.05f, 0.34f), broth);
+        Part(root, "ChunkA", new Vector3(-0.08f, -0.01f, 0.05f), new Vector3(0.08f, 0.08f, 0.08f), chunk, new Vector3(0f, 20f, 0f));
+        Part(root, "ChunkB", new Vector3(0.07f, -0.01f, -0.04f), new Vector3(0.07f, 0.07f, 0.07f), chunk, new Vector3(0f, -15f, 0f));
+    }
+
+    /// <summary>An iron pot with two side handles and a slick of broth on top.</summary>
+    static void BuildSoup(Transform root)
+    {
+        Material pot = Paint(new Color(0.22f, 0.22f, 0.25f));
+        Material trim = Paint(new Color(0.5f, 0.5f, 0.54f));
+        Material broth = Paint(new Color(0.30f, 0.46f, 0.62f));
+
+        Part(root, "Pot", new Vector3(0f, -0.14f, 0f), new Vector3(0.4f, 0.22f, 0.4f), pot);
+        Part(root, "Rim", new Vector3(0f, -0.03f, 0f), new Vector3(0.44f, 0.04f, 0.44f), trim);
+        Part(root, "Broth", new Vector3(0f, -0.01f, 0f), new Vector3(0.32f, 0.03f, 0.32f), broth);
+        Part(root, "HandleLeft", new Vector3(-0.24f, -0.06f, 0f), new Vector3(0.06f, 0.05f, 0.05f), trim);
+        Part(root, "HandleRight", new Vector3(0.24f, -0.06f, 0f), new Vector3(0.06f, 0.05f, 0.05f), trim);
+    }
+
+    /// <summary>A cup and saucer with a handle, daintier than the two bowls.</summary>
+    static void BuildTea(Transform root)
+    {
+        Material cup = Paint(new Color(0.90f, 0.88f, 0.82f));
+        Material trim = Paint(new Color(0.52f, 0.72f, 0.40f));
+
+        Part(root, "Saucer", new Vector3(0f, -0.22f, 0f), new Vector3(0.36f, 0.03f, 0.36f), cup);
+        Part(root, "Cup", new Vector3(0f, -0.1f, 0f), new Vector3(0.26f, 0.22f, 0.26f), cup);
+        Part(root, "Rim", new Vector3(0f, 0.01f, 0f), new Vector3(0.28f, 0.03f, 0.28f), trim);
+        Part(root, "Tea", new Vector3(0f, -0.02f, 0f), new Vector3(0.2f, 0.03f, 0.2f), trim);
+        Part(root, "Handle", new Vector3(0.17f, -0.08f, 0f), new Vector3(0.05f, 0.1f, 0.03f), trim, new Vector3(0f, 0f, 90f));
+    }
+
+    /// <summary>A whole fish on a plate, charred stripes and all.</summary>
+    static void BuildGrilledFish(Transform root)
+    {
+        Material plate = Paint(new Color(0.86f, 0.84f, 0.78f));
+        Material fish = Paint(new Color(0.74f, 0.58f, 0.34f));
+        Material char_ = Paint(new Color(0.30f, 0.20f, 0.14f));
+
+        Part(root, "Plate", new Vector3(0f, -0.18f, 0f), new Vector3(0.46f, 0.05f, 0.46f), plate);
+        Part(root, "Body", new Vector3(0f, -0.1f, 0f), new Vector3(0.36f, 0.09f, 0.16f), fish);
+        Part(root, "Tail", new Vector3(0f, -0.1f, -0.19f), new Vector3(0.08f, 0.09f, 0.1f), fish, new Vector3(0f, 0f, 20f));
+        Part(root, "CharStripeA", new Vector3(-0.06f, -0.06f, 0f), new Vector3(0.03f, 0.02f, 0.16f), char_, new Vector3(0f, 20f, 0f));
+        Part(root, "CharStripeB", new Vector3(0.06f, -0.06f, 0f), new Vector3(0.03f, 0.02f, 0.16f), char_, new Vector3(0f, -20f, 0f));
     }
 
     /// <summary>A breastplate: chest, collar, belt, pauldrons and a centre ridge.</summary>
