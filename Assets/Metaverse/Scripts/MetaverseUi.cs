@@ -168,14 +168,17 @@ public static class MetaverseUi
         SlotBackground(icon);
         GearPreview.Draw(icon, preview);
 
-        GUI.Label(new Rect(slot.x + 66f, slot.y + 2f, slot.width - 66f, 18f), $"<b>{name}</b>", Rich);
-        GUI.Label(new Rect(slot.x + 66f, slot.y + 20f, slot.width - 66f, 18f), detail);
+        GUI.Label(new Rect(slot.x + 66f, slot.y, slot.width - 66f, 22f), $"<b>{name}</b>", Rich);
+        GUI.Label(new Rect(slot.x + 66f, slot.y + 22f, slot.width - 66f, 20f), detail);
 
-        if (GUI.Button(new Rect(slot.x + 66f, slot.y + 40f, slot.width - 66f, 20f), actionLabel))
+        if (GUI.Button(new Rect(slot.x + 66f, slot.y + 44f, slot.width - 66f, 22f), actionLabel))
         {
             action();
         }
     }
+
+    /// <summary>Room an ItemRow needs top to bottom: name, detail and button, each given a full line.</summary>
+    public const float ItemRowHeight = 66f;
 
     /// <summary>A label box floating over a point in the world, e.g. "[E] 채집".</summary>
     public static void WorldPrompt(Vector3 worldPosition, string text)

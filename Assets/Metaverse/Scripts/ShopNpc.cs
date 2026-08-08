@@ -49,7 +49,7 @@ public class ShopNpc : MonoBehaviour
     /// </summary>
     void DrawBuying(Rect area, PlayerStats stats, PlayerGear gear)
     {
-        const float rowHeight = 70f;
+        const float rowHeight = MetaverseUi.ItemRowHeight + 10f;
         var inventory = stats.GetComponent<PlayerInventory>();
         int rows = 1 + PlayerGear.ShopCount + PlayerInventory.Slots.Length;
         var content = new Rect(0f, 0f, area.width - 20f, rows * rowHeight);
@@ -94,11 +94,13 @@ public class ShopNpc : MonoBehaviour
     /// </summary>
     void DrawUpgrading(Rect area, PlayerStats stats, PlayerGear gear)
     {
-        MetaverseUi.ItemRow(new Rect(area.x, area.y, area.width, 66f), GearPreview.Weapon,
+        const float rowHeight = MetaverseUi.ItemRowHeight + 4f;
+
+        MetaverseUi.ItemRow(new Rect(area.x, area.y, area.width, rowHeight), GearPreview.Weapon,
             $"검 Lv.{stats.WeaponLevel.Value}", $"공격 +{stats.WeaponBonus}",
             $"Lv.{stats.WeaponLevel.Value + 1}로 강화  ({stats.WeaponPrice} 골드)", () => stats.BuyWeaponRpc());
 
-        MetaverseUi.ItemRow(new Rect(area.x, area.y + 74f, area.width, 66f), GearPreview.Armor,
+        MetaverseUi.ItemRow(new Rect(area.x, area.y + rowHeight + 8f, area.width, rowHeight), GearPreview.Armor,
             $"방어구 Lv.{stats.ArmorLevel.Value}", $"방어 +{stats.ArmorBonus}",
             $"Lv.{stats.ArmorLevel.Value + 1}로 강화  ({stats.ArmorPrice} 골드)", () => stats.BuyArmorRpc());
     }
@@ -110,7 +112,7 @@ public class ShopNpc : MonoBehaviour
     /// </summary>
     void DrawSelling(Rect area, PlayerStats stats, PlayerGear gear)
     {
-        const float rowHeight = 70f;
+        const float rowHeight = MetaverseUi.ItemRowHeight + 10f;
 
         // The player prefab always carries all three; the builder adds them together.
         var inventory = stats.GetComponent<PlayerInventory>();

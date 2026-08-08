@@ -1,3 +1,5 @@
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
@@ -180,6 +182,7 @@ public class MetaverseHUD : MonoBehaviour
         // One pass for every monster in the world; they used to each own an OnGUI.
         GUI.depth = MetaverseUi.WorldDepth;
         Monster.DrawTags();
+        DamageNumbers.Draw();
         GUI.depth = 0;
 
         DrawHelp();
@@ -319,6 +322,12 @@ public class MetaverseHUD : MonoBehaviour
         if (manager.IsServer)
         {
             GUILayout.Label($"접속 인원: {manager.ConnectedClientsIds.Count}");
+
+            string ip = LocalIPv4();
+            if (ip != null)
+            {
+                GUILayout.Label($"다른 기기 접속 주소: {ip}:{port}");
+            }
         }
         else
         {
@@ -362,5 +371,47 @@ public class MetaverseHUD : MonoBehaviour
     {
         message = $"포트 {port}가 사용 중입니다. 다른 포트를 쓰거나 Unity를 재시작하세요.";
         Debug.LogWarning($"[Metaverse] transport failed to start on port {port}.");
+    }
+
+    static string cachedIPv4;
+    static bool cachedIPv4Read;
+
+    /// <summary>
+    /// The host's own LAN address(es), so another device's "서버 주소" field has something to
+    /// type in instead of the 127.0.0.1 default, which only ever means "this device itself".
+    /// Every active adapter is listed rather than guessing one: a PC with a VPN, a virtual
+    /// switch, or a second network card can easily have its real Wi-Fi address come back
+    /// second or third, and a wrong single guess is worse than a short list to try.
+    /// Cached after the first read - OnGUI calls this every repaint, and adapters do not
+    /// change mid-session.
+    /// </summary>
+    static string LocalIPv4()
+    {
+        if (cachedIPv4Read)
+        {
+            return cachedIPv4;
+        }
+
+        cachedIPv4Read = true;
+        string result = null;
+
+        foreach (var iface in NetworkInterface.GetAllNetworkInterfaces())
+        {
+            if (iface.OperationalStatus != OperationalStatus.Up || iface.NetworkInterfaceType == NetworkInterfaceType.Loopback)
+            {
+                continue;
+            }
+
+            foreach (var address in iface.GetIPProperties().UnicastAddresses)
+            {
+                if (address.Address.AddressFamily == AddressFamily.InterNetwork)
+                {
+                    result = result == null ? address.Address.ToString() : $"{result}, {address.Address}";
+                }
+            }
+        }
+
+        cachedIPv4 = result;
+        return result;
     }
 }

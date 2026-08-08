@@ -205,6 +205,17 @@ public class Monster : NetworkBehaviour
         GameSound.Play(current > 0 ? GameSound.Hit : GameSound.Death, transform.position);
     }
 
+    /// <summary>
+    /// The exact amount just dealt, announced separately from Hp itself: re-levelling while
+    /// idle also moves Hp (see RelevelIfIdle) and that is not a hit, so diffing Hp.OnValueChanged
+    /// would show a false number every time the field quietly re-scales to the players' level.
+    /// </summary>
+    [Rpc(SendTo.Everyone)]
+    void DamageNumberRpc(int amount)
+    {
+        DamageNumbers.Add(transform.position + Vector3.up * NameTagHeight, amount);
+    }
+
     /// <summary>Attacks are decided on the server, so the motion is announced to everyone.</summary>
     [Rpc(SendTo.Everyone)]
     void AttackMotionRpc(bool slam)
@@ -626,6 +637,7 @@ public class Monster : NetworkBehaviour
             contributors[attacker.OwnerClientId] = attacker;
         }
 
+        DamageNumberRpc(amount);
         Hp.Value = Mathf.Max(0, Hp.Value - amount);
         if (Hp.Value > 0)
         {

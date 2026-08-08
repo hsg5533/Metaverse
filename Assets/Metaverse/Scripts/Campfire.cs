@@ -8,7 +8,7 @@ public class Campfire : InteractStation
         // One icon row per recipe plus the resource line and up to three buff lines need more
         // room than the text-only stations: tall enough that nothing clips against the box
         // edge even with every buff running at once.
-        PanelSize = new Vector2(380f, 160f + PlayerInventory.CookRecipes.Length * 64f);
+        PanelSize = new Vector2(380f, 160f + PlayerInventory.CookRecipes.Length * (MetaverseUi.ItemRowHeight + 4f));
     }
 
     protected override void DrawPanel(PlayerAvatar player)
@@ -36,7 +36,7 @@ public class Campfire : InteractStation
             int piece = PlayerGear.FoodFirst + i;
             PlayerGear.Piece food = PlayerGear.Pieces[piece];
 
-            var slot = GUILayoutUtility.GetRect(PanelSize.x - 24f, 64f);
+            var slot = GUILayoutUtility.GetRect(PanelSize.x - 24f, MetaverseUi.ItemRowHeight + 4f);
             string effect = $"{PlayerBuffs.NameOf(food.Buff)}  {Mathf.RoundToInt(food.BuffSeconds / 60f)}분";
             string cost = $"만들기  ({Cost(recipe.Ore, recipe.Herb, recipe.Wood, recipe.Fish)})";
 

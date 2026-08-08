@@ -143,10 +143,27 @@ public class PlayerStats : NetworkBehaviour
 
     void OnHpChanged(int previous, int current)
     {
-        if (current < previous && limbAnimator != null)
+        if (current >= previous)
+        {
+            return;
+        }
+
+        if (limbAnimator != null)
         {
             limbAnimator.PlayHit();
         }
+    }
+
+    /// <summary>
+    /// The exact amount just dealt, announced separately from Hp itself: a level-up heal or a
+    /// respawn also move Hp (see GainReward, TakeDamage's own respawn line) and those are not
+    /// hits, so diffing Hp.OnValueChanged would show a false number on every level-up too.
+    /// </summary>
+    [Rpc(SendTo.Everyone)]
+    void DamageNumberRpc(int amount)
+    {
+        float height = avatar != null ? avatar.NameTagHeight : 2f;
+        DamageNumbers.Add(transform.position + Vector3.up * height, amount, taken: true);
     }
 
     /// <summary>Server side: pay out a kill and level up as many times as the experience allows.</summary>
@@ -181,7 +198,9 @@ public class PlayerStats : NetworkBehaviour
             return;
         }
 
-        Hp.Value = Mathf.Max(0, Hp.Value - Mathf.Max(1, amount - Defense));
+        int dealt = Mathf.Max(1, amount - Defense);
+        DamageNumberRpc(dealt);
+        Hp.Value = Mathf.Max(0, Hp.Value - dealt);
         if (Hp.Value > 0)
         {
             return;
@@ -243,7 +262,9 @@ public class PlayerStats : NetworkBehaviour
             return;
         }
 
-        Hp.Value = Mathf.Max(1, Hp.Value - Mathf.Max(1, amount - Defense));
+        int dealt = Mathf.Max(1, amount - Defense);
+        DamageNumberRpc(dealt);
+        Hp.Value = Mathf.Max(1, Hp.Value - dealt);
         if (Hp.Value <= 1)
         {
             NoticeRpc(NetText.Trim512($"{source}에게 패배했습니다."));
