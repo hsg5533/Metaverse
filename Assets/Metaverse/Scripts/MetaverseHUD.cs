@@ -164,11 +164,13 @@ public class MetaverseHUD : MonoBehaviour
             return;
         }
 
-        // The connect menu has fields and two buttons; the session panel is three lines.
+        // The connect menu has fields and two buttons; the session panel is three lines,
+        // four and wider while hosting - the extra one is the LAN address other devices type in.
         bool connected = manager.IsClient || manager.IsServer;
-        float height = connected ? 130f : 230f;
+        float width = connected && manager.IsServer ? 280f : 250f;
+        float height = !connected ? 230f : manager.IsServer ? 154f : 130f;
 
-        GUILayout.BeginArea(new Rect(10, 10, 250, height), GUI.skin.box);
+        GUILayout.BeginArea(new Rect(10, 10, width, height), GUI.skin.box);
         if (connected)
         {
             DrawSessionPanel(manager);

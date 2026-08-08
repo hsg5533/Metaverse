@@ -1375,9 +1375,11 @@ public static class MetaverseSceneBuilder
                     new Vector3(side * 0.55f, 0.3f, 0.15f - leg * 0.42f),
                     new Vector3(0.42f, 0.12f, 0.12f), bodyMaterial, Quaternion.Euler(0f, 0f, side * -24f));
 
+                // Where the leg segment above actually ends, so the foot meets it instead of
+                // floating off to the side.
                 BodyPart(PrimitiveType.Cube, $"ClawTip{suffix}{leg}", body.transform,
-                    new Vector3(side * 0.84f, 0.13f, 0.15f - leg * 0.42f),
-                    new Vector3(0.1f, 0.3f, 0.1f), clawMaterial, Quaternion.Euler(0f, 0f, side * -16f));
+                    new Vector3(side * 0.65f, 0.07f, 0.15f - leg * 0.42f),
+                    new Vector3(0.1f, 0.4f, 0.1f), clawMaterial, Quaternion.Euler(0f, 0f, side * -16f));
             }
         }
 

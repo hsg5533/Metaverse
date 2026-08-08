@@ -395,7 +395,6 @@ public class PlayerGear : NetworkBehaviour
     void NoticeRpc(FixedString512Bytes text)
     {
         ChatSystem.Local(text.ToString());
-        GameSound.PlayLocal(GameSound.Pickup);
     }
 
     /// <summary>
