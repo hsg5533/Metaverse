@@ -113,21 +113,27 @@ public class GearPreview : MonoBehaviour
 
     static float ViewSize(int slot)
     {
+        if (slot >= Piece)
+        {
+            PlayerGear.Piece piece = PlayerGear.Pieces[slot - Piece];
+            return piece.IsFood ? 0.4f : piece.Weapon ? 0.62f : 0.5f;
+        }
+
         return slot switch
         {
             Weapon => 0.62f,
             Armor => 0.5f,
-            Ore or Herb or Wood => 0.4f,
-            _ => PlayerGear.Pieces[slot - Piece].Weapon ? 0.62f : 0.5f,
+            _ => 0.4f, // Ore, Herb, Wood
         };
     }
 
     void LateUpdate()
     {
-        // ponytail: the rig lives only while the bag is open. Rebuilding a dozen cubes on
-        // every open is cheaper than reasoning about what survives a domain reload, and it
-        // makes leftovers from an earlier session impossible.
-        if (!PlayerInventory.WindowOpen)
+        // ponytail: the rig lives only while something that shows a 3D icon is open - the bag
+        // or the shop's buy list. Rebuilding a dozen cubes on every open is cheaper than
+        // reasoning about what survives a domain reload, and it makes leftovers from an
+        // earlier session impossible.
+        if (!PlayerInventory.WindowOpen && !ShopNpc.PanelOpen)
         {
             if (instance == this)
             {
@@ -203,9 +209,10 @@ public class GearPreview : MonoBehaviour
 
             Clear(slots[i].Mount);
 
-            // Only the armour and the material stacks have a model of their own to fall back
-            // on; the rest wait for the avatar to exist.
-            bool buildsItsOwn = i == Armor || i == Ore || i == Herb || i == Wood;
+            // Only the armour, the material stacks and the campfire's dishes have a model of
+            // their own to fall back on; the rest wait for the avatar to exist.
+            bool buildsItsOwn = i == Armor || i == Ore || i == Herb || i == Wood
+                || (i >= Piece && PlayerGear.Pieces[i - Piece].IsFood);
             if (worn == null && !buildsItsOwn)
             {
                 continue;
@@ -254,6 +261,9 @@ public class GearPreview : MonoBehaviour
         var group = new GameObject("Preview").transform;
         group.SetParent(transform, false);
 
+        var avatar = PlayerAvatar.Local;
+        var limbs = avatar != null ? avatar.GetComponent<AvatarLimbAnimator>() : null;
+
         foreach (var part in parts)
         {
             if (part == null)
@@ -262,8 +272,21 @@ public class GearPreview : MonoBehaviour
             }
 
             // A piece sitting in the bag is switched off on the body; the copy has to show.
-            var clone = Instantiate(part, group, true);
+            // Copying local transforms (rather than world ones) and adding back only the
+            // limb's own fixed pivot offset means the icon always shows the built rest pose -
+            // arms hanging straight - never whatever angle the walk cycle or an attack swing
+            // has the real arm at right now.
+            var clone = Instantiate(part, group, false);
             clone.SetActive(true);
+
+            if (limbs != null && part.transform.parent == limbs.RightArm)
+            {
+                clone.transform.localPosition += limbs.RightArm.localPosition;
+            }
+            else if (limbs != null && part.transform.parent == limbs.LeftArm)
+            {
+                clone.transform.localPosition += limbs.LeftArm.localPosition;
+            }
         }
 
         return group.gameObject;
@@ -311,6 +334,12 @@ public class GearPreview : MonoBehaviour
         var root = new GameObject("PreviewModel" + slot).transform;
         root.SetParent(transform, false);
 
+        if (slot >= Piece && PlayerGear.Pieces[slot - Piece].IsFood)
+        {
+            BuildFood(root, PlayerGear.Pieces[slot - Piece].Buff);
+            return root.gameObject;
+        }
+
         switch (slot)
         {
             case Ore:
@@ -328,6 +357,26 @@ public class GearPreview : MonoBehaviour
         }
 
         return root.gameObject;
+    }
+
+    /// <summary>A bowl of something hot: base, filling and a wisp of steam. Colour follows the buff.</summary>
+    static void BuildFood(Transform root, int buffKind)
+    {
+        Color fillColor = buffKind switch
+        {
+            PlayerBuffs.Attack => new Color(0.74f, 0.32f, 0.20f),
+            PlayerBuffs.Defense => new Color(0.30f, 0.46f, 0.62f),
+            _ => new Color(0.52f, 0.72f, 0.40f),
+        };
+
+        Material bowl = Paint(new Color(0.82f, 0.78f, 0.70f));
+        Material fill = Paint(fillColor);
+        Material steam = Paint(new Color(0.88f, 0.88f, 0.88f));
+
+        Part(root, "Bowl", new Vector3(0f, -0.14f, 0f), new Vector3(0.4f, 0.16f, 0.4f), bowl);
+        Part(root, "Filling", new Vector3(0f, -0.04f, 0f), new Vector3(0.32f, 0.06f, 0.32f), fill);
+        Part(root, "SteamLeft", new Vector3(-0.08f, 0.2f, 0f), new Vector3(0.05f, 0.22f, 0.05f), steam, new Vector3(0f, 0f, -12f));
+        Part(root, "SteamRight", new Vector3(0.08f, 0.22f, 0f), new Vector3(0.05f, 0.26f, 0.05f), steam, new Vector3(0f, 0f, 10f));
     }
 
     /// <summary>A breastplate: chest, collar, belt, pauldrons and a centre ridge.</summary>

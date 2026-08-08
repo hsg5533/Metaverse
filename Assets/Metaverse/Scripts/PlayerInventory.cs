@@ -25,12 +25,15 @@ public class PlayerInventory : NetworkBehaviour
         ("방어구 강화  (광석 2, 나무 2)", 2, 2, false),
     };
 
-    /// <summary>Cooking recipes: materials in, a timed buff out.</summary>
-    public static readonly (string Name, int Ore, int Herb, int Wood, int Buff, float Seconds)[] CookRecipes =
+    /// <summary>
+    /// Cooking recipes: materials in, one of the campfire's dishes out (see
+    /// <see cref="PlayerGear.FoodFirst"/> for the matching name and buff), in the same order.
+    /// </summary>
+    public static readonly (int Ore, int Herb, int Wood)[] CookRecipes =
     {
-        ("약초 스튜  (약초 2, 나무 1)  공격 +6 · 3분", 0, 2, 1, PlayerBuffs.Attack, 180f),
-        ("철분 수프  (광석 1, 약초 1, 나무 1)  방어 +6 · 3분", 1, 1, 1, PlayerBuffs.Defense, 180f),
-        ("여행자의 차  (약초 2)  이동속도 +40% · 2분", 0, 2, 0, PlayerBuffs.Speed, 120f),
+        (0, 2, 1),
+        (1, 1, 1),
+        (0, 2, 0),
     };
 
     /// <summary>True while the local player has the bag open; other panels stay shut.</summary>
@@ -51,7 +54,6 @@ public class PlayerInventory : NetworkBehaviour
 
 
     PlayerStats stats;
-    PlayerBuffs buffs;
     PlayerGear gear;
 
     /// <summary>Server side: the bag list carries a marker for every stack that is held.</summary>
@@ -68,7 +70,6 @@ public class PlayerInventory : NetworkBehaviour
     void Awake()
     {
         stats = GetComponent<PlayerStats>();
-        buffs = GetComponent<PlayerBuffs>();
         gear = GetComponent<PlayerGear>();
     }
 
@@ -148,18 +149,26 @@ public class PlayerInventory : NetworkBehaviour
             return;
         }
 
-        buffs.Apply(entry.Buff, entry.Seconds);
-        NoticeRpc(NetText.Trim512($"요리 완성. {PlayerBuffs.NameOf(entry.Buff)} {Mathf.RoundToInt(entry.Seconds / 60f)}분."));
+        // The dish goes to the bag instead of applying on the spot; gear.Give sends its own notice.
+        gear.Give(PlayerGear.FoodFirst + recipe);
     }
 
     [Rpc(SendTo.Owner)]
     void NoticeRpc(FixedString512Bytes text)
     {
         ChatSystem.Local(text.ToString());
+        GameSound.PlayLocal(GameSound.Pickup);
     }
 
     /// <summary>What the shop pays for one of each material, in Slots order.</summary>
     public static readonly int[] MaterialPrices = { 12, 8, 6 };
+
+    /// <summary>
+    /// What the shop charges for one of each material, in Slots order. Priced above
+    /// <see cref="MaterialPrices"/> so buying a stack and selling it back is never a way to
+    /// make gold.
+    /// </summary>
+    public static readonly int[] MaterialBuyPrices = { 20, 14, 10 };
 
     /// <summary>Sell one stack to the shopkeeper.</summary>
     [Rpc(SendTo.Server)]
@@ -180,6 +189,27 @@ public class PlayerInventory : NetworkBehaviour
         SetAll(material == 0 ? 0 : Ore.Value, material == 1 ? 0 : Herb.Value, material == 2 ? 0 : Wood.Value);
         stats.Gold.Value += paid;
         NoticeRpc(NetText.Trim512($"{Slots[material]} {count}개를 {paid} 골드에 팔았습니다."));
+    }
+
+    /// <summary>Buy one unit of a material from the shopkeeper.</summary>
+    [Rpc(SendTo.Server)]
+    public void BuyMaterialRpc(int material, RpcParams rpcParams = default)
+    {
+        if (rpcParams.Receive.SenderClientId != OwnerClientId || material < 0 || material >= Slots.Length)
+        {
+            return;
+        }
+
+        int price = MaterialBuyPrices[material];
+        if (stats.Gold.Value < price)
+        {
+            NoticeRpc(NetText.Trim512("골드가 부족합니다."));
+            return;
+        }
+
+        stats.Gold.Value -= price;
+        Add((GatherKind)material, 1);
+        NoticeRpc(NetText.Trim512($"{Slots[material]}을(를) {price} 골드에 구매했습니다."));
     }
 
     /// <summary>Server side: used by the save file.</summary>
@@ -299,7 +329,7 @@ public class PlayerInventory : NetworkBehaviour
         GUI.EndScrollView();
 
         GUI.Label(new Rect(window.x + gearWidth, window.y + height - 26f, gridWidth, 22f),
-            "가방의 장비를 누르면 착용, 장비 칸을 누르면 벗는다.");
+            "가방의 장비는 착용, 요리는 섭취. 장비 칸을 누르면 벗는다.");
     }
 
     /// <summary>
@@ -328,7 +358,7 @@ public class PlayerInventory : NetworkBehaviour
     void DrawGearSlot(Rect slot, string label, string name, string bonus, int preview)
     {
         var icon = new Rect(slot.x, slot.y, 60f, 60f);
-        DrawSlotBackground(icon);
+        MetaverseUi.SlotBackground(icon);
 
         // The real models, turning slowly, rendered by GearPreview.
         GearPreview.Draw(icon, preview);
@@ -345,23 +375,13 @@ public class PlayerInventory : NetworkBehaviour
         GUI.Label(new Rect(slot.x + 66f, slot.y + 40f, slot.width - 66f, 18f), bonus);
     }
 
-    /// <summary>The sunken square every slot sits in.</summary>
-    static void DrawSlotBackground(Rect slot)
-    {
-        Color previous = GUI.color;
-        GUI.color = new Color(0f, 0f, 0f, 0.35f);
-        GUI.DrawTexture(slot, Texture2D.whiteTexture);
-        GUI.color = previous;
-        GUI.Box(slot, GUIContent.none);
-    }
-
     /// <summary>
     /// One place in the bag, in the order it was picked up. A negative entry is a stack of
     /// material, which keeps its count elsewhere; anything else is a piece.
     /// </summary>
     void DrawSlot(Rect slot, int index)
     {
-        DrawSlotBackground(slot);
+        MetaverseUi.SlotBackground(slot);
 
         if (gear == null || index >= gear.Bag.Count)
         {
@@ -390,7 +410,7 @@ public class PlayerInventory : NetworkBehaviour
         GUI.Label(new Rect(slot.x, slot.y + slot.height - 20f, slot.width - 6f, 18f), CountOf(material).ToString(), RightAligned());
     }
 
-    /// <summary>One piece; clicking the slot puts it on.</summary>
+    /// <summary>One piece; clicking the slot puts it on, or eats it if it is one of the campfire's dishes.</summary>
     void DrawBagSlot(Rect slot, int bagIndex, int piece)
     {
         GearPreview.Draw(new Rect(slot.x + 4f, slot.y, slot.width - 8f, slot.height - 18f), GearPreview.Piece + piece);
@@ -398,7 +418,14 @@ public class PlayerInventory : NetworkBehaviour
 
         if (GUI.Button(slot, GUIContent.none, GUIStyle.none))
         {
-            gear.EquipRpc(bagIndex);
+            if (PlayerGear.Pieces[piece].IsFood)
+            {
+                gear.UseFoodRpc(bagIndex);
+            }
+            else
+            {
+                gear.EquipRpc(bagIndex);
+            }
         }
     }
 

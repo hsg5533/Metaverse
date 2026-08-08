@@ -1583,6 +1583,11 @@ public static class MetaverseSceneBuilder
             BuildSword(humanoid.RightArm, "SwordFrost", new Color(0.70f, 0.88f, 1f), new Color(0.42f, 0.66f, 0.88f)),
             BuildSword(humanoid.RightArm, "SwordEmber", new Color(0.42f, 0.30f, 0.28f), new Color(1f, 0.48f, 0.14f)),
             BuildRod(humanoid.RightArm),
+
+            // Past the rod: gear the shop sells outright, never dropped by a monster.
+            BuildSword(humanoid.RightArm, "SwordLeather", new Color(0.64f, 0.48f, 0.30f), new Color(0.40f, 0.28f, 0.16f)),
+            BuildSword(humanoid.RightArm, "SwordSilver", new Color(0.90f, 0.92f, 0.94f), new Color(0.64f, 0.68f, 0.74f)),
+            BuildSword(humanoid.RightArm, "SwordMithril", new Color(0.58f, 0.88f, 0.90f), new Color(0.22f, 0.56f, 0.62f)),
         };
 
         var armorSets = new[]
@@ -1603,10 +1608,36 @@ public static class MetaverseSceneBuilder
             BuildFish(humanoid.Rig, "FishGolden", new Color(0.94f, 0.78f, 0.26f), new Color(1f, 0.58f, 0.14f)),
         };
 
+        // The shop's own sets ride past the fish, so PlayerGear.Piece.Theme keeps meaning
+        // "index into this list" for every armour piece without reshuffling what the ground
+        // already drops.
+        var shopArmorSets = new[]
+        {
+            BuildArmorSet(humanoid, "ArmorLeather", new Color(0.58f, 0.42f, 0.26f), new Color(0.38f, 0.26f, 0.16f)),
+            BuildArmorSet(humanoid, "ArmorSilver", new Color(0.88f, 0.90f, 0.92f), new Color(0.64f, 0.68f, 0.72f)),
+            BuildArmorSet(humanoid, "ArmorMithril", new Color(0.56f, 0.86f, 0.88f), new Color(0.22f, 0.54f, 0.60f)),
+        };
+
         var armorModels = new List<GameObject>(System.Array.ConvertAll(armorSets, set => set.Body));
         armorModels.AddRange(fish);
-        var armorLeftArms = System.Array.ConvertAll(armorSets, set => set.LeftArm);
-        var armorRightArms = System.Array.ConvertAll(armorSets, set => set.RightArm);
+        armorModels.AddRange(System.Array.ConvertAll(shopArmorSets, set => set.Body));
+
+        // Left/right arrays line up with the same Theme index as armorModels: the fish stretch
+        // in the middle stays null in both, which At() already treats as "no arm piece".
+        var armorLeftArms = new GameObject[armorModels.Count];
+        var armorRightArms = new GameObject[armorModels.Count];
+        for (int i = 0; i < armorSets.Length; i++)
+        {
+            armorLeftArms[i] = armorSets[i].LeftArm;
+            armorRightArms[i] = armorSets[i].RightArm;
+        }
+
+        for (int i = 0; i < shopArmorSets.Length; i++)
+        {
+            int index = armorSets.Length + fish.Length + i;
+            armorLeftArms[index] = shopArmorSets[i].LeftArm;
+            armorRightArms[index] = shopArmorSets[i].RightArm;
+        }
 
         for (int i = 1; i < weaponModels.Length; i++)
         {
@@ -1614,6 +1645,13 @@ public static class MetaverseSceneBuilder
         }
 
         foreach (var set in armorSets)
+        {
+            set.Body.SetActive(false);
+            set.LeftArm.SetActive(false);
+            set.RightArm.SetActive(false);
+        }
+
+        foreach (var set in shopArmorSets)
         {
             set.Body.SetActive(false);
             set.LeftArm.SetActive(false);

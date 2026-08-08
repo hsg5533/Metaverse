@@ -2,8 +2,10 @@ using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
-/// One timed buff at a time, from cooking. The server sets the kind and the moment it ends;
-/// clients compare that against the synchronised server clock, so no ticking is replicated.
+/// One timed buff per kind, from cooking. Eating a stew and a tea both stay active at once, and
+/// eating a second stew stacks its time on top of the first instead of resetting the clock. The
+/// server sets each end time; clients compare that against the synchronised server clock, so no
+/// ticking is replicated.
 /// </summary>
 public class PlayerBuffs : NetworkBehaviour
 {
@@ -16,29 +18,30 @@ public class PlayerBuffs : NetworkBehaviour
     public int DefenseAmount = 6;
     public float SpeedAmount = 1.4f;
 
-    public NetworkVariable<int> Kind = new(None, writePerm: NetworkVariableWritePermission.Server);
-    public NetworkVariable<double> EndTime = new(0d, writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<double> AttackEndTime = new(0d, writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<double> DefenseEndTime = new(0d, writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<double> SpeedEndTime = new(0d, writePerm: NetworkVariableWritePermission.Server);
 
-    public bool Active => Kind.Value != None && Remaining > 0f;
+    public bool Active => RemainingOf(Attack) > 0f || RemainingOf(Defense) > 0f || RemainingOf(Speed) > 0f;
 
-    public float Remaining
+    public float RemainingOf(int kind)
     {
-        get
+        if (!IsSpawned || NetworkManager == null)
         {
-            if (!IsSpawned || NetworkManager == null)
-            {
-                return 0f;
-            }
-
-            return Mathf.Max(0f, (float)(EndTime.Value - NetworkManager.ServerTime.Time));
+            return 0f;
         }
+
+        return Mathf.Max(0f, (float)(EndTimeOf(kind) - NetworkManager.ServerTime.Time));
     }
 
-    public int AttackBonus => Active && Kind.Value == Attack ? AttackAmount : 0;
-    public int DefenseBonus => Active && Kind.Value == Defense ? DefenseAmount : 0;
-    public float SpeedMultiplier => Active && Kind.Value == Speed ? SpeedAmount : 1f;
+    public int AttackBonus => RemainingOf(Attack) > 0f ? AttackAmount : 0;
+    public int DefenseBonus => RemainingOf(Defense) > 0f ? DefenseAmount : 0;
+    public float SpeedMultiplier => RemainingOf(Speed) > 0f ? SpeedAmount : 1f;
 
-    /// <summary>Server side: replaces whatever was running.</summary>
+    /// <summary>
+    /// Server side: stacks with whatever other kind is running, and with itself - a second
+    /// dish of the same kind adds its time on top instead of resetting the clock.
+    /// </summary>
     public void Apply(int kind, float seconds)
     {
         if (!IsServer)
@@ -46,8 +49,32 @@ public class PlayerBuffs : NetworkBehaviour
             return;
         }
 
-        Kind.Value = kind;
-        EndTime.Value = NetworkManager.ServerTime.Time + seconds;
+        double now = NetworkManager.ServerTime.Time;
+        double end = System.Math.Max(EndTimeOf(kind), now) + seconds;
+
+        switch (kind)
+        {
+            case Attack:
+                AttackEndTime.Value = end;
+                break;
+            case Defense:
+                DefenseEndTime.Value = end;
+                break;
+            case Speed:
+                SpeedEndTime.Value = end;
+                break;
+        }
+    }
+
+    double EndTimeOf(int kind)
+    {
+        return kind switch
+        {
+            Attack => AttackEndTime.Value,
+            Defense => DefenseEndTime.Value,
+            Speed => SpeedEndTime.Value,
+            _ => 0d,
+        };
     }
 
     public static string NameOf(int kind)
@@ -65,13 +92,32 @@ public class PlayerBuffs : NetworkBehaviour
     {
         MetaverseUi.ApplyFont();
 
-        if (!IsOwner || !IsSpawned || !Active)
+        if (!IsOwner || !IsSpawned)
         {
             return;
         }
 
-        GUILayout.BeginArea(new Rect(MetaverseUi.Width - 250, 238, 240, 28), GUI.skin.box);
-        GUILayout.Label($"{NameOf(Kind.Value)}   {Mathf.CeilToInt(Remaining)}초 남음");
+        float attack = RemainingOf(Attack);
+        float defense = RemainingOf(Defense);
+        float speed = RemainingOf(Speed);
+        int count = (attack > 0f ? 1 : 0) + (defense > 0f ? 1 : 0) + (speed > 0f ? 1 : 0);
+        if (count == 0)
+        {
+            return;
+        }
+
+        GUILayout.BeginArea(new Rect(MetaverseUi.Width - 270, 238, 260, count * 20f + 8f), GUI.skin.box);
+        DrawLine(Attack, attack);
+        DrawLine(Defense, defense);
+        DrawLine(Speed, speed);
         GUILayout.EndArea();
+    }
+
+    static void DrawLine(int kind, float remaining)
+    {
+        if (remaining > 0f)
+        {
+            GUILayout.Label($"{NameOf(kind)}   {Mathf.CeilToInt(remaining)}초 남음");
+        }
     }
 }

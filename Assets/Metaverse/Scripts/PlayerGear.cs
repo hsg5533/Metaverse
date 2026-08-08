@@ -4,8 +4,9 @@ using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
-/// Gear that drops off monsters: what is carried, what is worn, and which model shows on the
-/// body. The server owns both, so every client sees the same sword in the same hand.
+/// Gear the player carries, whether it dropped off a monster or was bought at the shop: what
+/// is carried, what is worn, and which model shows on the body. The server owns all three, so
+/// every client sees the same sword in the same hand.
 /// </summary>
 public class PlayerGear : NetworkBehaviour
 {
@@ -15,19 +16,29 @@ public class PlayerGear : NetworkBehaviour
         public readonly bool Weapon;
         public readonly int Bonus;
 
-        /// <summary>The ground it drops on, which is also the model to show.</summary>
+        /// <summary>The ground it drops on, which is also the model to show. -1 for food, which builds its own bowl instead.</summary>
         public readonly int Theme;
 
-        /// <summary>False for a fish: it sits in the bag and is sold, never worn.</summary>
+        /// <summary>False for a fish or a dish: it sits in the bag and is sold or eaten, never worn.</summary>
         public readonly bool Wearable;
 
-        public Piece(string name, bool weapon, int bonus, int theme, bool wearable = true)
+        /// <summary>The buff eating this applies, or -1 for anything that is not food.</summary>
+        public readonly int Buff;
+
+        /// <summary>How long that buff lasts.</summary>
+        public readonly float BuffSeconds;
+
+        public bool IsFood => Buff >= 0;
+
+        public Piece(string name, bool weapon, int bonus, int theme, bool wearable = true, int buff = -1, float buffSeconds = 0f)
         {
             Name = name;
             Weapon = weapon;
             Bonus = bonus;
             Theme = theme;
             Wearable = wearable;
+            Buff = buff;
+            BuffSeconds = buffSeconds;
         }
     }
 
@@ -50,6 +61,22 @@ public class PlayerGear : NetworkBehaviour
         new("메기", false, 9, 5, false),
         new("무지개송어", false, 12, 6, false),
         new("황금잉어", false, 33, 7, false),
+
+        // The shop's own stock: never dropped by anything, only ever bought outright. A tier
+        // below the ground's steel and a tier above its lava, so there is a reason to buy at
+        // every point in the run instead of only farming.
+        new("가죽 검", true, 4, 4),
+        new("가죽 갑옷", false, 3, 8),
+        new("은 검", true, 12, 5),
+        new("은 갑옷", false, 9, 9),
+        new("미스릴 검", true, 24, 6),
+        new("미스릴 갑옷", false, 18, 10),
+
+        // The campfire's dishes: cooking no longer applies the buff on the spot, it hands over
+        // one of these instead, and eating it - a click in the bag - is what applies it.
+        new("약초 스튜", false, 0, -1, false, PlayerBuffs.Attack, 180f),
+        new("철분 수프", false, 0, -1, false, PlayerBuffs.Defense, 180f),
+        new("여행자의 차", false, 0, -1, false, PlayerBuffs.Speed, 120f),
     };
 
     /// <summary>The rod, which the shop sells and the lake needs.</summary>
@@ -57,6 +84,15 @@ public class PlayerGear : NetworkBehaviour
 
     /// <summary>The first fish; the rest follow it in order.</summary>
     public const int FirstFish = 7;
+
+    /// <summary>Where the shop's own gear starts in <see cref="Pieces"/>, past the ground's drops and the catch.</summary>
+    public const int ShopFirst = 12;
+
+    /// <summary>Three tiers, a weapon and an armour each.</summary>
+    public const int ShopCount = 6;
+
+    /// <summary>Where the campfire's dishes start in <see cref="Pieces"/>, past the shop's own gear.</summary>
+    public const int FoodFirst = 18;
 
     /// <summary>
     /// A material stack keeps its count in PlayerInventory, but takes a place in this list so
@@ -117,6 +153,13 @@ public class PlayerGear : NetworkBehaviour
 
     /// <summary>What the shop pays for a piece: worth about two levels of the upgrade it saves.</summary>
     public static int PriceOf(int piece) => Pieces[piece].Bonus * 12;
+
+    /// <summary>
+    /// What the shop charges for one of its own pieces, bought outright instead of found on a
+    /// monster. Priced above <see cref="PriceOf"/> so buying one and selling it back is never a
+    /// way to make gold.
+    /// </summary>
+    public static int BuyPriceOf(int piece) => Pieces[piece].Bonus * 20;
 
     /// <summary>Which piece a saved name refers to, or -1 when it is not gear.</summary>
     public static int IndexOf(string name)
@@ -243,6 +286,27 @@ public class PlayerGear : NetworkBehaviour
 
     public const int RodPrice = 120;
 
+    /// <summary>Server side: the shopkeeper hands over one of its own weapons or armour for gold.</summary>
+    [Rpc(SendTo.Server)]
+    public void BuyPieceRpc(int piece, RpcParams rpcParams = default)
+    {
+        var stats = GetComponent<PlayerStats>();
+        if (rpcParams.Receive.SenderClientId != OwnerClientId || stats == null || piece < ShopFirst || piece >= ShopFirst + ShopCount)
+        {
+            return;
+        }
+
+        int price = BuyPriceOf(piece);
+        if (stats.Gold.Value < price)
+        {
+            NoticeRpc(NetText.Trim512("골드가 부족합니다."));
+            return;
+        }
+
+        stats.Gold.Value -= price;
+        Give(piece);
+    }
+
     /// <summary>Take a piece off: it goes back to the bag and the plain gear comes back.</summary>
     [Rpc(SendTo.Server)]
     public void UnequipRpc(bool weapon, RpcParams rpcParams = default)
@@ -283,6 +347,33 @@ public class PlayerGear : NetworkBehaviour
         NoticeRpc(NetText.Trim512($"{Pieces[piece].Name}을(를) {PriceOf(piece)} 골드에 팔았습니다."));
     }
 
+    /// <summary>Eat or drink a dish from the bag: applies its buff and removes it.</summary>
+    [Rpc(SendTo.Server)]
+    public void UseFoodRpc(int bagIndex, RpcParams rpcParams = default)
+    {
+        if (rpcParams.Receive.SenderClientId != OwnerClientId || bagIndex < 0 || bagIndex >= Bag.Count)
+        {
+            return;
+        }
+
+        int piece = Bag[bagIndex];
+        if (piece < 0 || !Pieces[piece].IsFood)
+        {
+            return;
+        }
+
+        Bag.RemoveAt(bagIndex);
+
+        var buffs = GetComponent<PlayerBuffs>();
+        if (buffs != null)
+        {
+            buffs.Apply(Pieces[piece].Buff, Pieces[piece].BuffSeconds);
+        }
+
+        NoticeRpc(NetText.Trim512(
+            $"{Pieces[piece].Name}을(를) 먹었습니다. {PlayerBuffs.NameOf(Pieces[piece].Buff)} {Mathf.RoundToInt(Pieces[piece].BuffSeconds / 60f)}분."));
+    }
+
     [Rpc(SendTo.Owner)]
     void NoticeRpc(FixedString512Bytes text)
     {
@@ -297,8 +388,9 @@ public class PlayerGear : NetworkBehaviour
     /// </summary>
     public GameObject[] PartsFor(int piece)
     {
-        if (!Valid(piece))
+        if (!Valid(piece) || Pieces[piece].IsFood)
         {
+            // Food has no avatar model of its own; GearPreview builds it a bowl instead.
             return System.Array.Empty<GameObject>();
         }
 

@@ -22,6 +22,9 @@ public static class GameSound
 
     const int Rate = 22050;
 
+    /// <summary>Every clip is baked at this amplitude, so nothing plays louder or quieter than anything else.</summary>
+    const float Volume = 1f;
+
     static readonly AudioClip[] Clips = new AudioClip[13];
 
     /// <summary>Beyond this a sound is inaudible anyway, and playing it still costs an object.</summary>
@@ -70,19 +73,19 @@ public static class GameSound
     {
         return sound switch
         {
-            Swing => Sweep("swing", 0.16f, 1100f, 240f, 0.85f, 0.3f),
-            Hit => Sweep("hit", 0.18f, 340f, 90f, 0.35f, 0.5f),
-            Death => Sweep("death", 0.5f, 300f, 60f, 0.2f, 0.45f),
-            LevelUp => Chime("levelup", new[] { 523f, 659f, 784f, 1047f }, 0.11f, 0.35f),
-            Pickup => Chime("pickup", new[] { 784f, 1175f }, 0.07f, 0.3f),
-            Step => Sweep("step", 0.07f, 190f, 90f, 0.7f, 0.12f),
-            Growl => Sweep("growl", 0.3f, 150f, 70f, 0.45f, 0.4f),
-            Warp => Sweep("warp", 0.35f, 200f, 1400f, 0.3f, 0.3f),
-            Jump => Sweep("jump", 0.14f, 260f, 620f, 0.25f, 0.25f),
-            Land => Sweep("land", 0.12f, 160f, 70f, 0.6f, 0.28f),
-            Cast => Sweep("cast", 0.22f, 900f, 180f, 0.75f, 0.22f),
-            Bite => Chime("bite", new[] { 880f, 1320f }, 0.06f, 0.34f),
-            _ => Chime("chest", new[] { 392f, 523f, 784f }, 0.09f, 0.32f),
+            Swing => Sweep("swing", 0.16f, 1100f, 240f, 0.85f, Volume),
+            Hit => Sweep("hit", 0.18f, 340f, 90f, 0.35f, Volume),
+            Death => Sweep("death", 0.5f, 300f, 60f, 0.2f, Volume),
+            LevelUp => Chime("levelup", new[] { 523f, 659f, 784f, 1047f }, 0.11f, Volume),
+            Pickup => Chime("pickup", new[] { 784f, 1175f }, 0.07f, Volume),
+            Step => Sweep("step", 0.07f, 190f, 90f, 0.7f, Volume),
+            Growl => Sweep("growl", 0.3f, 150f, 70f, 0.45f, Volume),
+            Warp => Sweep("warp", 0.35f, 200f, 1400f, 0.3f, Volume),
+            Jump => Sweep("jump", 0.14f, 260f, 620f, 0.25f, Volume),
+            Land => Sweep("land", 0.12f, 160f, 70f, 0.6f, Volume),
+            Cast => Sweep("cast", 0.22f, 900f, 180f, 0.75f, Volume),
+            Bite => Chime("bite", new[] { 880f, 1320f }, 0.06f, Volume),
+            _ => Chime("chest", new[] { 392f, 523f, 784f }, 0.09f, Volume),
         };
     }
 

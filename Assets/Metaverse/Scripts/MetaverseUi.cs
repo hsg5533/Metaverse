@@ -148,6 +148,35 @@ public static class MetaverseUi
         GUI.color = previous;
     }
 
+    /// <summary>The sunken square every item icon sits in, in the bag or in a shop.</summary>
+    public static void SlotBackground(Rect slot)
+    {
+        Color previous = GUI.color;
+        GUI.color = new Color(0f, 0f, 0f, 0.35f);
+        GUI.DrawTexture(slot, Texture2D.whiteTexture);
+        GUI.color = previous;
+        GUI.Box(slot, GUIContent.none);
+    }
+
+    /// <summary>
+    /// One icon, a name and a detail line, and a button that fires an action - the shop's buy
+    /// and sell lists, and the campfire's recipes, all draw their rows with this.
+    /// </summary>
+    public static void ItemRow(Rect slot, int preview, string name, string detail, string actionLabel, System.Action action)
+    {
+        var icon = new Rect(slot.x, slot.y, 60f, 60f);
+        SlotBackground(icon);
+        GearPreview.Draw(icon, preview);
+
+        GUI.Label(new Rect(slot.x + 66f, slot.y + 2f, slot.width - 66f, 18f), $"<b>{name}</b>", Rich);
+        GUI.Label(new Rect(slot.x + 66f, slot.y + 20f, slot.width - 66f, 18f), detail);
+
+        if (GUI.Button(new Rect(slot.x + 66f, slot.y + 40f, slot.width - 66f, 20f), actionLabel))
+        {
+            action();
+        }
+    }
+
     /// <summary>A label box floating over a point in the world, e.g. "[E] 채집".</summary>
     public static void WorldPrompt(Vector3 worldPosition, string text)
     {
