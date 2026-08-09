@@ -54,7 +54,7 @@ public class PlayerCombat : NetworkBehaviour
     [Rpc(SendTo.Server)]
     void AttackRpc(RpcParams rpcParams = default)
     {
-        if (rpcParams.Receive.SenderClientId != OwnerClientId)
+        if (!this.IsFromOwner(rpcParams))
         {
             return;
         }

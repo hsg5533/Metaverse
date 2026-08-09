@@ -288,7 +288,7 @@ public class PartySystem : NetworkBehaviour
     [Rpc(SendTo.SpecifiedInParams)]
     void NoticeRpc(FixedString512Bytes text, RpcParams rpcParams)
     {
-        ChatSystem.Local(text.ToString());
+        ChatSystem.Notice(text.ToString());
     }
 
     void OnGUI()

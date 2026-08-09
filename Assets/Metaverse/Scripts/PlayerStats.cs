@@ -211,22 +211,34 @@ public class PlayerStats : NetworkBehaviour
         RespawnRpc();
     }
 
-    [Rpc(SendTo.Server)]
-    public void BuyArmorRpc(RpcParams rpcParams = default)
-    {
-        if (rpcParams.Receive.SenderClientId != OwnerClientId)
-        {
-            return;
-        }
+    public const string InsufficientGold = "골드가 부족합니다.";
 
-        int price = ArmorPrice;
+    /// <summary>Server side: deducts gold if there's enough, otherwise leaves it untouched.</summary>
+    public bool TrySpendGold(int price)
+    {
         if (Gold.Value < price)
         {
-            NoticeRpc(NetText.Trim512("골드가 부족합니다."), sound: true);
-            return;
+            return false;
         }
 
         Gold.Value -= price;
+        return true;
+    }
+
+    [Rpc(SendTo.Server)]
+    public void BuyArmorRpc(RpcParams rpcParams = default)
+    {
+        if (!this.IsFromOwner(rpcParams))
+        {
+            return;
+        }
+
+        if (!TrySpendGold(ArmorPrice))
+        {
+            NoticeRpc(NetText.Trim512(InsufficientGold), sound: true);
+            return;
+        }
+
         ArmorLevel.Value++;
         NoticeRpc(NetText.Trim512($"방어구 Lv.{ArmorLevel.Value}! 방어력 {Defense}"), sound: true);
     }
@@ -234,19 +246,17 @@ public class PlayerStats : NetworkBehaviour
     [Rpc(SendTo.Server)]
     public void BuyWeaponRpc(RpcParams rpcParams = default)
     {
-        if (rpcParams.Receive.SenderClientId != OwnerClientId)
+        if (!this.IsFromOwner(rpcParams))
         {
             return;
         }
 
-        int price = WeaponPrice;
-        if (Gold.Value < price)
+        if (!TrySpendGold(WeaponPrice))
         {
-            NoticeRpc(NetText.Trim512("골드가 부족합니다."), sound: true);
+            NoticeRpc(NetText.Trim512(InsufficientGold), sound: true);
             return;
         }
 
-        Gold.Value -= price;
         WeaponLevel.Value++;
         NoticeRpc(NetText.Trim512($"검 Lv.{WeaponLevel.Value}! 공격력 {AttackPower}"), sound: true);
     }
@@ -329,11 +339,7 @@ public class PlayerStats : NetworkBehaviour
     [Rpc(SendTo.Owner)]
     void NoticeRpc(FixedString512Bytes text, bool sound = false)
     {
-        ChatSystem.Local(text.ToString());
-        if (sound)
-        {
-            GameSound.PlayLocal(GameSound.Pickup);
-        }
+        ChatSystem.Notice(text.ToString(), sound);
     }
 
     void OnGUI()

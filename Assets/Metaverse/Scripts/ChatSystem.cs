@@ -32,6 +32,16 @@ public class ChatSystem : NetworkBehaviour
         }
     }
 
+    /// <summary>Same as <see cref="Local"/>, with the shop/pickup chime some notices also want.</summary>
+    public static void Notice(string line, bool sound = false)
+    {
+        Local(line);
+        if (sound)
+        {
+            GameSound.PlayLocal(GameSound.Pickup);
+        }
+    }
+
     const string ControlName = "metaverseChatInput";
     const int MaxLines = 12;
 

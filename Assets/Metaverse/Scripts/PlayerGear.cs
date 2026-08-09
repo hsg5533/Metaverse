@@ -257,7 +257,7 @@ public class PlayerGear : NetworkBehaviour
     [Rpc(SendTo.Server)]
     public void EquipRpc(int bagIndex, RpcParams rpcParams = default)
     {
-        if (rpcParams.Receive.SenderClientId != OwnerClientId || bagIndex < 0 || bagIndex >= Bag.Count)
+        if (!this.IsFromOwner(rpcParams) || bagIndex < 0 || bagIndex >= Bag.Count)
         {
             return;
         }
@@ -286,18 +286,17 @@ public class PlayerGear : NetworkBehaviour
     public void BuyRodRpc(RpcParams rpcParams = default)
     {
         var stats = GetComponent<PlayerStats>();
-        if (rpcParams.Receive.SenderClientId != OwnerClientId || stats == null)
+        if (!this.IsFromOwner(rpcParams) || stats == null)
         {
             return;
         }
 
-        if (stats.Gold.Value < RodPrice)
+        if (!stats.TrySpendGold(RodPrice))
         {
-            NoticeRpc(NetText.Trim512("골드가 부족합니다."));
+            NoticeRpc(NetText.Trim512(PlayerStats.InsufficientGold));
             return;
         }
 
-        stats.Gold.Value -= RodPrice;
         Give(Rod);
     }
 
@@ -308,19 +307,17 @@ public class PlayerGear : NetworkBehaviour
     public void BuyPieceRpc(int piece, RpcParams rpcParams = default)
     {
         var stats = GetComponent<PlayerStats>();
-        if (rpcParams.Receive.SenderClientId != OwnerClientId || stats == null || piece < ShopFirst || piece >= ShopFirst + ShopCount)
+        if (!this.IsFromOwner(rpcParams) || stats == null || piece < ShopFirst || piece >= ShopFirst + ShopCount)
         {
             return;
         }
 
-        int price = BuyPriceOf(piece);
-        if (stats.Gold.Value < price)
+        if (!stats.TrySpendGold(BuyPriceOf(piece)))
         {
-            NoticeRpc(NetText.Trim512("골드가 부족합니다."));
+            NoticeRpc(NetText.Trim512(PlayerStats.InsufficientGold));
             return;
         }
 
-        stats.Gold.Value -= price;
         Give(piece);
     }
 
@@ -329,7 +326,7 @@ public class PlayerGear : NetworkBehaviour
     public void UnequipRpc(bool weapon, RpcParams rpcParams = default)
     {
         var slot = weapon ? Weapon : Armor;
-        if (rpcParams.Receive.SenderClientId != OwnerClientId || slot.Value < 0)
+        if (!this.IsFromOwner(rpcParams) || slot.Value < 0)
         {
             return;
         }
@@ -342,7 +339,7 @@ public class PlayerGear : NetworkBehaviour
     [Rpc(SendTo.Server)]
     public void SellRpc(int bagIndex, RpcParams rpcParams = default)
     {
-        if (rpcParams.Receive.SenderClientId != OwnerClientId || bagIndex < 0 || bagIndex >= Bag.Count)
+        if (!this.IsFromOwner(rpcParams) || bagIndex < 0 || bagIndex >= Bag.Count)
         {
             return;
         }
@@ -368,7 +365,7 @@ public class PlayerGear : NetworkBehaviour
     [Rpc(SendTo.Server)]
     public void UseFoodRpc(int bagIndex, RpcParams rpcParams = default)
     {
-        if (rpcParams.Receive.SenderClientId != OwnerClientId || bagIndex < 0 || bagIndex >= Bag.Count)
+        if (!this.IsFromOwner(rpcParams) || bagIndex < 0 || bagIndex >= Bag.Count)
         {
             return;
         }
@@ -394,7 +391,7 @@ public class PlayerGear : NetworkBehaviour
     [Rpc(SendTo.Owner)]
     void NoticeRpc(FixedString512Bytes text)
     {
-        ChatSystem.Local(text.ToString());
+        ChatSystem.Notice(text.ToString(), sound: true);
     }
 
     /// <summary>

@@ -355,7 +355,7 @@ public class DuelSystem : NetworkBehaviour
     [Rpc(SendTo.SpecifiedInParams)]
     void NoticeRpc(FixedString512Bytes text, RpcParams rpcParams)
     {
-        ChatSystem.Local(text.ToString());
+        ChatSystem.Notice(text.ToString());
     }
 
     [Rpc(SendTo.SpecifiedInParams)]

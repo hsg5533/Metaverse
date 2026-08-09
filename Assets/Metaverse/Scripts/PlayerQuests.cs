@@ -38,7 +38,7 @@ public class PlayerQuests : NetworkBehaviour
     [Rpc(SendTo.Server)]
     public void AcceptRpc(int index, RpcParams rpcParams = default)
     {
-        if (rpcParams.Receive.SenderClientId != OwnerClientId || index < 0 || index >= Board.Length)
+        if (!this.IsFromOwner(rpcParams) || index < 0 || index >= Board.Length)
         {
             return;
         }
@@ -57,7 +57,7 @@ public class PlayerQuests : NetworkBehaviour
     [Rpc(SendTo.Server)]
     public void ClaimRpc(RpcParams rpcParams = default)
     {
-        if (rpcParams.Receive.SenderClientId != OwnerClientId || !Complete)
+        if (!this.IsFromOwner(rpcParams) || !Complete)
         {
             return;
         }
@@ -73,7 +73,7 @@ public class PlayerQuests : NetworkBehaviour
     [Rpc(SendTo.Server)]
     public void AbandonRpc(RpcParams rpcParams = default)
     {
-        if (rpcParams.Receive.SenderClientId != OwnerClientId)
+        if (!this.IsFromOwner(rpcParams))
         {
             return;
         }
@@ -130,7 +130,7 @@ public class PlayerQuests : NetworkBehaviour
     [Rpc(SendTo.Owner)]
     void NoticeRpc(FixedString512Bytes text)
     {
-        ChatSystem.Local(text.ToString());
+        ChatSystem.Notice(text.ToString());
     }
 
     void OnGUI()

@@ -41,6 +41,8 @@ public class PlayerInventory : NetworkBehaviour
     /// <summary>True while the local player has the bag open; other panels stay shut.</summary>
     public static bool WindowOpen;
 
+    const string InsufficientMaterials = "재료가 부족합니다.";
+
     /// <summary>What each material slot holds, in the same order as the preview models.</summary>
     public static readonly string[] Slots = { "광석", "약초", "나무" };
 
@@ -112,7 +114,7 @@ public class PlayerInventory : NetworkBehaviour
     [Rpc(SendTo.Server)]
     public void CraftRpc(int recipe, RpcParams rpcParams = default)
     {
-        if (rpcParams.Receive.SenderClientId != OwnerClientId || recipe < 0 || recipe >= CraftRecipes.Length)
+        if (!this.IsFromOwner(rpcParams) || recipe < 0 || recipe >= CraftRecipes.Length)
         {
             return;
         }
@@ -120,7 +122,7 @@ public class PlayerInventory : NetworkBehaviour
         var entry = CraftRecipes[recipe];
         if (!Spend(entry.Ore, 0, entry.Wood))
         {
-            NoticeRpc(NetText.Trim512("재료가 부족합니다."));
+            NoticeRpc(NetText.Trim512(InsufficientMaterials));
             return;
         }
 
@@ -139,7 +141,7 @@ public class PlayerInventory : NetworkBehaviour
     [Rpc(SendTo.Server)]
     public void CookRpc(int recipe, RpcParams rpcParams = default)
     {
-        if (rpcParams.Receive.SenderClientId != OwnerClientId || recipe < 0 || recipe >= CookRecipes.Length)
+        if (!this.IsFromOwner(rpcParams) || recipe < 0 || recipe >= CookRecipes.Length)
         {
             return;
         }
@@ -147,13 +149,13 @@ public class PlayerInventory : NetworkBehaviour
         var entry = CookRecipes[recipe];
         if (entry.Fish >= 0 && !gear.HasInBag(entry.Fish))
         {
-            NoticeRpc(NetText.Trim512("재료가 부족합니다."));
+            NoticeRpc(NetText.Trim512(InsufficientMaterials));
             return;
         }
 
         if (!Spend(entry.Ore, entry.Herb, entry.Wood))
         {
-            NoticeRpc(NetText.Trim512("재료가 부족합니다."));
+            NoticeRpc(NetText.Trim512(InsufficientMaterials));
             return;
         }
 
@@ -169,8 +171,7 @@ public class PlayerInventory : NetworkBehaviour
     [Rpc(SendTo.Owner)]
     void NoticeRpc(FixedString512Bytes text)
     {
-        ChatSystem.Local(text.ToString());
-        GameSound.PlayLocal(GameSound.Pickup);
+        ChatSystem.Notice(text.ToString(), sound: true);
     }
 
     /// <summary>What the shop pays for one of each material, in Slots order.</summary>
@@ -187,7 +188,7 @@ public class PlayerInventory : NetworkBehaviour
     [Rpc(SendTo.Server)]
     public void SellRpc(int material, RpcParams rpcParams = default)
     {
-        if (rpcParams.Receive.SenderClientId != OwnerClientId || material < 0 || material >= Slots.Length)
+        if (!this.IsFromOwner(rpcParams) || material < 0 || material >= Slots.Length)
         {
             return;
         }
@@ -208,19 +209,18 @@ public class PlayerInventory : NetworkBehaviour
     [Rpc(SendTo.Server)]
     public void BuyMaterialRpc(int material, RpcParams rpcParams = default)
     {
-        if (rpcParams.Receive.SenderClientId != OwnerClientId || material < 0 || material >= Slots.Length)
+        if (!this.IsFromOwner(rpcParams) || material < 0 || material >= Slots.Length)
         {
             return;
         }
 
         int price = MaterialBuyPrices[material];
-        if (stats.Gold.Value < price)
+        if (!stats.TrySpendGold(price))
         {
-            NoticeRpc(NetText.Trim512("골드가 부족합니다."));
+            NoticeRpc(NetText.Trim512(PlayerStats.InsufficientGold));
             return;
         }
 
-        stats.Gold.Value -= price;
         Add((GatherKind)material, 1);
         NoticeRpc(NetText.Trim512($"{Slots[material]}을(를) {price} 골드에 구매했습니다."));
     }

@@ -239,7 +239,7 @@ public class PlayerFishing : NetworkBehaviour
     void CatchRpc(Vector3 float3, RpcParams rpcParams = default)
     {
         // The float has to be on water and within a cast of whoever claims to be holding it.
-        if (rpcParams.Receive.SenderClientId != OwnerClientId
+        if (!this.IsFromOwner(rpcParams)
             || !FishingSpot.OnWater(float3)
             || Vector3.Distance(transform.position, float3) > CastRange + 3f)
         {
@@ -264,8 +264,7 @@ public class PlayerFishing : NetworkBehaviour
     [Rpc(SendTo.Owner)]
     void NoticeRpc(FixedString512Bytes text)
     {
-        ChatSystem.Local(text.ToString());
-        GameSound.PlayLocal(GameSound.Pickup);
+        ChatSystem.Notice(text.ToString(), sound: true);
     }
 
     void OnGUI()
