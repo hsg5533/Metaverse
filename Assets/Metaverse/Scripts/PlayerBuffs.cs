@@ -118,19 +118,36 @@ public class PlayerBuffs : NetworkBehaviour
             return;
         }
 
-        GUILayout.BeginArea(new Rect(MetaverseUi.Width - 270, 238, 260, count * 20f + 8f), GUI.skin.box);
+        const float lineHeight = 20f;
+        const float padding = 12f;
+
+        var area = new Rect(MetaverseUi.Width - 270f, 238f, 260f, count * lineHeight + padding);
+        GUI.Box(area, GUIContent.none);
+
+        float y = area.y + padding * 0.5f;
         foreach (int kind in Kinds)
         {
-            DrawLine(kind, RemainingOf(kind));
+            float remaining = RemainingOf(kind);
+            if (remaining <= 0f)
+            {
+                continue;
+            }
+
+            GUI.Label(new Rect(area.x + 8f, y, area.width - 16f, lineHeight),
+                $"{NameOf(kind)}   {Mathf.CeilToInt(remaining)}초 남음", Line);
+            y += lineHeight;
         }
-        GUILayout.EndArea();
     }
 
-    static void DrawLine(int kind, float remaining)
+    static GUIStyle line;
+
+    /// <summary>
+    /// One line stays one line. The default label wraps, and a wrapped line is twice as tall
+    /// as the box was measured for, which pushed whatever came after it off the bottom.
+    /// </summary>
+    static GUIStyle Line => line ??= new GUIStyle(GUI.skin.label)
     {
-        if (remaining > 0f)
-        {
-            GUILayout.Label($"{NameOf(kind)}   {Mathf.CeilToInt(remaining)}초 남음");
-        }
-    }
+        wordWrap = false,
+        clipping = TextClipping.Overflow,
+    };
 }

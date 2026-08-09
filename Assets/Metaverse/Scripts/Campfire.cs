@@ -5,9 +5,7 @@ public class Campfire : InteractStation
 {
     void Awake()
     {
-        // One icon row per recipe plus the resource line and up to four buff lines need more
-        // room than the text-only stations: tall enough that nothing clips against the box
-        // edge even with every buff running at once.
+        // One icon row per recipe plus the line of materials above them.
         PanelSize = new Vector2(380f, 140f + PlayerInventory.CookRecipes.Length * (MetaverseUi.ItemRowHeight + 4f));
     }
 
@@ -15,7 +13,6 @@ public class Campfire : InteractStation
     {
         var inventory = player.GetComponent<PlayerInventory>();
         var gear = player.GetComponent<PlayerGear>();
-        var buffs = player.GetComponent<PlayerBuffs>();
         if (inventory == null)
         {
             return;
@@ -23,14 +20,6 @@ public class Campfire : InteractStation
 
         string fish = gear != null ? $"   붕어 {gear.CountInBag(PlayerGear.FirstFish)}" : "";
         GUILayout.Label($"광석 {inventory.Ore.Value}   약초 {inventory.Herb.Value}   나무 {inventory.Wood.Value}{fish}");
-        if (buffs != null && buffs.Active)
-        {
-            // One short line per kind instead of one long joined line, so nothing has to wrap.
-            foreach (int kind in PlayerBuffs.Kinds)
-            {
-                DrawBuffLine(buffs, kind);
-            }
-        }
         GUILayout.Space(4);
 
         for (int i = 0; i < PlayerInventory.CookRecipes.Length; i++)
@@ -49,15 +38,6 @@ public class Campfire : InteractStation
 
         GUILayout.Space(2);
         GUILayout.Label("가방에서 눌러 먹는다.");
-    }
-
-    static void DrawBuffLine(PlayerBuffs buffs, int kind)
-    {
-        float remaining = buffs.RemainingOf(kind);
-        if (remaining > 0f)
-        {
-            GUILayout.Label($"적용 중: {PlayerBuffs.NameOf(kind)}  {Mathf.CeilToInt(remaining)}초");
-        }
     }
 
     static string Cost(int ore, int herb, int wood, int fish)
