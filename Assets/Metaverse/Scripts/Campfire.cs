@@ -8,7 +8,7 @@ public class Campfire : InteractStation
         // One icon row per recipe plus the resource line and up to four buff lines need more
         // room than the text-only stations: tall enough that nothing clips against the box
         // edge even with every buff running at once.
-        PanelSize = new Vector2(380f, 180f + PlayerInventory.CookRecipes.Length * (MetaverseUi.ItemRowHeight + 4f));
+        PanelSize = new Vector2(380f, 140f + PlayerInventory.CookRecipes.Length * (MetaverseUi.ItemRowHeight + 4f));
     }
 
     protected override void DrawPanel(PlayerAvatar player)
