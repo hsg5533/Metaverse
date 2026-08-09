@@ -164,22 +164,16 @@ public class MetaverseHUD : MonoBehaviour
             return;
         }
 
-        // The connect menu has fields and two buttons; the session panel is three lines,
-        // four and wider while hosting - the extra one is the LAN address other devices type in.
+        // Connection info and the exit button used to sit in an always-on panel; now they only
+        // show up behind the gear, alongside the controls list, so the connect menu is the only
+        // thing left permanently on screen.
         bool connected = manager.IsClient || manager.IsServer;
-        float width = connected && manager.IsServer ? 280f : 250f;
-        float height = !connected ? 230f : manager.IsServer ? 154f : 130f;
-
-        GUILayout.BeginArea(new Rect(10, 10, width, height), GUI.skin.box);
-        if (connected)
+        if (!connected)
         {
-            DrawSessionPanel(manager);
-        }
-        else
-        {
+            GUILayout.BeginArea(new Rect(10, 10, 250f, 230f), GUI.skin.box);
             DrawConnectMenu(manager);
+            GUILayout.EndArea();
         }
-        GUILayout.EndArea();
 
         // One pass for every monster in the world; they used to each own an OnGUI.
         GUI.depth = MetaverseUi.WorldDepth;
@@ -197,17 +191,23 @@ public class MetaverseHUD : MonoBehaviour
     void DrawHelp()
     {
         bool touch = MobileInput.Active;
+        var manager = NetworkManager.Singleton;
+        bool connected = manager != null && (manager.IsClient || manager.IsServer);
 
         // On a phone the gear sits top right: the bottom right corner is all thumb.
         float size = touch ? 60f : 44f;
         int rows = touch ? (TouchActions.Length + 1) / 2 : Controls.Length;
         float rowHeight = touch ? 40f : 20f;
 
+        // The exit button rides at the bottom of the same panel, below the controls list,
+        // only while connected - no other session details, just the one way out.
+        float exitHeight = connected ? 34f : 0f;
+
         var button = touch
             ? new Rect(MetaverseUi.Width - size - 14f, 14f, size, size)
             : new Rect(MetaverseUi.Width - size - 14f, MetaverseUi.Height - size - 14f, size, size);
 
-        float panelHeight = rows * rowHeight + 36f;
+        float panelHeight = rows * rowHeight + 36f + exitHeight;
         var panel = touch
             ? new Rect(MetaverseUi.Width - 366f, button.yMax + 8f, 352f, panelHeight)
             : new Rect(MetaverseUi.Width - 366f, MetaverseUi.Height - 66f - panelHeight, 352f, panelHeight);
@@ -245,6 +245,13 @@ public class MetaverseHUD : MonoBehaviour
                     GUI.Label(new Rect(panel.x + 12f, y, 110f, 20f), Controls[i].Keys);
                     GUI.Label(new Rect(panel.x + 128f, y, panel.width - 140f, 20f), Controls[i].What);
                 }
+            }
+
+            if (connected && GUI.Button(new Rect(panel.x + 10f, panel.yMax - exitHeight + 4f, 100f, 24f), "나가기"))
+            {
+                manager.Shutdown();
+                message = "";
+                helpOpen = false;
             }
         }
 
@@ -313,34 +320,6 @@ public class MetaverseHUD : MonoBehaviour
         if (!string.IsNullOrEmpty(message))
         {
             GUILayout.Label(message);
-        }
-    }
-
-    void DrawSessionPanel(NetworkManager manager)
-    {
-        string role = manager.IsHost ? "호스트" : manager.IsServer ? "서버" : "클라이언트";
-        GUILayout.Label($"<b>{role}</b> · {LocalNickname}", MetaverseUi.Rich);
-
-        if (manager.IsServer)
-        {
-            GUILayout.Label($"접속 인원: {manager.ConnectedClientsIds.Count}");
-
-            string ip = LocalIPv4();
-            if (ip != null)
-            {
-                GUILayout.Label($"다른 기기 접속 주소: {ip}:{port}");
-            }
-        }
-        else
-        {
-            GUILayout.Label(manager.IsConnectedClient ? "접속됨" : "접속 중...");
-        }
-
-        GUILayout.Space(6);
-        if (GUILayout.Button("나가기"))
-        {
-            manager.Shutdown();
-            message = "";
         }
     }
 
