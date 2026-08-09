@@ -5,28 +5,31 @@ public class Campfire : InteractStation
 {
     void Awake()
     {
-        // One icon row per recipe plus the resource line and up to three buff lines need more
+        // One icon row per recipe plus the resource line and up to four buff lines need more
         // room than the text-only stations: tall enough that nothing clips against the box
         // edge even with every buff running at once.
-        PanelSize = new Vector2(380f, 160f + PlayerInventory.CookRecipes.Length * (MetaverseUi.ItemRowHeight + 4f));
+        PanelSize = new Vector2(380f, 180f + PlayerInventory.CookRecipes.Length * (MetaverseUi.ItemRowHeight + 4f));
     }
 
     protected override void DrawPanel(PlayerAvatar player)
     {
         var inventory = player.GetComponent<PlayerInventory>();
+        var gear = player.GetComponent<PlayerGear>();
         var buffs = player.GetComponent<PlayerBuffs>();
         if (inventory == null)
         {
             return;
         }
 
-        GUILayout.Label($"광석 {inventory.Ore.Value}   약초 {inventory.Herb.Value}   나무 {inventory.Wood.Value}");
+        string fish = gear != null ? $"   붕어 {gear.CountInBag(PlayerGear.FirstFish)}" : "";
+        GUILayout.Label($"광석 {inventory.Ore.Value}   약초 {inventory.Herb.Value}   나무 {inventory.Wood.Value}{fish}");
         if (buffs != null && buffs.Active)
         {
             // One short line per kind instead of one long joined line, so nothing has to wrap.
-            DrawBuffLine(buffs, PlayerBuffs.Attack);
-            DrawBuffLine(buffs, PlayerBuffs.Defense);
-            DrawBuffLine(buffs, PlayerBuffs.Speed);
+            foreach (int kind in PlayerBuffs.Kinds)
+            {
+                DrawBuffLine(buffs, kind);
+            }
         }
         GUILayout.Space(4);
 

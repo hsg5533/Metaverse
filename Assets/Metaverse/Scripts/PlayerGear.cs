@@ -77,7 +77,7 @@ public class PlayerGear : NetworkBehaviour
         new("약초 스튜", false, 0, -1, false, PlayerBuffs.Attack, 180f),
         new("철분 수프", false, 0, -1, false, PlayerBuffs.Defense, 180f),
         new("여행자의 차", false, 0, -1, false, PlayerBuffs.Speed, 120f),
-        new("생선구이", false, 0, -1, false, PlayerBuffs.Attack, 180f),
+        new("생선구이", false, 0, -1, false, PlayerBuffs.AttackSpeed, 180f),
     };
 
     /// <summary>The rod, which the shop sells and the lake needs.</summary>
@@ -215,6 +215,21 @@ public class PlayerGear : NetworkBehaviour
 
     /// <summary>Server side: a recipe checking whether it has the fish it needs.</summary>
     public bool HasInBag(int piece) => Bag.IndexOf(piece) >= 0;
+
+    /// <summary>How many of a piece sit in the bag - the campfire shows this for its fish ingredient.</summary>
+    public int CountInBag(int piece)
+    {
+        int count = 0;
+        foreach (int entry in Bag)
+        {
+            if (entry == piece)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
 
     /// <summary>Server side: a recipe spending the fish it needed. False if it was already gone.</summary>
     public bool TakeFromBag(int piece)

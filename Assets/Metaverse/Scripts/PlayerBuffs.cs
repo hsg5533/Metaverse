@@ -13,16 +13,47 @@ public class PlayerBuffs : NetworkBehaviour
     public const int Attack = 1;
     public const int Defense = 2;
     public const int Speed = 3;
+    public const int AttackSpeed = 4;
+
+    /// <summary>Every kind but None, in buff-panel order - the one list everything else loops over.</summary>
+    public static readonly int[] Kinds = { Attack, Defense, Speed, AttackSpeed };
+
+    static readonly string[] Names = { "", "공격력 증가", "방어력 증가", "이동속도 증가", "공격속도 증가" };
 
     public int AttackAmount = 6;
     public int DefenseAmount = 6;
     public float SpeedAmount = 1.4f;
+    public float AttackSpeedAmount = 1.4f;
 
     public NetworkVariable<double> AttackEndTime = new(0d, writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<double> DefenseEndTime = new(0d, writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<double> SpeedEndTime = new(0d, writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<double> AttackSpeedEndTime = new(0d, writePerm: NetworkVariableWritePermission.Server);
 
-    public bool Active => RemainingOf(Attack) > 0f || RemainingOf(Defense) > 0f || RemainingOf(Speed) > 0f;
+    // Netcode only auto-syncs a NetworkVariable declared as its own field, so the four above stay
+    // separate; this is just an index into them (None unused) for the shared lookup/apply code.
+    NetworkVariable<double>[] endTimes;
+
+    void Awake()
+    {
+        endTimes = new[] { null, AttackEndTime, DefenseEndTime, SpeedEndTime, AttackSpeedEndTime };
+    }
+
+    public bool Active
+    {
+        get
+        {
+            foreach (int kind in Kinds)
+            {
+                if (RemainingOf(kind) > 0f)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
 
     public float RemainingOf(int kind)
     {
@@ -37,6 +68,7 @@ public class PlayerBuffs : NetworkBehaviour
     public int AttackBonus => RemainingOf(Attack) > 0f ? AttackAmount : 0;
     public int DefenseBonus => RemainingOf(Defense) > 0f ? DefenseAmount : 0;
     public float SpeedMultiplier => RemainingOf(Speed) > 0f ? SpeedAmount : 1f;
+    public float AttackSpeedMultiplier => RemainingOf(AttackSpeed) > 0f ? AttackSpeedAmount : 1f;
 
     /// <summary>
     /// Server side: stacks with whatever other kind is running, and with itself - a second
@@ -44,48 +76,23 @@ public class PlayerBuffs : NetworkBehaviour
     /// </summary>
     public void Apply(int kind, float seconds)
     {
-        if (!IsServer)
+        if (!IsServer || kind <= None || kind >= endTimes.Length)
         {
             return;
         }
 
         double now = NetworkManager.ServerTime.Time;
-        double end = System.Math.Max(EndTimeOf(kind), now) + seconds;
-
-        switch (kind)
-        {
-            case Attack:
-                AttackEndTime.Value = end;
-                break;
-            case Defense:
-                DefenseEndTime.Value = end;
-                break;
-            case Speed:
-                SpeedEndTime.Value = end;
-                break;
-        }
+        endTimes[kind].Value = System.Math.Max(endTimes[kind].Value, now) + seconds;
     }
 
     double EndTimeOf(int kind)
     {
-        return kind switch
-        {
-            Attack => AttackEndTime.Value,
-            Defense => DefenseEndTime.Value,
-            Speed => SpeedEndTime.Value,
-            _ => 0d,
-        };
+        return kind > None && kind < endTimes.Length ? endTimes[kind].Value : 0d;
     }
 
     public static string NameOf(int kind)
     {
-        return kind switch
-        {
-            Attack => "공격력 증가",
-            Defense => "방어력 증가",
-            Speed => "이동속도 증가",
-            _ => "",
-        };
+        return kind > None && kind < Names.Length ? Names[kind] : "";
     }
 
     void OnGUI()
@@ -97,19 +104,25 @@ public class PlayerBuffs : NetworkBehaviour
             return;
         }
 
-        float attack = RemainingOf(Attack);
-        float defense = RemainingOf(Defense);
-        float speed = RemainingOf(Speed);
-        int count = (attack > 0f ? 1 : 0) + (defense > 0f ? 1 : 0) + (speed > 0f ? 1 : 0);
+        int count = 0;
+        foreach (int kind in Kinds)
+        {
+            if (RemainingOf(kind) > 0f)
+            {
+                count++;
+            }
+        }
+
         if (count == 0)
         {
             return;
         }
 
         GUILayout.BeginArea(new Rect(MetaverseUi.Width - 270, 238, 260, count * 20f + 8f), GUI.skin.box);
-        DrawLine(Attack, attack);
-        DrawLine(Defense, defense);
-        DrawLine(Speed, speed);
+        foreach (int kind in Kinds)
+        {
+            DrawLine(kind, RemainingOf(kind));
+        }
         GUILayout.EndArea();
     }
 

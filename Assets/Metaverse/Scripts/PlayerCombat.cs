@@ -14,6 +14,7 @@ public class PlayerCombat : NetworkBehaviour
     public float Cooldown = 0.6f;
 
     PlayerStats stats;
+    PlayerBuffs buffs;
     AvatarLimbAnimator limbAnimator;
     PlayerFishing fishing;
     float nextAttackTime;
@@ -21,6 +22,7 @@ public class PlayerCombat : NetworkBehaviour
     void Awake()
     {
         stats = GetComponent<PlayerStats>();
+        buffs = GetComponent<PlayerBuffs>();
         limbAnimator = GetComponent<AvatarLimbAnimator>();
         fishing = GetComponent<PlayerFishing>();
     }
@@ -45,7 +47,8 @@ public class PlayerCombat : NetworkBehaviour
             return;
         }
 
-        nextAttackTime = Time.time + Cooldown;
+        float cooldown = buffs != null ? Cooldown / buffs.AttackSpeedMultiplier : Cooldown;
+        nextAttackTime = Time.time + cooldown;
         GetComponent<PlayerEmotes>()?.Stop();
         PlaySwing();
         AttackRpc();
