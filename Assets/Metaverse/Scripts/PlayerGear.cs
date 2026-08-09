@@ -280,7 +280,6 @@ public class PlayerGear : NetworkBehaviour
         int piece = Bag[bagIndex];
         if (piece < 0 || !Pieces[piece].Wearable)
         {
-            NoticeRpc(NetText.Trim512($"{Pieces[piece].Name}은(는) 입을 수 없습니다. 상인에게 파세요."));
             return;
         }
 

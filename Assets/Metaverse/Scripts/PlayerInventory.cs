@@ -429,9 +429,17 @@ public class PlayerInventory : NetworkBehaviour
         GearPreview.Draw(new Rect(slot.x + 4f, slot.y, slot.width - 8f, slot.height - 18f), GearPreview.Piece + piece);
         GUI.Label(new Rect(slot.x + 4f, slot.y + slot.height - 20f, slot.width - 8f, 18f), PlayerGear.Pieces[piece].Name);
 
+        // A fish is neither worn nor eaten - it is sold - so its slot takes no click at all,
+        // which is also what stops it answering with a refusal and a chime.
+        PlayerGear.Piece entry = PlayerGear.Pieces[piece];
+        if (!entry.Wearable && !entry.IsFood)
+        {
+            return;
+        }
+
         if (GUI.Button(slot, GUIContent.none, GUIStyle.none))
         {
-            if (PlayerGear.Pieces[piece].IsFood)
+            if (entry.IsFood)
             {
                 gear.UseFoodRpc(bagIndex);
             }
