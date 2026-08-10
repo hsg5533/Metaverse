@@ -102,6 +102,12 @@ public class PlayerAvatar : NetworkBehaviour
 
     public NetworkVariable<int> SkinTint = new(0, writePerm: NetworkVariableWritePermission.Server);
 
+    /// <summary>Everything the mirror sets, so subscribing to them is one line instead of five.</summary>
+    NetworkVariable<int>[] LookChoices()
+    {
+        return new[] { BodyTint, PantsTint, HairTint, HairStyle, SkinTint };
+    }
+
     CharacterController controller;
     PlayerBuffs buffs;
     PlayerFishing fishing;
@@ -120,11 +126,11 @@ public class PlayerAvatar : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        BodyTint.OnValueChanged += OnLookChanged;
-        PantsTint.OnValueChanged += OnLookChanged;
-        HairTint.OnValueChanged += OnLookChanged;
-        HairStyle.OnValueChanged += OnLookChanged;
-        SkinTint.OnValueChanged += OnLookChanged;
+        foreach (var choice in LookChoices())
+        {
+            choice.OnValueChanged += OnLookChanged;
+        }
+
         ApplyLook();
 
         if (IsServer)
@@ -154,11 +160,10 @@ public class PlayerAvatar : NetworkBehaviour
 
     public override void OnNetworkDespawn()
     {
-        BodyTint.OnValueChanged -= OnLookChanged;
-        PantsTint.OnValueChanged -= OnLookChanged;
-        HairTint.OnValueChanged -= OnLookChanged;
-        HairStyle.OnValueChanged -= OnLookChanged;
-        SkinTint.OnValueChanged -= OnLookChanged;
+        foreach (var choice in LookChoices())
+        {
+            choice.OnValueChanged -= OnLookChanged;
+        }
         if (Local == this)
         {
             Local = null;

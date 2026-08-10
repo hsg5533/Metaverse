@@ -65,8 +65,7 @@ public class ShopNpc : MonoBehaviour
         {
             int piece = PlayerGear.ShopFirst + i;
             PlayerGear.Piece info = PlayerGear.Pieces[piece];
-            string bonus = info.IsFood ? $"체력 {info.Heal}% 회복"
-                : info.Weapon ? $"공격 +{info.Bonus}" : $"방어 +{info.Bonus}";
+            string bonus = Detail(info);
             int price = PlayerGear.BuyPriceOf(piece);
 
             MetaverseUi.ItemRow(new Rect(0f, y, content.width, rowHeight - 6f), GearPreview.Piece + piece,
@@ -86,6 +85,13 @@ public class ShopNpc : MonoBehaviour
         }
 
         GUI.EndScrollView();
+    }
+
+    /// <summary>What a piece says about itself in a list: what it heals, hits or blocks for.</summary>
+    static string Detail(PlayerGear.Piece info)
+    {
+        return info.IsFood ? $"체력 {info.Heal}% 회복"
+            : info.Weapon ? $"공격 +{info.Bonus}" : $"방어 +{info.Bonus}";
     }
 
     /// <summary>
@@ -151,8 +157,7 @@ public class ShopNpc : MonoBehaviour
 
             int bagIndex = i;
             PlayerGear.Piece info = PlayerGear.Pieces[piece];
-            string bonus = info.IsFood ? $"체력 {info.Heal}% 회복"
-                : info.Weapon ? $"공격 +{info.Bonus}" : $"방어 +{info.Bonus}";
+            string bonus = Detail(info);
             int price = PlayerGear.PriceOf(piece);
 
             MetaverseUi.ItemRow(new Rect(0f, y, content.width, rowHeight - 6f), GearPreview.Piece + piece,

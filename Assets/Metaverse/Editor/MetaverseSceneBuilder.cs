@@ -13,6 +13,9 @@ using UnityEngine;
 /// </summary>
 public static class MetaverseSceneBuilder
 {
+    /// <summary>Half the width of one area, which is what its walls stand on.</summary>
+    const float AreaHalfWidth = 30f;
+
     const string Root = "Assets/Metaverse";
     const string ScenePath = Root + "/Scenes/Metaverse.unity";
     const string PrefabPath = Root + "/Prefabs/PlayerAvatar.prefab";
@@ -266,11 +269,7 @@ public static class MetaverseSceneBuilder
         CreateDisc("Plaza", world.transform, new Vector3(0f, 0.02f, 0f), 20f, plazaMaterial);
 
         // Boundary walls so nobody walks off the world.
-        const float half = 30f;
-        CreatePrimitive(PrimitiveType.Cube, "WallNorth", world.transform, new Vector3(0f, 2f, half), new Vector3(60f, 4f, 1f), wallMaterial);
-        CreatePrimitive(PrimitiveType.Cube, "WallSouth", world.transform, new Vector3(0f, 2f, -half), new Vector3(60f, 4f, 1f), wallMaterial);
-        CreatePrimitive(PrimitiveType.Cube, "WallEast", world.transform, new Vector3(half, 2f, 0f), new Vector3(1f, 4f, 60f), wallMaterial);
-        CreatePrimitive(PrimitiveType.Cube, "WallWest", world.transform, new Vector3(-half, 2f, 0f), new Vector3(1f, 4f, 60f), wallMaterial);
+        BuildBounds(world.transform, "", wallMaterial);
 
         // Houses: walls, a roof that overhangs, a door and lit windows. Nothing else in the
         // world has this silhouette, so a house never reads as a rock or a resource.
@@ -379,7 +378,7 @@ public static class MetaverseSceneBuilder
         Material bedMaterial = CreateMaterial("LakeBed", new Color(0.32f, 0.30f, 0.26f));
         Material reedMaterial = CreateMaterial("LakeReed", new Color(0.38f, 0.62f, 0.30f));
 
-        const float half = 30f;
+        const float half = AreaHalfWidth;
         const float lakeRadius = 17f;
         const float lakeZ = 4f;
 
@@ -410,10 +409,7 @@ public static class MetaverseSceneBuilder
         CreatePrimitive(PrimitiveType.Cube, "ShoreEast", lake.transform, new Vector3((inner + half) * 0.5f, -0.5f, lakeZ),
             new Vector3(half - inner, 1f, inner * 2f), shoreMaterial);
         Material wallMaterial = CreateMaterial("Wall", new Color(0.30f, 0.32f, 0.38f));
-        CreatePrimitive(PrimitiveType.Cube, "WallNorth", lake.transform, new Vector3(0f, 2f, half), new Vector3(60f, 4f, 1f), wallMaterial);
-        CreatePrimitive(PrimitiveType.Cube, "WallSouth", lake.transform, new Vector3(0f, 2f, -half), new Vector3(60f, 4f, 1f), wallMaterial);
-        CreatePrimitive(PrimitiveType.Cube, "WallEast", lake.transform, new Vector3(half, 2f, 0f), new Vector3(1f, 4f, 60f), wallMaterial);
-        CreatePrimitive(PrimitiveType.Cube, "WallWest", lake.transform, new Vector3(-half, 2f, 0f), new Vector3(1f, 4f, 60f), wallMaterial);
+        BuildBounds(lake.transform, "", wallMaterial);
 
         // The water: a disc lying on the ground, and a darker one under it for depth. Neither
         // has a collider, so you wade through rather than walk on top.
@@ -458,11 +454,7 @@ public static class MetaverseSceneBuilder
         var ground = CreatePrimitive(PrimitiveType.Plane, "ArenaGround", arena.transform, Vector3.zero, new Vector3(6f, 1f, 6f), stoneMaterial);
         ground.isStatic = true;
 
-        const float half = 30f;
-        CreatePrimitive(PrimitiveType.Cube, "ArenaWallNorth", arena.transform, new Vector3(0f, 2f, half), new Vector3(60f, 4f, 1f), wallMaterial);
-        CreatePrimitive(PrimitiveType.Cube, "ArenaWallSouth", arena.transform, new Vector3(0f, 2f, -half), new Vector3(60f, 4f, 1f), wallMaterial);
-        CreatePrimitive(PrimitiveType.Cube, "ArenaWallEast", arena.transform, new Vector3(half, 2f, 0f), new Vector3(1f, 4f, 60f), wallMaterial);
-        CreatePrimitive(PrimitiveType.Cube, "ArenaWallWest", arena.transform, new Vector3(-half, 2f, 0f), new Vector3(1f, 4f, 60f), wallMaterial);
+        BuildBounds(arena.transform, "Arena", wallMaterial);
 
         // The floor of the ring, a low step up so it reads as a stage.
         CreatePrimitive(PrimitiveType.Cube, "Ring", arena.transform, new Vector3(0f, 0.17f, 0f), new Vector3(ArenaRadius * 2f, 0.35f, ArenaRadius * 2f), sandMaterial);
@@ -951,7 +943,7 @@ public static class MetaverseSceneBuilder
         floor.isStatic = true;
 
         // Outer walls, taller than the village so it reads as indoors.
-        const float half = 30f;
+        const float half = AreaHalfWidth;
         const float wallHeight = 8f;
         CreatePrimitive(PrimitiveType.Cube, "OuterNorth", dungeon.transform, new Vector3(0f, wallHeight * 0.5f, half), new Vector3(60f, wallHeight, 1f), stoneMaterial);
         CreatePrimitive(PrimitiveType.Cube, "OuterSouth", dungeon.transform, new Vector3(0f, wallHeight * 0.5f, -half), new Vector3(60f, wallHeight, 1f), stoneMaterial);
@@ -1022,11 +1014,7 @@ public static class MetaverseSceneBuilder
         var ground = CreatePrimitive(PrimitiveType.Plane, "FieldGround", field.transform, Vector3.zero, new Vector3(6f, 1f, 6f), fieldMaterial);
         ground.isStatic = true;
 
-        const float half = 30f;
-        CreatePrimitive(PrimitiveType.Cube, "FieldWallNorth", field.transform, new Vector3(0f, 2f, half), new Vector3(60f, 4f, 1f), wallMaterial);
-        CreatePrimitive(PrimitiveType.Cube, "FieldWallSouth", field.transform, new Vector3(0f, 2f, -half), new Vector3(60f, 4f, 1f), wallMaterial);
-        CreatePrimitive(PrimitiveType.Cube, "FieldWallEast", field.transform, new Vector3(half, 2f, 0f), new Vector3(1f, 4f, 60f), wallMaterial);
-        CreatePrimitive(PrimitiveType.Cube, "FieldWallWest", field.transform, new Vector3(-half, 2f, 0f), new Vector3(1f, 4f, 60f), wallMaterial);
+        BuildBounds(field.transform, "Field", wallMaterial);
 
         // Field scenery is all natural shapes: round boulders, bare dead trees and grass
         // tufts. Nothing here is a box, so it never gets confused with village masonry.
@@ -2074,6 +2062,19 @@ public static class MetaverseSceneBuilder
         }
 
         return (armor, sleeves[0], sleeves[1]);
+    }
+
+    /// <summary>
+    /// The fence every area is boxed in by: four slabs on the edge of a sixty unit square.
+    /// One place, because the four of them only work if they agree on the same square.
+    /// </summary>
+    static void BuildBounds(Transform parent, string prefix, Material material)
+    {
+        const float half = AreaHalfWidth;
+        CreatePrimitive(PrimitiveType.Cube, prefix + "WallNorth", parent, new Vector3(0f, 2f, half), new Vector3(60f, 4f, 1f), material);
+        CreatePrimitive(PrimitiveType.Cube, prefix + "WallSouth", parent, new Vector3(0f, 2f, -half), new Vector3(60f, 4f, 1f), material);
+        CreatePrimitive(PrimitiveType.Cube, prefix + "WallEast", parent, new Vector3(half, 2f, 0f), new Vector3(1f, 4f, 60f), material);
+        CreatePrimitive(PrimitiveType.Cube, prefix + "WallWest", parent, new Vector3(-half, 2f, 0f), new Vector3(1f, 4f, 60f), material);
     }
 
     /// <summary>Static body part with its primitive collider removed.</summary>
