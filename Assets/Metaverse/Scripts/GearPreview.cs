@@ -70,7 +70,7 @@ public class GearPreview : MonoBehaviour
             instance = host.AddComponent<GearPreview>();
         }
 
-        Slot entry = instance.slots[Mathf.Clamp(slot, 0, instance.slots.Length - 1)];
+        Slot entry = instance.Stand(Mathf.Clamp(slot, 0, instance.slots.Length - 1));
         entry.Wanted = true;
 
         if (entry.Texture != null)
@@ -91,12 +91,17 @@ public class GearPreview : MonoBehaviour
 
         rigOrigin = new Vector3(Random.Range(-4000f, 4000f), -1000f, Random.Range(-4000f, 4000f));
         transform.position = rigOrigin;
+    }
 
-        // Ten apart, so no camera can see the model belonging to the slot next door.
-        for (int i = 0; i < slots.Length; i++)
-        {
-            slots[i] = Setup(new Vector3(i * 10f, 0f, 0f), ViewSize(i));
-        }
+    /// <summary>
+    /// The stand for one slot, built the first time something asks to draw it. There is a slot
+    /// for every kind of thing the bag can hold, and a camera and a render texture each is a
+    /// bill nobody should pay for two dozen items to look at four.
+    /// Ten apart, so no camera can see the model belonging to the slot next door.
+    /// </summary>
+    Slot Stand(int index)
+    {
+        return slots[index] ??= Setup(new Vector3(index * 10f, 0f, 0f), ViewSize(index));
     }
 
     void OnDestroy()
@@ -144,17 +149,30 @@ public class GearPreview : MonoBehaviour
             return;
         }
 
+        // Before the flags are cleared: this is what decides which stands get a model at all.
+        BuildModels();
+
         foreach (var slot in slots)
         {
-            slot.View.enabled = slot.Wanted;
+            if (slot != null)
+            {
+                // Asked for again by the next OnGUI or it stops rendering: a bag of two dozen
+                // kinds only ever has a handful of rows on screen, and the rest are behind the
+                // scroll view filming nothing anybody looks at.
+                slot.View.enabled = slot.Wanted;
+                slot.Wanted = false;
+            }
         }
-
-        BuildModels();
 
         // A slow turn plus a fixed tilt shows the depth of every model.
         var spin = Quaternion.Euler(14f, Time.time * 45f, 0f);
         for (int i = 0; i < slots.Length; i++)
         {
+            if (slots[i] == null)
+            {
+                continue;
+            }
+
             bool blade = i == Weapon || (i >= Piece && PlayerGear.Pieces[i - Piece].Weapon);
             slots[i].Mount.localRotation = blade ? spin * Quaternion.Euler(0f, 0f, 22f) : spin;
         }
@@ -192,7 +210,7 @@ public class GearPreview : MonoBehaviour
     {
         for (int i = 0; i < slots.Length; i++)
         {
-            if (!slots[i].Wanted)
+            if (slots[i] == null || !slots[i].Wanted)
             {
                 continue;
             }
