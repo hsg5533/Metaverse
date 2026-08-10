@@ -39,17 +39,37 @@ public class PlayerAvatar : NetworkBehaviour
         new Color(0.88f, 0.46f, 0.72f),
     };
 
+    /// <summary>What skin can be, in the same order the mirror lists it: palest first, darkest last.</summary>
+    static readonly Color[] SkinPalette =
+    {
+        new Color(0.99f, 0.86f, 0.74f),
+        new Color(0.95f, 0.79f, 0.66f),
+        new Color(0.90f, 0.70f, 0.55f),
+        new Color(0.80f, 0.58f, 0.42f),
+        new Color(0.68f, 0.48f, 0.34f),
+        new Color(0.55f, 0.38f, 0.26f),
+        new Color(0.42f, 0.28f, 0.18f),
+        new Color(0.30f, 0.20f, 0.14f),
+    };
+
     public static int SwatchCount => Palette.Length;
+
+    public static int SkinPaletteCount => SkinPalette.Length;
 
     public static Color Swatch(int index) => Palette[Mathf.Clamp(index, 0, Palette.Length - 1)];
 
     public static Color HairSwatch(int index) => HairPalette[Mathf.Clamp(index, 0, HairPalette.Length - 1)];
+
+    public static Color SkinSwatch(int index) => SkinPalette[Mathf.Clamp(index, 0, SkinPalette.Length - 1)];
 
     /// <summary>Body parts tinted with the player colour (shirt and arms).</summary>
     public Renderer[] ColoredParts;
 
     /// <summary>Legs, which take a colour of their own.</summary>
     public Renderer[] TrouserParts;
+
+    /// <summary>The head, tinted with the skin colour.</summary>
+    public Renderer[] SkinnedParts;
 
     /// <summary>One head of hair per style, only ever one of them switched on. Zero is bald.</summary>
     public GameObject[] HairStyles;
@@ -80,6 +100,8 @@ public class PlayerAvatar : NetworkBehaviour
 
     public NetworkVariable<int> HairStyle = new(1, writePerm: NetworkVariableWritePermission.Server);
 
+    public NetworkVariable<int> SkinTint = new(0, writePerm: NetworkVariableWritePermission.Server);
+
     CharacterController controller;
     PlayerBuffs buffs;
     PlayerFishing fishing;
@@ -102,6 +124,7 @@ public class PlayerAvatar : NetworkBehaviour
         PantsTint.OnValueChanged += OnLookChanged;
         HairTint.OnValueChanged += OnLookChanged;
         HairStyle.OnValueChanged += OnLookChanged;
+        SkinTint.OnValueChanged += OnLookChanged;
         ApplyLook();
 
         if (IsServer)
@@ -135,6 +158,7 @@ public class PlayerAvatar : NetworkBehaviour
         PantsTint.OnValueChanged -= OnLookChanged;
         HairTint.OnValueChanged -= OnLookChanged;
         HairStyle.OnValueChanged -= OnLookChanged;
+        SkinTint.OnValueChanged -= OnLookChanged;
         if (Local == this)
         {
             Local = null;
@@ -301,16 +325,16 @@ public class PlayerAvatar : NetworkBehaviour
     /// clamping it is the whole of the checking that needs doing.
     /// </summary>
     [Rpc(SendTo.Server)]
-    public void SetLookRpc(int body, int pants, int hair, int style, RpcParams rpcParams = default)
+    public void SetLookRpc(int body, int pants, int hair, int style, int skin, RpcParams rpcParams = default)
     {
         if (this.IsFromOwner(rpcParams))
         {
-            SetLook(body, pants, hair, style);
+            SetLook(body, pants, hair, style, skin);
         }
     }
 
     /// <summary>Server side: the same, for a look coming back out of the save file.</summary>
-    public void SetLook(int body, int pants, int hair, int style)
+    public void SetLook(int body, int pants, int hair, int style, int skin)
     {
         if (!IsServer)
         {
@@ -321,13 +345,15 @@ public class PlayerAvatar : NetworkBehaviour
         PantsTint.Value = Mathf.Clamp(pants, 0, Palette.Length - 1);
         HairTint.Value = Mathf.Clamp(hair, 0, HairPalette.Length - 1);
         HairStyle.Value = HairStyles != null ? Mathf.Clamp(style, 0, HairStyles.Length - 1) : 0;
+        SkinTint.Value = Mathf.Clamp(skin, 0, SkinPalette.Length - 1);
     }
 
-    /// <summary>Shirt, trousers, and whichever head of hair is being worn.</summary>
+    /// <summary>Shirt, trousers, skin, and whichever head of hair is being worn.</summary>
     void ApplyLook()
     {
         ApplyColor(ColoredParts, Swatch(BodyTint.Value));
         ApplyColor(TrouserParts, Swatch(PantsTint.Value));
+        ApplyColor(SkinnedParts, SkinSwatch(SkinTint.Value));
 
         if (HairStyles == null)
         {

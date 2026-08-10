@@ -794,7 +794,7 @@ public static class MetaverseSceneBuilder
         {
             case 2:
                 // Long: down the back and past the ears.
-                BodyPart(PrimitiveType.Cube, "Back", hair.transform, new Vector3(0f, 1.7f, -0.21f), new Vector3(0.44f, 0.36f, 0.07f), material);
+                BodyPart(PrimitiveType.Cube, "Back", hair.transform, new Vector3(0f, 1.76f, -0.21f), new Vector3(0.44f, 0.3f, 0.07f), material);
                 foreach (float side in new[] { -1f, 1f })
                 {
                     BodyPart(PrimitiveType.Cube, side < 0f ? "SideLeft" : "SideRight", hair.transform,
@@ -1847,6 +1847,8 @@ public static class MetaverseSceneBuilder
             humanoid.LeftLeg.GetComponentInChildren<Renderer>(),
             humanoid.RightLeg.GetComponentInChildren<Renderer>(),
         };
+
+        avatar.SkinnedParts = new[] { humanoid.Head.GetComponent<Renderer>() };
 
         avatar.HairStyles = hairStyles;
         avatar.NameTagHeight = humanoid.Head.transform.localPosition.y + 0.55f;

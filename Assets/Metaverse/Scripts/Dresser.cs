@@ -25,7 +25,7 @@ public class Dresser : InteractStation
     void Awake()
     {
         Title = "거울";
-        PanelSize = new Vector2(360f, Chrome + 4f * RowHeight);
+        PanelSize = new Vector2(360f, Chrome + 5f * RowHeight);
     }
 
     protected override void DrawPanel(PlayerAvatar player)
@@ -34,18 +34,20 @@ public class Dresser : InteractStation
         int pants = player.PantsTint.Value;
         int hair = player.HairTint.Value;
         int style = player.HairStyle.Value;
+        int skin = player.SkinTint.Value;
 
         float width = PanelSize.x - 24f;
+        int pickedSkin = Row(width, "피부", PlayerAvatar.SkinPaletteCount, skin, PlayerAvatar.SkinSwatch);
         int pickedBody = Row(width, "상의", PlayerAvatar.SwatchCount, body, PlayerAvatar.Swatch);
         int pickedPants = Row(width, "바지", PlayerAvatar.SwatchCount, pants, PlayerAvatar.Swatch);
-        int pickedHair = Row(width, "머리색", PlayerAvatar.SwatchCount, hair, PlayerAvatar.HairSwatch);
+        int pickedHair = Row(width, "염색", PlayerAvatar.SwatchCount, hair, PlayerAvatar.HairSwatch);
 
         int styles = player.HairStyles != null ? player.HairStyles.Length : 1;
-        int pickedStyle = Row(width, "머리", styles, style, null);
+        int pickedStyle = Row(width, "헤어", styles, style, null);
 
-        if (pickedBody != body || pickedPants != pants || pickedHair != hair || pickedStyle != style)
+        if (pickedBody != body || pickedPants != pants || pickedHair != hair || pickedStyle != style || pickedSkin != skin)
         {
-            player.SetLookRpc(pickedBody, pickedPants, pickedHair, pickedStyle);
+            player.SetLookRpc(pickedBody, pickedPants, pickedHair, pickedStyle, pickedSkin);
         }
     }
 

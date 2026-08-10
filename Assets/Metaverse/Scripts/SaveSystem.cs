@@ -46,6 +46,7 @@ public class SaveSystem : MonoBehaviour
         public int pantsTint = -1;
         public int hairTint = -1;
         public int hairStyle = -1;
+        public int skinTint = -1;
         public List<BagEntry> bag = new();
     }
 
@@ -135,7 +136,7 @@ public class SaveSystem : MonoBehaviour
 
         if (record.bodyTint >= 0)
         {
-            avatar.SetLook(record.bodyTint, record.pantsTint, record.hairTint, record.hairStyle);
+            avatar.SetLook(record.bodyTint, record.pantsTint, record.hairTint, record.hairStyle, record.skinTint);
         }
 
         var stats = avatar.GetComponent<PlayerStats>();
@@ -242,6 +243,7 @@ public class SaveSystem : MonoBehaviour
             record.pantsTint = avatar.PantsTint.Value;
             record.hairTint = avatar.HairTint.Value;
             record.hairStyle = avatar.HairStyle.Value;
+            record.skinTint = avatar.SkinTint.Value;
 
             record.bag.Clear();
 
