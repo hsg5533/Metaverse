@@ -1900,7 +1900,7 @@ public static class MetaverseSceneBuilder
         BodyPart(PrimitiveType.Cube, "EyeRight", rig.transform, new Vector3(0.11f, 1.71f, 0.22f), new Vector3(0.09f, 0.1f, 0.03f), faceMaterial);
         // A line under them, in the same colour. Not on the list of parts the mirror recolours:
         // a mouth is a mouth whatever else the player decides to be.
-        BodyPart(PrimitiveType.Cube, "Mouth", rig.transform, new Vector3(0f, 1.58f, 0.22f), new Vector3(0.16f, 0.04f, 0.03f), faceMaterial);
+        BodyPart(PrimitiveType.Cube, "Mouth", rig.transform, new Vector3(0f, 1.58f, 0.22f), new Vector3(0.11f, 0.04f, 0.03f), faceMaterial);
 
         return new Humanoid
         {
