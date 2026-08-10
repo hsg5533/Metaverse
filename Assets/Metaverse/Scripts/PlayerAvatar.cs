@@ -26,8 +26,33 @@ public class PlayerAvatar : NetworkBehaviour
         new Color(0.60f, 0.60f, 0.65f),
     };
 
+    /// <summary>What hair can be, in the same order the mirror lists it.</summary>
+    static readonly Color[] HairPalette =
+    {
+        new Color(0.13f, 0.11f, 0.10f),
+        new Color(0.35f, 0.22f, 0.13f),
+        new Color(0.60f, 0.40f, 0.22f),
+        new Color(0.90f, 0.80f, 0.45f),
+        new Color(0.86f, 0.86f, 0.88f),
+        new Color(0.78f, 0.24f, 0.18f),
+        new Color(0.32f, 0.52f, 0.86f),
+        new Color(0.88f, 0.46f, 0.72f),
+    };
+
+    public static int SwatchCount => Palette.Length;
+
+    public static Color Swatch(int index) => Palette[Mathf.Clamp(index, 0, Palette.Length - 1)];
+
+    public static Color HairSwatch(int index) => HairPalette[Mathf.Clamp(index, 0, HairPalette.Length - 1)];
+
     /// <summary>Body parts tinted with the player colour (shirt and arms).</summary>
     public Renderer[] ColoredParts;
+
+    /// <summary>Legs, which take a colour of their own.</summary>
+    public Renderer[] TrouserParts;
+
+    /// <summary>One head of hair per style, only ever one of them switched on. Zero is bald.</summary>
+    public GameObject[] HairStyles;
 
 
     /// <summary>Local height the name tag is drawn at.</summary>
@@ -42,8 +67,18 @@ public class PlayerAvatar : NetworkBehaviour
     public NetworkVariable<FixedString64Bytes> Nickname =
         new(new FixedString64Bytes("Player"), writePerm: NetworkVariableWritePermission.Server);
 
-    public NetworkVariable<Color> BodyColor =
-        new(Color.gray, writePerm: NetworkVariableWritePermission.Server);
+    /// <summary>
+    /// What the avatar looks like, as places in the palettes rather than colours: the server
+    /// only has to clamp an index to know a client has not invented a colour of its own, and a
+    /// save file holds four small numbers instead of four strings nobody can read.
+    /// </summary>
+    public NetworkVariable<int> BodyTint = new(0, writePerm: NetworkVariableWritePermission.Server);
+
+    public NetworkVariable<int> PantsTint = new(7, writePerm: NetworkVariableWritePermission.Server);
+
+    public NetworkVariable<int> HairTint = new(0, writePerm: NetworkVariableWritePermission.Server);
+
+    public NetworkVariable<int> HairStyle = new(1, writePerm: NetworkVariableWritePermission.Server);
 
     CharacterController controller;
     PlayerBuffs buffs;
@@ -63,13 +98,17 @@ public class PlayerAvatar : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        BodyColor.OnValueChanged += OnBodyColorChanged;
-        ApplyColor(BodyColor.Value);
-
+        BodyTint.OnValueChanged += OnLookChanged;
+        PantsTint.OnValueChanged += OnLookChanged;
+        HairTint.OnValueChanged += OnLookChanged;
+        HairStyle.OnValueChanged += OnLookChanged;
+        ApplyLook();
 
         if (IsServer)
         {
-            BodyColor.Value = Palette[OwnerClientId % (ulong)Palette.Length];
+            // Something different per player until they pick for themselves at the mirror.
+            BodyTint.Value = (int)(OwnerClientId % (ulong)Palette.Length);
+            HairTint.Value = (int)(OwnerClientId % (ulong)HairPalette.Length);
             Nickname.Value = NetText.Trim64("플레이어 " + OwnerClientId);
         }
 
@@ -92,7 +131,10 @@ public class PlayerAvatar : NetworkBehaviour
 
     public override void OnNetworkDespawn()
     {
-        BodyColor.OnValueChanged -= OnBodyColorChanged;
+        BodyTint.OnValueChanged -= OnLookChanged;
+        PantsTint.OnValueChanged -= OnLookChanged;
+        HairTint.OnValueChanged -= OnLookChanged;
+        HairStyle.OnValueChanged -= OnLookChanged;
         if (Local == this)
         {
             Local = null;
@@ -249,17 +291,71 @@ public class PlayerAvatar : NetworkBehaviour
         }
     }
 
-    void OnBodyColorChanged(Color previous, Color current)
+    void OnLookChanged(int previous, int current)
     {
-        ApplyColor(current);
+        ApplyLook();
+    }
+
+    /// <summary>
+    /// Server side: the mirror asking for a look. Every choice is a place in a palette, so
+    /// clamping it is the whole of the checking that needs doing.
+    /// </summary>
+    [Rpc(SendTo.Server)]
+    public void SetLookRpc(int body, int pants, int hair, int style, RpcParams rpcParams = default)
+    {
+        if (this.IsFromOwner(rpcParams))
+        {
+            SetLook(body, pants, hair, style);
+        }
+    }
+
+    /// <summary>Server side: the same, for a look coming back out of the save file.</summary>
+    public void SetLook(int body, int pants, int hair, int style)
+    {
+        if (!IsServer)
+        {
+            return;
+        }
+
+        BodyTint.Value = Mathf.Clamp(body, 0, Palette.Length - 1);
+        PantsTint.Value = Mathf.Clamp(pants, 0, Palette.Length - 1);
+        HairTint.Value = Mathf.Clamp(hair, 0, HairPalette.Length - 1);
+        HairStyle.Value = HairStyles != null ? Mathf.Clamp(style, 0, HairStyles.Length - 1) : 0;
+    }
+
+    /// <summary>Shirt, trousers, and whichever head of hair is being worn.</summary>
+    void ApplyLook()
+    {
+        ApplyColor(ColoredParts, Swatch(BodyTint.Value));
+        ApplyColor(TrouserParts, Swatch(PantsTint.Value));
+
+        if (HairStyles == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < HairStyles.Length; i++)
+        {
+            if (HairStyles[i] == null)
+            {
+                continue;
+            }
+
+            bool worn = i == HairStyle.Value;
+            HairStyles[i].SetActive(worn);
+            if (worn)
+            {
+                ApplyColor(HairStyles[i].GetComponentsInChildren<Renderer>(true), HairSwatch(HairTint.Value));
+            }
+        }
     }
 
     static MaterialPropertyBlock colorBlock;
     static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
 
-    void ApplyColor(Color color)
+    static void ApplyColor(Renderer[] parts, Color color)
     {
-        if (ColoredParts == null)
+        if (parts == null)
         {
             return;
         }
@@ -269,7 +365,7 @@ public class PlayerAvatar : NetworkBehaviour
         colorBlock ??= new MaterialPropertyBlock();
         colorBlock.SetColor(BaseColor, color);
 
-        foreach (var part in ColoredParts)
+        foreach (var part in parts)
         {
             if (part != null)
             {

@@ -557,6 +557,7 @@ public static class MetaverseSceneBuilder
         Material emberMaterial = CreateMaterial("Ember", new Color(0.95f, 0.55f, 0.20f));
 
         BuildAnvil(parent, new Vector3(-5f, 0f, 10f), woodMaterial);
+        BuildDresser(parent, new Vector3(13f, 0f, -4f));
         BuildCampfire(parent, new Vector3(6f, 0f, 9f), woodMaterial, emberMaterial);
 
         var board = new GameObject("QuestBoard");
@@ -753,6 +754,78 @@ public static class MetaverseSceneBuilder
         gather.PromptHeight = kind == GatherKind.Wood ? 3.4f : 1.6f;
     }
 
+    /// <summary>
+    /// One head of hair. Style zero has nothing in it, which is what being bald is; the rest
+    /// are a cap on the crown and whatever hangs off it. They sit under the rig rather than
+    /// the head because the head is a part, not a pivot, and nothing here has to swing.
+    /// </summary>
+    static GameObject BuildHairStyle(Transform rig, int style, Material material)
+    {
+        var hair = new GameObject("Hair" + style);
+        hair.transform.SetParent(rig, false);
+
+        if (style == 0)
+        {
+            return hair;
+        }
+
+        // The skull runs to 1.95 and is 0.44 across, so the cap sits just over the crown and
+        // hangs a little past the sides.
+        BodyPart(PrimitiveType.Cube, "Cap", hair.transform, new Vector3(0f, 1.94f, -0.01f), new Vector3(0.47f, 0.13f, 0.45f), material);
+        BodyPart(PrimitiveType.Cube, "Fringe", hair.transform, new Vector3(0f, 1.85f, 0.2f), new Vector3(0.46f, 0.12f, 0.06f), material);
+
+        if (style == 2)
+        {
+            BodyPart(PrimitiveType.Cube, "Back", hair.transform, new Vector3(0f, 1.7f, -0.21f), new Vector3(0.44f, 0.36f, 0.07f), material);
+            foreach (float side in new[] { -1f, 1f })
+            {
+                BodyPart(PrimitiveType.Cube, side < 0f ? "SideLeft" : "SideRight", hair.transform,
+                    new Vector3(side * 0.215f, 1.76f, -0.02f), new Vector3(0.06f, 0.3f, 0.4f), material);
+            }
+        }
+
+        if (style == 3)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                float across = (i - 1) * 0.15f;
+                BodyPart(PrimitiveType.Cube, $"Spike{i}", hair.transform,
+                    new Vector3(across, 2.06f, -0.02f), new Vector3(0.11f, 0.26f, 0.11f), material,
+                    Quaternion.Euler(-18f, 0f, across * 90f));
+            }
+        }
+
+        return hair;
+    }
+
+    /// <summary>A standing mirror: a frame with a pale sheet in it, and somewhere to change.</summary>
+    static void BuildDresser(Transform parent, Vector3 localPosition)
+    {
+        Material frameMaterial = CreateMaterial("MirrorFrame", new Color(0.44f, 0.30f, 0.20f));
+        Material glassMaterial = CreateMaterial("MirrorGlass", new Color(0.78f, 0.88f, 0.94f));
+
+        var mirror = new GameObject("Mirror");
+        mirror.transform.SetParent(parent, false);
+        mirror.transform.localPosition = localPosition;
+        // Glass towards the middle of the plaza, which is the side anyone walks up from.
+        mirror.transform.localRotation = Quaternion.Euler(0f, -73f, 0f);
+
+        CreatePrimitive(PrimitiveType.Cube, "Foot", mirror.transform, new Vector3(0f, 0.1f, 0f), new Vector3(1.3f, 0.2f, 0.5f), frameMaterial);
+        BodyPart(PrimitiveType.Cube, "Glass", mirror.transform, new Vector3(0f, 1.4f, 0.03f), new Vector3(0.95f, 2f, 0.08f), glassMaterial);
+
+        foreach (float side in new[] { -1f, 1f })
+        {
+            CreatePrimitive(PrimitiveType.Cube, side < 0f ? "PostLeft" : "PostRight", mirror.transform,
+                new Vector3(side * 0.58f, 1.4f, 0f), new Vector3(0.16f, 2.3f, 0.2f), frameMaterial);
+        }
+
+        BodyPart(PrimitiveType.Cube, "Head", mirror.transform, new Vector3(0f, 2.58f, 0f), new Vector3(1.32f, 0.18f, 0.2f), frameMaterial);
+        BodyPart(PrimitiveType.Cube, "Sill", mirror.transform, new Vector3(0f, 0.28f, 0f), new Vector3(1.32f, 0.16f, 0.24f), frameMaterial);
+
+        var dresser = mirror.AddComponent<Dresser>();
+        dresser.PromptHeight = 2.9f;
+    }
+
     /// <summary>Shopkeeper: the same humanoid the players use, standing on the plaza.</summary>
     static void BuildShopNpc(Transform parent)
     {
@@ -766,7 +839,8 @@ public static class MetaverseSceneBuilder
         npc.transform.localPosition = new Vector3(-9f, 0f, 7f);
         npc.transform.localRotation = Quaternion.LookRotation(new Vector3(9f, 0f, -7f));
 
-        BuildHumanoid(npc.transform, coatMaterial, skinMaterial, pantsMaterial, faceMaterial);
+        var shopkeeper = BuildHumanoid(npc.transform, coatMaterial, skinMaterial, pantsMaterial, faceMaterial);
+        BuildHairStyle(shopkeeper.Rig, 1, CreateMaterial("NpcHair", new Color(0.30f, 0.20f, 0.14f)));
 
         // The rig parts have no colliders, so give the shopkeeper one body to bump into.
         var body = npc.AddComponent<CapsuleCollider>();
@@ -1689,6 +1763,16 @@ public static class MetaverseSceneBuilder
         controller.slopeLimit = 50f;
         controller.stepOffset = 0.4f;
 
+        // Four heads of hair in the prefab, of which the avatar shows one.
+        Material hairMaterial = CreateMaterial("PlayerHair", Color.white);
+        var hairStyles = new GameObject[4];
+        for (int i = 0; i < hairStyles.Length; i++)
+        {
+            hairStyles[i] = BuildHairStyle(humanoid.Rig, i, hairMaterial);
+            // One at a time, or the prefab wears all four at once until a spawn sorts it out.
+            hairStyles[i].SetActive(i == 1);
+        }
+
         var limbAnimator = root.AddComponent<AvatarLimbAnimator>();
         limbAnimator.Rig = humanoid.Rig;
         limbAnimator.LeftArm = humanoid.LeftArm;
@@ -1712,6 +1796,14 @@ public static class MetaverseSceneBuilder
             humanoid.LeftArm.GetComponentInChildren<Renderer>(),
             humanoid.RightArm.GetComponentInChildren<Renderer>(),
         };
+
+        avatar.TrouserParts = new[]
+        {
+            humanoid.LeftLeg.GetComponentInChildren<Renderer>(),
+            humanoid.RightLeg.GetComponentInChildren<Renderer>(),
+        };
+
+        avatar.HairStyles = hairStyles;
         avatar.NameTagHeight = humanoid.Head.transform.localPosition.y + 0.55f;
 
         var gear = root.AddComponent<PlayerGear>();

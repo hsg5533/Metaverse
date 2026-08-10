@@ -40,6 +40,12 @@ public class SaveSystem : MonoBehaviour
         public int duelLosses;
         public string gearWeapon = "";
         public string gearArmor = "";
+
+        // What the player picked at the mirror. -1 keeps whatever they were given on the way in.
+        public int bodyTint = -1;
+        public int pantsTint = -1;
+        public int hairTint = -1;
+        public int hairStyle = -1;
         public List<BagEntry> bag = new();
     }
 
@@ -125,6 +131,11 @@ public class SaveSystem : MonoBehaviour
         if (record == null)
         {
             return;
+        }
+
+        if (record.bodyTint >= 0)
+        {
+            avatar.SetLook(record.bodyTint, record.pantsTint, record.hairTint, record.hairStyle);
         }
 
         var stats = avatar.GetComponent<PlayerStats>();
@@ -226,6 +237,11 @@ public class SaveSystem : MonoBehaviour
             record.hp = stats.Hp.Value;
             record.duelWins = stats.DuelWins.Value;
             record.duelLosses = stats.DuelLosses.Value;
+
+            record.bodyTint = avatar.BodyTint.Value;
+            record.pantsTint = avatar.PantsTint.Value;
+            record.hairTint = avatar.HairTint.Value;
+            record.hairStyle = avatar.HairStyle.Value;
 
             record.bag.Clear();
 
