@@ -1849,8 +1849,11 @@ public static class MetaverseSceneBuilder
         var torso = BodyPart(PrimitiveType.Cube, "Torso", rig.transform, new Vector3(0f, 1.15f, 0f), new Vector3(0.62f, 0.72f, 0.34f), shirtMaterial);
         var head = BodyPart(PrimitiveType.Cube, "Head", rig.transform, new Vector3(0f, 1.73f, 0f), new Vector3(0.44f, 0.44f, 0.42f), skinMaterial);
         // Two eyes rather than one visor strip, so the face reads as a face.
-        BodyPart(PrimitiveType.Cube, "EyeLeft", rig.transform, new Vector3(-0.11f, 1.77f, 0.22f), new Vector3(0.09f, 0.1f, 0.03f), faceMaterial);
-        BodyPart(PrimitiveType.Cube, "EyeRight", rig.transform, new Vector3(0.11f, 1.77f, 0.22f), new Vector3(0.09f, 0.1f, 0.03f), faceMaterial);
+        BodyPart(PrimitiveType.Cube, "EyeLeft", rig.transform, new Vector3(-0.11f, 1.71f, 0.22f), new Vector3(0.09f, 0.1f, 0.03f), faceMaterial);
+        BodyPart(PrimitiveType.Cube, "EyeRight", rig.transform, new Vector3(0.11f, 1.71f, 0.22f), new Vector3(0.09f, 0.1f, 0.03f), faceMaterial);
+        // A line under them, in the same colour. Not on the list of parts the mirror recolours:
+        // a mouth is a mouth whatever else the player decides to be.
+        BodyPart(PrimitiveType.Cube, "Mouth", rig.transform, new Vector3(0f, 1.58f, 0.22f), new Vector3(0.16f, 0.04f, 0.03f), faceMaterial);
 
         return new Humanoid
         {
