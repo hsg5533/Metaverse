@@ -15,8 +15,11 @@ public class Campfire : InteractStation
 
     void Awake()
     {
-        // The line of materials, the recipes on show, and the line underneath.
-        PanelSize = new Vector2(380f, 96f + VisibleRecipes * RowHeight);
+        // Everything that is not the scrolling list: the title, the line of materials, the
+        // line underneath, and the close button the station draws below all of it - plus the
+        // margin GUILayout puts around each of them. Budget this short and the close button is
+        // the thing that falls off the bottom, which on a phone leaves no way out of the panel.
+        PanelSize = new Vector2(380f, 132f + VisibleRecipes * RowHeight);
     }
 
     protected override void DrawPanel(PlayerAvatar player)
