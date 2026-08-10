@@ -829,15 +829,14 @@ public static class MetaverseSceneBuilder
                 break;
 
             case 7:
-                // A round mass all the way round the skull rather than a cut sitting on it.
-                BodyPart(PrimitiveType.Sphere, "Crown", hair.transform, new Vector3(0f, 1.99f, -0.02f), new Vector3(0.58f, 0.36f, 0.56f), material);
-                BodyPart(PrimitiveType.Sphere, "Nape", hair.transform, new Vector3(0f, 1.85f, -0.23f), new Vector3(0.42f, 0.32f, 0.22f), material);
+                // A poofy, boxy bob: side panels angled outward toward the bottom instead of a
+                // sleek taper, so it flares rather than pressing flat against the head.
                 foreach (float side in new[] { -1f, 1f })
                 {
-                    BodyPart(PrimitiveType.Sphere, side < 0f ? "PuffLeft" : "PuffRight", hair.transform,
-                        new Vector3(side * 0.24f, 1.86f, -0.02f), new Vector3(0.24f, 0.32f, 0.36f), material);
+                    BodyPart(PrimitiveType.Cube, side < 0f ? "FlareLeft" : "FlareRight", hair.transform,
+                        new Vector3(side * 0.3f, 1.72f, -0.02f), new Vector3(0.14f, 0.34f, 0.4f), material);
                 }
-
+                BodyPart(PrimitiveType.Cube, "Back", hair.transform, new Vector3(0f, 1.72f, -0.24f), new Vector3(0.5f, 0.34f, 0.16f), material);
                 break;
         }
 
@@ -1899,7 +1898,7 @@ public static class MetaverseSceneBuilder
         BodyPart(PrimitiveType.Cube, "EyeRight", rig.transform, new Vector3(0.11f, 1.71f, 0.22f), new Vector3(0.09f, 0.1f, 0.03f), faceMaterial);
         // A line under them, in the same colour. Not on the list of parts the mirror recolours:
         // a mouth is a mouth whatever else the player decides to be.
-        BodyPart(PrimitiveType.Cube, "Mouth", rig.transform, new Vector3(0f, 1.58f, 0.22f), new Vector3(0.16f, 0.04f, 0.03f), faceMaterial);
+        BodyPart(PrimitiveType.Cube, "Mouth", rig.transform, new Vector3(0f, 1.59f, 0.22f), new Vector3(0.16f, 0.04f, 0.03f), faceMaterial);
 
         return new Humanoid
         {
