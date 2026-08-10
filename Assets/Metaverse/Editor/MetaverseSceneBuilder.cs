@@ -756,8 +756,12 @@ public static class MetaverseSceneBuilder
 
     /// <summary>
     /// One head of hair. Style zero has nothing in it, which is what being bald is; the rest
-    /// are a cap on the crown and whatever hangs off it. They sit under the rig rather than
-    /// the head because the head is a part, not a pivot, and nothing here has to swing.
+    /// are a cap on the crown and whatever hangs off it, except the mohawk, which is the one
+    /// cut that has to leave the sides of the head bare. They sit under the rig rather than the
+    /// head because the head is a part, not a pivot, and nothing here has to swing.
+    ///
+    /// The skull runs from 1.51 to 1.95 and is 0.44 across, which is what every number below
+    /// is measured against.
     /// </summary>
     static GameObject BuildHairStyle(Transform rig, int style, Material material)
     {
@@ -769,30 +773,72 @@ public static class MetaverseSceneBuilder
             return hair;
         }
 
-        // The skull runs to 1.95 and is 0.44 across, so the cap sits just over the crown and
-        // hangs a little past the sides.
+        if (style == 6)
+        {
+            // Shaved at the sides, so no cap: a ridge front to back, tallest in the middle.
+            float[] heights = { 0.24f, 0.34f, 0.30f, 0.20f };
+            for (int i = 0; i < heights.Length; i++)
+            {
+                BodyPart(PrimitiveType.Cube, $"Ridge{i}", hair.transform,
+                    new Vector3(0f, 1.94f + heights[i] * 0.5f, 0.16f - i * 0.12f),
+                    new Vector3(0.11f, heights[i], 0.13f), material);
+            }
+
+            return hair;
+        }
+
         BodyPart(PrimitiveType.Cube, "Cap", hair.transform, new Vector3(0f, 1.94f, -0.01f), new Vector3(0.47f, 0.13f, 0.45f), material);
         BodyPart(PrimitiveType.Cube, "Fringe", hair.transform, new Vector3(0f, 1.85f, 0.2f), new Vector3(0.46f, 0.12f, 0.06f), material);
 
-        if (style == 2)
+        switch (style)
         {
-            BodyPart(PrimitiveType.Cube, "Back", hair.transform, new Vector3(0f, 1.7f, -0.21f), new Vector3(0.44f, 0.36f, 0.07f), material);
-            foreach (float side in new[] { -1f, 1f })
-            {
-                BodyPart(PrimitiveType.Cube, side < 0f ? "SideLeft" : "SideRight", hair.transform,
-                    new Vector3(side * 0.215f, 1.76f, -0.02f), new Vector3(0.06f, 0.3f, 0.4f), material);
-            }
-        }
+            case 2:
+                // Long: down the back and past the ears.
+                BodyPart(PrimitiveType.Cube, "Back", hair.transform, new Vector3(0f, 1.7f, -0.21f), new Vector3(0.44f, 0.36f, 0.07f), material);
+                foreach (float side in new[] { -1f, 1f })
+                {
+                    BodyPart(PrimitiveType.Cube, side < 0f ? "SideLeft" : "SideRight", hair.transform,
+                        new Vector3(side * 0.215f, 1.76f, -0.02f), new Vector3(0.06f, 0.3f, 0.4f), material);
+                }
 
-        if (style == 3)
-        {
-            for (int i = 0; i < 3; i++)
-            {
-                float across = (i - 1) * 0.15f;
-                BodyPart(PrimitiveType.Cube, $"Spike{i}", hair.transform,
-                    new Vector3(across, 2.06f, -0.02f), new Vector3(0.11f, 0.26f, 0.11f), material,
-                    Quaternion.Euler(-18f, 0f, across * 90f));
-            }
+                break;
+
+            case 3:
+                // Spiked: three points, leaning further out the further from the middle.
+                for (int i = 0; i < 3; i++)
+                {
+                    float across = (i - 1) * 0.15f;
+                    BodyPart(PrimitiveType.Cube, $"Spike{i}", hair.transform,
+                        new Vector3(across, 2.06f, -0.02f), new Vector3(0.11f, 0.26f, 0.11f), material,
+                        Quaternion.Euler(-18f, 0f, across * 90f));
+                }
+
+                break;
+
+            case 4:
+                // Tied at the back, hanging down and away.
+                BodyPart(PrimitiveType.Cube, "Tie", hair.transform, new Vector3(0f, 1.87f, -0.24f), new Vector3(0.13f, 0.12f, 0.1f), material);
+                BodyPart(PrimitiveType.Cube, "Tail", hair.transform, new Vector3(0f, 1.68f, -0.31f), new Vector3(0.14f, 0.42f, 0.14f), material,
+                    Quaternion.Euler(18f, 0f, 0f));
+                break;
+
+            case 5:
+                // Gathered into a knot on top.
+                BodyPart(PrimitiveType.Cube, "Band", hair.transform, new Vector3(0f, 2.0f, -0.02f), new Vector3(0.17f, 0.06f, 0.17f), material);
+                BodyPart(PrimitiveType.Sphere, "Bun", hair.transform, new Vector3(0f, 2.1f, -0.02f), new Vector3(0.23f, 0.21f, 0.23f), material);
+                break;
+
+            case 7:
+                // A round mass all the way round the skull rather than a cut sitting on it.
+                BodyPart(PrimitiveType.Sphere, "Crown", hair.transform, new Vector3(0f, 1.99f, -0.02f), new Vector3(0.58f, 0.36f, 0.56f), material);
+                BodyPart(PrimitiveType.Sphere, "Nape", hair.transform, new Vector3(0f, 1.85f, -0.23f), new Vector3(0.42f, 0.32f, 0.22f), material);
+                foreach (float side in new[] { -1f, 1f })
+                {
+                    BodyPart(PrimitiveType.Sphere, side < 0f ? "PuffLeft" : "PuffRight", hair.transform,
+                        new Vector3(side * 0.24f, 1.86f, -0.02f), new Vector3(0.24f, 0.32f, 0.36f), material);
+                }
+
+                break;
         }
 
         return hair;
@@ -1765,7 +1811,7 @@ public static class MetaverseSceneBuilder
 
         // Four heads of hair in the prefab, of which the avatar shows one.
         Material hairMaterial = CreateMaterial("PlayerHair", Color.white);
-        var hairStyles = new GameObject[4];
+        var hairStyles = new GameObject[8];
         for (int i = 0; i < hairStyles.Length; i++)
         {
             hairStyles[i] = BuildHairStyle(humanoid.Rig, i, hairMaterial);
