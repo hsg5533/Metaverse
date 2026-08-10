@@ -28,9 +28,12 @@ public class PlayerGear : NetworkBehaviour
         /// <summary>How long that buff lasts.</summary>
         public readonly float BuffSeconds;
 
-        public bool IsFood => Buff >= 0;
+        /// <summary>Share of the whole health bar this puts back, or 0 for anything that does not.</summary>
+        public readonly int Heal;
 
-        public Piece(string name, bool weapon, int bonus, int theme, bool wearable = true, int buff = -1, float buffSeconds = 0f)
+        public bool IsFood => Buff >= 0 || Heal > 0;
+
+        public Piece(string name, bool weapon, int bonus, int theme, bool wearable = true, int buff = -1, float buffSeconds = 0f, int heal = 0)
         {
             Name = name;
             Weapon = weapon;
@@ -39,6 +42,7 @@ public class PlayerGear : NetworkBehaviour
             Wearable = wearable;
             Buff = buff;
             BuffSeconds = buffSeconds;
+            Heal = heal;
         }
     }
 
@@ -72,12 +76,17 @@ public class PlayerGear : NetworkBehaviour
         new("미스릴 검", true, 24, 6),
         new("미스릴 갑옷", false, 18, 10),
 
+        // Sold over the counter, which is the only healing that can be bought on the way out
+        // of the village. Deliberately the weaker of the two: no gathering went into it.
+        new("체력 포션", false, 3, -1, false, heal: 45),
+
         // The campfire's dishes: cooking no longer applies the buff on the spot, it hands over
         // one of these instead, and eating it - a click in the bag - is what applies it.
         new("약초 스튜", false, 0, -1, false, PlayerBuffs.Attack, 180f),
         new("철분 수프", false, 0, -1, false, PlayerBuffs.Defense, 180f),
         new("여행자의 차", false, 0, -1, false, PlayerBuffs.Speed, 120f),
         new("생선구이", false, 0, -1, false, PlayerBuffs.AttackSpeed, 180f),
+        new("회복 죽", false, 0, -1, false, heal: 70),
     };
 
     /// <summary>The rod, which the shop sells and the lake needs.</summary>
@@ -89,11 +98,14 @@ public class PlayerGear : NetworkBehaviour
     /// <summary>Where the shop's own gear starts in <see cref="Pieces"/>, past the ground's drops and the catch.</summary>
     public const int ShopFirst = 12;
 
-    /// <summary>Three tiers, a weapon and an armour each.</summary>
-    public const int ShopCount = 6;
+    /// <summary>Three tiers of a weapon and an armour each, and the potion after them.</summary>
+    public const int ShopCount = 7;
+
+    /// <summary>The bought potion, last of the shop's stock.</summary>
+    public const int Potion = 18;
 
     /// <summary>Where the campfire's dishes start in <see cref="Pieces"/>, past the shop's own gear.</summary>
-    public const int FoodFirst = 18;
+    public const int FoodFirst = 19;
 
     /// <summary>
     /// A material stack keeps its count in PlayerInventory, but takes a place in this list so
@@ -391,15 +403,32 @@ public class PlayerGear : NetworkBehaviour
         }
 
         Bag.RemoveAt(bagIndex);
+        Piece eaten = Pieces[piece];
 
-        var buffs = GetComponent<PlayerBuffs>();
-        if (buffs != null)
+        string effect;
+        if (eaten.Heal > 0)
         {
-            buffs.Apply(Pieces[piece].Buff, Pieces[piece].BuffSeconds);
+            var stats = GetComponent<PlayerStats>();
+            int before = stats != null ? stats.Hp.Value : 0;
+            if (stats != null)
+            {
+                stats.Restore(eaten.Heal);
+            }
+
+            effect = $"체력 {(stats != null ? stats.Hp.Value - before : 0)} 회복.";
+        }
+        else
+        {
+            var buffs = GetComponent<PlayerBuffs>();
+            if (buffs != null)
+            {
+                buffs.Apply(eaten.Buff, eaten.BuffSeconds);
+            }
+
+            effect = $"{PlayerBuffs.NameOf(eaten.Buff)} {Mathf.RoundToInt(eaten.BuffSeconds / 60f)}분.";
         }
 
-        NoticeRpc(NetText.Trim512(
-            $"{Pieces[piece].Name}을(를) 먹었습니다. {PlayerBuffs.NameOf(Pieces[piece].Buff)} {Mathf.RoundToInt(Pieces[piece].BuffSeconds / 60f)}분."));
+        NoticeRpc(NetText.Trim512($"{eaten.Name}을(를) 먹었습니다. {effect}"));
     }
 
     [Rpc(SendTo.Owner)]

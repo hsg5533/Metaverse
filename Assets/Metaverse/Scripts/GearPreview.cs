@@ -373,10 +373,49 @@ public class GearPreview : MonoBehaviour
             case 2:
                 BuildTea(root);
                 break;
-            default:
+            case 3:
                 BuildGrilledFish(root);
                 break;
+            case 4:
+                BuildPorridge(root);
+                break;
+            // Bought rather than cooked, so it sits before the dishes and lands here at -1.
+            default:
+                BuildPotion(root);
+                break;
         }
+    }
+
+    /// <summary>The shop potion: a round flask of red under a corked neck.</summary>
+    static void BuildPotion(Transform root)
+    {
+        Material glass = Paint(new Color(0.62f, 0.74f, 0.78f));
+        Material liquid = Paint(new Color(0.86f, 0.20f, 0.26f));
+        Material cork = Paint(new Color(0.58f, 0.42f, 0.24f));
+
+        Part(root, "Belly", new Vector3(0f, -0.08f, 0f), new Vector3(0.3f, 0.26f, 0.3f), glass);
+        Part(root, "BellyCut", new Vector3(0f, -0.08f, 0f), new Vector3(0.24f, 0.3f, 0.24f), glass, new Vector3(0f, 45f, 0f));
+        Part(root, "Liquid", new Vector3(0f, -0.11f, 0f), new Vector3(0.26f, 0.16f, 0.26f), liquid);
+        Part(root, "LiquidCut", new Vector3(0f, -0.11f, 0f), new Vector3(0.21f, 0.18f, 0.21f), liquid, new Vector3(0f, 45f, 0f));
+        Part(root, "Neck", new Vector3(0f, 0.1f, 0f), new Vector3(0.11f, 0.14f, 0.11f), glass);
+        Part(root, "Cork", new Vector3(0f, 0.2f, 0f), new Vector3(0.09f, 0.08f, 0.09f), cork);
+    }
+
+    /// <summary>The cooked one: a deep bowl of porridge with a spoon standing in it.</summary>
+    static void BuildPorridge(Transform root)
+    {
+        Material bowl = Paint(new Color(0.42f, 0.46f, 0.52f));
+        Material rim = Paint(new Color(0.60f, 0.64f, 0.70f));
+        Material grain = Paint(new Color(0.90f, 0.84f, 0.64f));
+        Material herb = Paint(new Color(0.36f, 0.66f, 0.34f));
+        Material spoon = Paint(new Color(0.62f, 0.46f, 0.28f));
+
+        Part(root, "Bowl", new Vector3(0f, -0.15f, 0f), new Vector3(0.4f, 0.18f, 0.4f), bowl);
+        Part(root, "Rim", new Vector3(0f, -0.06f, 0f), new Vector3(0.44f, 0.04f, 0.44f), rim);
+        Part(root, "Porridge", new Vector3(0f, -0.03f, 0f), new Vector3(0.34f, 0.05f, 0.34f), grain);
+        Part(root, "HerbA", new Vector3(-0.07f, 0.01f, 0.04f), new Vector3(0.09f, 0.03f, 0.05f), herb, new Vector3(0f, 24f, 0f));
+        Part(root, "HerbB", new Vector3(0.06f, 0.01f, -0.05f), new Vector3(0.08f, 0.03f, 0.05f), herb, new Vector3(0f, -32f, 0f));
+        Part(root, "Spoon", new Vector3(0.1f, 0.08f, -0.02f), new Vector3(0.04f, 0.22f, 0.04f), spoon, new Vector3(0f, 0f, 18f));
     }
 
     /// <summary>A bowl with chunks poking out of the broth.</summary>

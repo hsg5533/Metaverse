@@ -281,6 +281,15 @@ public class PlayerStats : NetworkBehaviour
         }
     }
 
+    /// <summary>Server side: a share of the whole bar put back, which is what food does.</summary>
+    public void Restore(int percent)
+    {
+        if (IsServer)
+        {
+            Hp.Value = Mathf.Min(MaxHp, Hp.Value + Mathf.Max(1, MaxHp * percent / 100));
+        }
+    }
+
     /// <summary>Server side: back to full, used at both ends of a duel.</summary>
     public void Heal()
     {

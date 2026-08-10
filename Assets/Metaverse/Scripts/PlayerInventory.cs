@@ -36,6 +36,7 @@ public class PlayerInventory : NetworkBehaviour
         (1, 1, 1, -1),
         (0, 2, 0, -1),
         (0, 0, 1, PlayerGear.FirstFish),
+        (0, 3, 1, -1),
     };
 
     /// <summary>True while the local player has the bag open; other panels stay shut.</summary>
