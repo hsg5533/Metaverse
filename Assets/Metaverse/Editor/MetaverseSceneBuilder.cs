@@ -1465,7 +1465,12 @@ public static class MetaverseSceneBuilder
         body.transform.SetParent(parent, false);
 
         BodyPart(PrimitiveType.Cube, "Torso", body.transform, new Vector3(0f, 1.4f, 0f), new Vector3(1.5f, 1.3f, 0.9f), bodyMaterial);
-        BodyPart(PrimitiveType.Sphere, "Hump", body.transform, new Vector3(0f, 2.05f, -0.3f), new Vector3(1.1f, 0.7f, 0.8f), bodyMaterial);
+
+        // The bulk goes across rather than behind: a slab wider than the torso and wider than
+        // the arms hang from reads as shoulders, where a ball the size of the head behind the
+        // head only ever reads as a second head.
+        BodyPart(PrimitiveType.Cube, "Shoulders", body.transform, new Vector3(0f, 2.0f, -0.02f), new Vector3(2.15f, 0.44f, 1f), bodyMaterial);
+        BodyPart(PrimitiveType.Cube, "Neck", body.transform, new Vector3(0f, 2.2f, 0.08f), new Vector3(0.44f, 0.3f, 0.44f), bodyMaterial);
         BodyPart(PrimitiveType.Cube, "DetailBelt", body.transform, new Vector3(0f, 0.85f, 0f), new Vector3(1.55f, 0.22f, 0.95f), clawMaterial);
         BodyPart(PrimitiveType.Cube, "DetailBuckle", body.transform, new Vector3(0f, 0.85f, 0.48f), new Vector3(0.3f, 0.3f, 0.08f), boneMaterial);
 
@@ -1484,7 +1489,8 @@ public static class MetaverseSceneBuilder
             BodyPart(PrimitiveType.Cube, "Tusk" + suffix, body.transform, new Vector3(side * 0.2f, 2.32f, 0.42f), new Vector3(0.1f, 0.3f, 0.1f), boneMaterial);
             BodyPart(PrimitiveType.Sphere, "Eye" + suffix, body.transform, new Vector3(side * 0.22f, 2.52f, 0.38f), new Vector3(0.18f, 0.18f, 0.1f), eyeMaterial);
 
-            BodyPart(PrimitiveType.Cube, "DetailPlate" + suffix, body.transform, new Vector3(side * 0.95f, 2.05f, 0f), new Vector3(0.62f, 0.3f, 0.68f), boneMaterial, Quaternion.Euler(0f, 0f, side * 14f));
+            // Capping the shoulder slab rather than floating beside it.
+            BodyPart(PrimitiveType.Cube, "DetailPlate" + suffix, body.transform, new Vector3(side * 0.86f, 2.24f, 0f), new Vector3(0.66f, 0.28f, 0.78f), boneMaterial, Quaternion.Euler(0f, 0f, side * 16f));
 
             BodyPart(PrimitiveType.Cube, "Arm" + suffix, body.transform, new Vector3(side * 1.05f, 1.25f, 0.05f), new Vector3(0.42f, 1.6f, 0.44f), bodyMaterial);
             BodyPart(PrimitiveType.Cube, "Leg" + suffix, body.transform, new Vector3(side * 0.42f, 0.4f, 0f), new Vector3(0.46f, 0.8f, 0.48f), bodyMaterial);
@@ -1542,19 +1548,23 @@ public static class MetaverseSceneBuilder
         // Bridges the torso down to where the legs meet it, so the two do not read as a box
         // stacked on two boxes.
         BodyPart(PrimitiveType.Cube, "Hips", body.transform, new Vector3(0f, 0.75f, 0f), new Vector3(1.4f, 0.4f, 1.0f), bodyMaterial);
-        BodyPart(PrimitiveType.Sphere, "Hump", body.transform, new Vector3(0f, 2.0f, -0.35f), new Vector3(1.55f, 0.95f, 1.15f), bodyMaterial);
+        // Shoulders below the head and set back, with the neck carrying the head out in
+        // front of them: the beast is hunched, and a hunch is a line from back to jaw, not a
+        // second ball parked behind the skull.
+        BodyPart(PrimitiveType.Cube, "Shoulders", body.transform, new Vector3(0f, 1.86f, -0.22f), new Vector3(2.3f, 0.58f, 1.15f), bodyMaterial);
+        BodyPart(PrimitiveType.Cube, "Neck", body.transform, new Vector3(0f, 1.98f, 0.26f), new Vector3(0.62f, 0.46f, 0.52f), bodyMaterial);
         BodyPart(PrimitiveType.Sphere, "Head", body.transform, new Vector3(0f, 2.05f, 0.6f), new Vector3(0.9f, 0.72f, 0.85f), bodyMaterial);
         BodyPart(PrimitiveType.Cube, "Jaw", body.transform, new Vector3(0f, 1.8f, 0.72f), new Vector3(0.72f, 0.26f, 0.62f), bodyMaterial);
         BodyPart(PrimitiveType.Cube, "DetailMaw", body.transform, new Vector3(0f, 1.95f, 0.86f), new Vector3(0.6f, 0.16f, 0.2f), emberMaterial);
         BodyPart(PrimitiveType.Cube, "DetailCrackChest", body.transform, new Vector3(0f, 1.3f, 0.6f), new Vector3(0.22f, 0.85f, 0.06f), emberMaterial);
 
-        // Spines along the hump, tallest at the shoulders.
+        // Spines down the back, tallest at the shoulders and shrinking towards the tail.
         for (int i = 0; i < 5; i++)
         {
             float t = i / 4f;
             BodyPart(PrimitiveType.Cube, $"DetailSpine{i}", body.transform,
-                new Vector3(0f, 2.5f - t * 0.5f, -0.2f - t * 0.75f),
-                new Vector3(0.22f, 0.75f - t * 0.3f, 0.22f), emberMaterial, Quaternion.Euler(-24f - i * 8f, 45f, 0f));
+                new Vector3(0f, 2.25f - t * 0.55f, -0.35f - t * 0.6f),
+                new Vector3(0.22f, 0.7f - t * 0.3f, 0.22f), emberMaterial, Quaternion.Euler(-24f - i * 8f, 45f, 0f));
         }
 
         foreach (float side in new[] { -1f, 1f })
