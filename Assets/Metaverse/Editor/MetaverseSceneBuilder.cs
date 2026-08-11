@@ -1731,7 +1731,9 @@ public static class MetaverseSceneBuilder
             PrimitiveType.Cube,
             "Portal",
             pad.transform,
-            new Vector3(0f, 2.2f, 0f),
+            // Down onto the plate: the sheet used to start a hand above the ground, which
+            // read as the whole gate hovering.
+            new Vector3(0f, 2.03f, 0f),
             new Vector3(3.6f, 4f, 0.12f),
             portalMaterial
         );
