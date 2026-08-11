@@ -19,9 +19,11 @@ public class MobileInput : MonoBehaviour
     /// <summary>How far the look drag moved this frame, in pixels.</summary>
     public static Vector2 Look { get; private set; }
 
-    static bool jump;
-    static bool attack;
-    static bool interact;
+    // The frame each button went down on, or zero for not pressed. A frame rather than a flag
+    // so a press cannot be banked: see Take.
+    static int jump;
+    static int attack;
+    static int interact;
 
     /// <summary>Each press is handed out once, the same way a key press is.</summary>
     public static bool ConsumeJump() => Take(ref jump);
@@ -76,11 +78,15 @@ public class MobileInput : MonoBehaviour
     const float StickRadius = 88f;
     const float ButtonSize = 111f;
 
+    /// <summary>How far off the corner the stick sits. A thumb curls inwards, and the very
+    /// corner of a phone is the hardest place on it to reach.</summary>
+    const float StickInset = 46f;
+
     /// <summary>
     /// Where the stick sits when nobody is holding it: bottom left. In touch space, where y
     /// counts up from the bottom of the screen, the same as the fingers it is compared with.
     /// </summary>
-    static Vector2 StickHome => new Vector2(24f + StickRadius, 24f + StickRadius);
+    static Vector2 StickHome => new Vector2(StickInset + StickRadius, StickInset + StickRadius);
 
     const int NoRole = -1;
     const int StickRole = 0;
@@ -143,7 +149,7 @@ public class MobileInput : MonoBehaviour
                 // and a swipe that happens to start on it is not a press.
                 if (role[i] == 3)
                 {
-                    interact = true;
+                    interact = Time.frameCount;
                 }
 
                 role[i] = NoRole;
@@ -229,8 +235,8 @@ public class MobileInput : MonoBehaviour
     /// </summary>
     static void PressButton(int assigned)
     {
-        if (assigned == 1) { attack = true; }
-        else if (assigned == 2) { jump = true; }
+        if (assigned == 1) { attack = Time.frameCount; }
+        else if (assigned == 2) { jump = Time.frameCount; }
     }
 
     /// <summary>Attack, jump, interact: a cluster in the bottom right corner, thumb sized.</summary>
@@ -326,14 +332,21 @@ public class MobileInput : MonoBehaviour
             new Color(1f, 1f, 1f, 0.55f));
     }
 
-    static bool Take(ref bool pressed)
+    /// <summary>
+    /// A press counts for the frame it happened on and the one after it: long enough to be read
+    /// whichever order Unity runs the scripts in, short enough that it cannot be saved up. Held
+    /// as a flag instead, an E pressed in an empty field sat there unread - nothing out of range
+    /// asks for it - and sprang open the next thing walked up to.
+    /// </summary>
+    static bool Take(ref int frame)
     {
-        if (!pressed)
+        if (frame == 0)
         {
             return false;
         }
 
-        pressed = false;
-        return true;
+        bool fresh = Time.frameCount - frame <= 1;
+        frame = 0;
+        return fresh;
     }
 }

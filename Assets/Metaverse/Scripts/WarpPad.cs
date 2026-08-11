@@ -121,8 +121,16 @@ public class WarpPad : MonoBehaviour
         var window = new Rect(MetaverseUi.Width * 0.5f - width * 0.5f, MetaverseUi.Height * 0.5f - height * 0.5f, width, height);
 
         GUI.Box(window, "");
-        GUI.Label(new Rect(window.x + 12f, window.y + 8f, width - 24f, 22f), $"<b>{Label}</b>", MetaverseUi.Rich);
-        GUI.Label(new Rect(window.x + 12f, window.y + 30f, width - 24f, 22f), "갈 곳을 고르세요.   [Esc] 닫기");
+        GUI.Label(new Rect(window.x + 12f, window.y + 8f, width - 48f, 22f), $"<b>{Label}</b>", MetaverseUi.Rich);
+        GUI.Label(new Rect(window.x + 12f, window.y + 30f, width - 24f, 22f), "갈 곳을 고르세요.");
+
+        // Top right, because Esc is not a key a phone has, and the pad's own E is deaf while
+        // a window is up.
+        if (GUI.Button(new Rect(window.xMax - 34f, window.y + 6f, 26f, 26f), "X"))
+        {
+            Close();
+            return;
+        }
 
         for (int i = 0; i < Choices.Length; i++)
         {
