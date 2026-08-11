@@ -1636,9 +1636,7 @@ public static class MetaverseSceneBuilder
 
         var npc = new GameObject("ShopNpc");
         npc.transform.SetParent(parent, false);
-        // Level with the players: a CharacterController rests its capsule a skin width clear
-        // of the floor, so an avatar stands that much higher than anything placed flat on it.
-        npc.transform.localPosition = new Vector3(-9f, 0.08f, 7f);
+        npc.transform.localPosition = new Vector3(-9f, 0f, 7f);
         npc.transform.localRotation = Quaternion.LookRotation(new Vector3(9f, 0f, -7f));
 
         var shopkeeper = BuildHumanoid(
@@ -2207,7 +2205,8 @@ public static class MetaverseSceneBuilder
         var controller = root.AddComponent<CharacterController>();
         controller.height = 2.2f;
         controller.radius = 0.5f;
-        controller.center = new Vector3(0f, 1.1f, 0f);
+        controller.skinWidth = 0.03f;
+        controller.center = new Vector3(0f, 1.13f, 0f);
         controller.slopeLimit = 55f;
         controller.stepOffset = 0.5f;
 
@@ -4030,7 +4029,11 @@ public static class MetaverseSceneBuilder
         var controller = root.AddComponent<CharacterController>();
         controller.height = 1.95f;
         controller.radius = 0.3f;
-        controller.center = new Vector3(0f, 0.98f, 0f);
+        // A controller parks its capsule a skin width clear of the floor, so the body hangs
+        // that far above it unless the capsule is lifted by the same amount inside the body.
+        // Half the height plus the skin puts the feet on the ground.
+        controller.skinWidth = 0.03f;
+        controller.center = new Vector3(0f, 1.005f, 0f);
         controller.slopeLimit = 50f;
         controller.stepOffset = 0.4f;
 
