@@ -25,7 +25,7 @@ public static class MetaverseSceneBuilder
 
     // Hunting grounds and dungeons are further areas of the same scene, far enough away
     // that the village never sees them. Warp pads are the only way across.
-    static readonly Vector3 VillagePad = new(10f, 0.05f, -12f);
+    static readonly Vector3 VillagePad = new(10f, 0f, -12f);
     static readonly Vector3 VillageArrival = new(13.5f, 1f, -12f);
 
     /// <summary>A hunting ground: where it stands, how hard it hits, and its palette.</summary>
@@ -187,18 +187,18 @@ public static class MetaverseSceneBuilder
     const float ArenaRadius = 22f;
     static readonly Vector3 CornerA = new(0f, 1f, 106f);
     static readonly Vector3 CornerB = new(0f, 1f, 134f);
-    static readonly Vector3 VillageArenaPad = new(0f, 0.05f, -13f);
-    static readonly Vector3 ArenaPad = new(0f, 0.05f, 96f);
+    static readonly Vector3 VillageArenaPad = new(0f, 0f, -13f);
+    static readonly Vector3 ArenaPad = new(0f, 0f, 96f);
     static readonly Vector3 VillageArenaArrival = new(0f, 1f, -9.5f);
     static readonly Vector3 ArenaArrival = new(0f, 1f, 99.5f);
 
     // The dungeon gate stands on the far side of the plaza from the hunting gate.
-    static readonly Vector3 VillageDungeonPad = new(-10f, 0.05f, -12f);
+    static readonly Vector3 VillageDungeonPad = new(-10f, 0f, -12f);
     static readonly Vector3 VillageDungeonArrival = new(-13.5f, 1f, -12f);
 
     // The lake, and the gate to it: tucked between the two houses behind the shopkeeper.
     static readonly Vector3 LakeCentre = new(0f, 0f, -120f);
-    static readonly Vector3 VillageLakePad = new(-17f, 0.05f, 4f);
+    static readonly Vector3 VillageLakePad = new(-17f, 0f, 4f);
 
     // Beside the arch rather than in front of it: the gate faces along the gap now, and the
     // tree behind it is something to walk into.
@@ -690,7 +690,7 @@ public static class MetaverseSceneBuilder
         BuildWarpPad(
             lake.transform,
             "WarpPadLakeExit",
-            new Vector3(0f, 0.05f, -25f),
+            new Vector3(0f, 0f, -25f),
             "마을",
             VillageLakeArrival,
             "PortalVillage",
@@ -1683,8 +1683,10 @@ public static class MetaverseSceneBuilder
         pad.transform.SetParent(parent, false);
         pad.transform.localPosition = position;
 
-        CreateDisc("Base", pad.transform, new Vector3(0f, 0.04f, 0f), 5f, trimMaterial);
-        CreateDisc("Inlay", pad.transform, new Vector3(0f, 0.06f, 0f), 3.4f, portalMaterial);
+        // Just over the plaza, which is itself a disc two centimetres up: enough not to
+        // fight it for the same pixels, not enough to look propped up.
+        CreateDisc("Base", pad.transform, new Vector3(0f, 0.03f, 0f), 5f, trimMaterial);
+        CreateDisc("Inlay", pad.transform, new Vector3(0f, 0.05f, 0f), 3.4f, portalMaterial);
 
         // Two stepped pillars and a lintel across the top.
         foreach (float side in new[] { -1f, 1f })
@@ -1920,7 +1922,7 @@ public static class MetaverseSceneBuilder
         BuildWarpPad(
             dungeon.transform,
             "WarpPadDungeonExit" + area.Key,
-            new Vector3(0f, 0.05f, -26f),
+            new Vector3(0f, 0f, -26f),
             "마을",
             VillageDungeonArrival,
             "PortalVillage",
@@ -2062,7 +2064,7 @@ public static class MetaverseSceneBuilder
         BuildWarpPad(
             field.transform,
             "WarpPadField" + area.Key,
-            new Vector3(0f, 0.05f, -25f),
+            new Vector3(0f, 0f, -25f),
             "마을",
             VillageArrival,
             "PortalVillage",
