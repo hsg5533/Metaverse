@@ -93,7 +93,14 @@ public static class GameSound
     /// A square wave sliding from one pitch to another, mixed with hiss and fading out.
     /// Square rather than sine because it carries over the rest of the game.
     /// </summary>
-    static AudioClip Sweep(string name, float seconds, float startHz, float endHz, float noise, float volume)
+    static AudioClip Sweep(
+        string name,
+        float seconds,
+        float startHz,
+        float endHz,
+        float noise,
+        float volume
+    )
     {
         var data = new float[Mathf.CeilToInt(Rate * seconds)];
         var random = new System.Random(name.GetHashCode());
@@ -125,7 +132,8 @@ public static class GameSound
             {
                 phase += notes[note] / Rate * 2f * Mathf.PI;
                 float fade = 1f - i / (float)perNote;
-                data[note * perNote + i] = (Mathf.Sin(phase) > 0f ? 1f : -1f) * fade * fade * volume;
+                data[note * perNote + i] =
+                    (Mathf.Sin(phase) > 0f ? 1f : -1f) * fade * fade * volume;
             }
         }
 

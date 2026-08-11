@@ -67,8 +67,10 @@ public class MonsterSpawner : MonoBehaviour
             float ring = roster.Length > 1 ? slot / (float)(roster.Length - 1) : 0f;
             // The inner ring and the jitter both scale with the area, so a narrow corridor
             // does not end up with monsters standing inside its walls.
-            float distance = Mathf.Lerp(Mathf.Min(8f, Radius), Radius, ring) + (i % 3) * Radius * 0.1f;
-            Vector3 position = transform.position + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * distance;
+            float distance =
+                Mathf.Lerp(Mathf.Min(8f, Radius), Radius, ring) + (i % 3) * Radius * 0.1f;
+            Vector3 position =
+                transform.position + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * distance;
 
             var instance = Instantiate(MonsterPrefab, position, Quaternion.identity);
             instance.name = $"{Monster.Kinds[kind].Name}{i}";

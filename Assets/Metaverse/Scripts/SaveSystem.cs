@@ -136,7 +136,13 @@ public class SaveSystem : MonoBehaviour
 
         if (record.bodyTint >= 0)
         {
-            avatar.SetLook(record.bodyTint, record.pantsTint, record.hairTint, record.hairStyle, record.skinTint);
+            avatar.SetLook(
+                record.bodyTint,
+                record.pantsTint,
+                record.hairTint,
+                record.hairStyle,
+                record.skinTint
+            );
         }
 
         var stats = avatar.GetComponent<PlayerStats>();
@@ -170,8 +176,6 @@ public class SaveSystem : MonoBehaviour
             }
         }
 
-
-
         var quests = avatar.GetComponent<PlayerQuests>();
         if (quests != null)
         {
@@ -182,7 +186,11 @@ public class SaveSystem : MonoBehaviour
         var gear = avatar.GetComponent<PlayerGear>();
         if (gear != null)
         {
-            gear.Restore(PlayerGear.IndexOf(record.gearWeapon), PlayerGear.IndexOf(record.gearArmor), pieces);
+            gear.Restore(
+                PlayerGear.IndexOf(record.gearWeapon),
+                PlayerGear.IndexOf(record.gearArmor),
+                pieces
+            );
         }
 
         var inventory = avatar.GetComponent<PlayerInventory>();
@@ -191,7 +199,9 @@ public class SaveSystem : MonoBehaviour
             inventory.SetAll(counts[0], counts[1], counts[2]);
         }
 
-        Debug.Log($"[Metaverse] loaded save for {record.name} (Lv.{record.level}, {record.gold} G)");
+        Debug.Log(
+            $"[Metaverse] loaded save for {record.name} (Lv.{record.level}, {record.gold} G)"
+        );
     }
 
     void SaveAll()
@@ -255,7 +265,9 @@ public class SaveSystem : MonoBehaviour
                     int count = inventory.CountOf(i);
                     if (count > 0)
                     {
-                        record.bag.Add(new BagEntry { item = PlayerInventory.Slots[i], count = count });
+                        record.bag.Add(
+                            new BagEntry { item = PlayerInventory.Slots[i], count = count }
+                        );
                     }
                 }
             }
@@ -309,7 +321,9 @@ public class SaveSystem : MonoBehaviour
             if (File.Exists(FilePath))
             {
                 book = JsonUtility.FromJson<Book>(File.ReadAllText(FilePath)) ?? new Book();
-                Debug.Log($"[Metaverse] save file loaded: {FilePath} ({book.players.Count} players)");
+                Debug.Log(
+                    $"[Metaverse] save file loaded: {FilePath} ({book.players.Count} players)"
+                );
             }
         }
         catch (Exception error)

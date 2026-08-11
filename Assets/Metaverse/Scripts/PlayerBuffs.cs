@@ -18,17 +18,36 @@ public class PlayerBuffs : NetworkBehaviour
     /// <summary>Every kind but None, in buff-panel order - the one list everything else loops over.</summary>
     public static readonly int[] Kinds = { Attack, Defense, Speed, AttackSpeed };
 
-    static readonly string[] Names = { "", "공격력 증가", "방어력 증가", "이동속도 증가", "공격속도 증가" };
+    static readonly string[] Names =
+    {
+        "",
+        "공격력 증가",
+        "방어력 증가",
+        "이동속도 증가",
+        "공격속도 증가",
+    };
 
     public int AttackAmount = 6;
     public int DefenseAmount = 6;
     public float SpeedAmount = 1.4f;
     public float AttackSpeedAmount = 1.4f;
 
-    public NetworkVariable<double> AttackEndTime = new(0d, writePerm: NetworkVariableWritePermission.Server);
-    public NetworkVariable<double> DefenseEndTime = new(0d, writePerm: NetworkVariableWritePermission.Server);
-    public NetworkVariable<double> SpeedEndTime = new(0d, writePerm: NetworkVariableWritePermission.Server);
-    public NetworkVariable<double> AttackSpeedEndTime = new(0d, writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<double> AttackEndTime = new(
+        0d,
+        writePerm: NetworkVariableWritePermission.Server
+    );
+    public NetworkVariable<double> DefenseEndTime = new(
+        0d,
+        writePerm: NetworkVariableWritePermission.Server
+    );
+    public NetworkVariable<double> SpeedEndTime = new(
+        0d,
+        writePerm: NetworkVariableWritePermission.Server
+    );
+    public NetworkVariable<double> AttackSpeedEndTime = new(
+        0d,
+        writePerm: NetworkVariableWritePermission.Server
+    );
 
     // Netcode only auto-syncs a NetworkVariable declared as its own field, so the four above stay
     // separate; this is just an index into them (None unused) for the shared lookup/apply code.
@@ -133,8 +152,11 @@ public class PlayerBuffs : NetworkBehaviour
                 continue;
             }
 
-            GUI.Label(new Rect(area.x + 8f, y, area.width - 16f, lineHeight),
-                $"{NameOf(kind)}   {Mathf.CeilToInt(remaining)}초 남음", Line);
+            GUI.Label(
+                new Rect(area.x + 8f, y, area.width - 16f, lineHeight),
+                $"{NameOf(kind)}   {Mathf.CeilToInt(remaining)}초 남음",
+                Line
+            );
             y += lineHeight;
         }
     }
@@ -145,9 +167,10 @@ public class PlayerBuffs : NetworkBehaviour
     /// One line stays one line. The default label wraps, and a wrapped line is twice as tall
     /// as the box was measured for, which pushed whatever came after it off the bottom.
     /// </summary>
-    static GUIStyle Line => line ??= new GUIStyle(GUI.skin.label)
-    {
-        wordWrap = false,
-        clipping = TextClipping.Overflow,
-    };
+    static GUIStyle Line =>
+        line ??= new GUIStyle(GUI.skin.label)
+        {
+            wordWrap = false,
+            clipping = TextClipping.Overflow,
+        };
 }

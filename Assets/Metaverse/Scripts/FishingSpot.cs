@@ -51,7 +51,10 @@ public class FishingSpot : MonoBehaviour
 
             // Flat: the jetty stands above the water and the bed lies below it.
             Vector3 middle = spot.transform.position;
-            if (new Vector2(point.x - middle.x, point.z - middle.z).magnitude <= spot.Radius + extra)
+            if (
+                new Vector2(point.x - middle.x, point.z - middle.z).magnitude
+                <= spot.Radius + extra
+            )
             {
                 return true;
             }

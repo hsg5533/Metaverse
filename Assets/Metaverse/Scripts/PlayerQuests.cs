@@ -12,7 +12,14 @@ public class PlayerQuests : NetworkBehaviour
     public const int Hunt = 0;
     public const int Gather = 1;
 
-    public static readonly (string Text, int Kind, int Detail, int Target, int Gold, int Exp)[] Board =
+    public static readonly (
+        string Text,
+        int Kind,
+        int Detail,
+        int Target,
+        int Gold,
+        int Exp
+    )[] Board =
     {
         ("몬스터 5마리 처치", Hunt, 0, 5, 40, 30),
         ("광석 8개 채집", Gather, (int)GatherKind.Ore, 8, 35, 20),
@@ -93,7 +100,6 @@ public class PlayerQuests : NetworkBehaviour
     {
         Advance(Gather, (int)kind, amount);
     }
-
 
     void Advance(int kind, int detail, int amount)
     {

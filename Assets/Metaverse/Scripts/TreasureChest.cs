@@ -24,7 +24,10 @@ public class TreasureChest : NetworkBehaviour
     public float InteractRange = 3f;
     public float PromptHeight = 1.4f;
 
-    public NetworkVariable<bool> Unlocked = new(false, writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> Unlocked = new(
+        false,
+        writePerm: NetworkVariableWritePermission.Server
+    );
 
     float lidAngle;
 
@@ -56,7 +59,11 @@ public class TreasureChest : NetworkBehaviour
     {
         foreach (var chest in All)
         {
-            if (chest != null && chest.IsServer && Vector3.Distance(chest.transform.position, point) <= range)
+            if (
+                chest != null
+                && chest.IsServer
+                && Vector3.Distance(chest.transform.position, point) <= range
+            )
             {
                 chest.Unlocked.Value = true;
             }
@@ -101,7 +108,10 @@ public class TreasureChest : NetworkBehaviour
         var player = MetaverseUi.PlayerObject(rpcParams.Receive.SenderClientId);
 
         // The client asked, but the server decides whether they are actually standing here.
-        if (player == null || Vector3.Distance(player.transform.position, transform.position) > InteractRange + 1f)
+        if (
+            player == null
+            || Vector3.Distance(player.transform.position, transform.position) > InteractRange + 1f
+        )
         {
             return;
         }
@@ -135,7 +145,8 @@ public class TreasureChest : NetworkBehaviour
 
     bool InRange()
     {
-        return Vector3.Distance(PlayerAvatar.Local.transform.position, transform.position) <= InteractRange;
+        return Vector3.Distance(PlayerAvatar.Local.transform.position, transform.position)
+            <= InteractRange;
     }
 
     void OnGUI()
@@ -147,8 +158,11 @@ public class TreasureChest : NetworkBehaviour
             return;
         }
 
-        string label = Piece >= 0 ? $"[E] 보물상자 열기  ({PlayerGear.NameOf(Piece)})" : "[E] 보물상자 열기";
-        MetaverseUi.WorldPrompt(transform.position + Vector3.up * PromptHeight,
-            Unlocked.Value ? label : "보스를 처치해야 열린다");
+        string label =
+            Piece >= 0 ? $"[E] 보물상자 열기  ({PlayerGear.NameOf(Piece)})" : "[E] 보물상자 열기";
+        MetaverseUi.WorldPrompt(
+            transform.position + Vector3.up * PromptHeight,
+            Unlocked.Value ? label : "보스를 처치해야 열린다"
+        );
     }
 }

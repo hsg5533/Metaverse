@@ -29,7 +29,13 @@ public class PlayerCombat : NetworkBehaviour
 
     void Update()
     {
-        if (!IsOwner || !IsSpawned || ChatSystem.IsTyping || ShopNpc.PanelOpen || MetaverseHUD.PointerOverHud)
+        if (
+            !IsOwner
+            || !IsSpawned
+            || ChatSystem.IsTyping
+            || ShopNpc.PanelOpen
+            || MetaverseHUD.PointerOverHud
+        )
         {
             return;
         }
@@ -41,7 +47,8 @@ public class PlayerCombat : NetworkBehaviour
         }
 
         var mouse = Mouse.current;
-        bool pressed = (mouse != null && mouse.leftButton.wasPressedThisFrame) || MobileInput.ConsumeAttack();
+        bool pressed =
+            (mouse != null && mouse.leftButton.wasPressedThisFrame) || MobileInput.ConsumeAttack();
         if (!pressed || Time.time < nextAttackTime)
         {
             return;
@@ -66,20 +73,29 @@ public class PlayerCombat : NetworkBehaviour
         SwingRpc();
 
         // In a duel the swing goes at the other fighter; monsters are ignored entirely.
-        var opponent = DuelSystem.Instance != null ? DuelSystem.Instance.OpponentOf(OwnerClientId) : null;
+        var opponent =
+            DuelSystem.Instance != null ? DuelSystem.Instance.OpponentOf(OwnerClientId) : null;
         if (opponent != null)
         {
             if (InReach(opponent.transform.position))
             {
                 var avatar = GetComponent<PlayerAvatar>();
-                opponent.TakeDuelDamage(stats.AttackPower, avatar != null ? avatar.Nickname.Value.ToString() : "Someone");
+                opponent.TakeDuelDamage(
+                    stats.AttackPower,
+                    avatar != null ? avatar.Nickname.Value.ToString() : "Someone"
+                );
                 DuelSystem.Instance.ReportDuelHit(opponent);
             }
 
             return;
         }
 
-        var target = Monster.FindTarget(transform.position + Vector3.up * 0.8f, transform.forward, Range, ConeDegrees);
+        var target = Monster.FindTarget(
+            transform.position + Vector3.up * 0.8f,
+            transform.forward,
+            Range,
+            ConeDegrees
+        );
         if (target != null)
         {
             target.TakeDamage(stats.AttackPower, stats);

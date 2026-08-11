@@ -19,7 +19,10 @@ public class ChatSystem : NetworkBehaviour
     {
         if (instance != null && instance.IsServer)
         {
-            instance.BroadcastChatRpc(new Unity.Collections.FixedString64Bytes("월드"), NetText.Trim512(text));
+            instance.BroadcastChatRpc(
+                new Unity.Collections.FixedString64Bytes("월드"),
+                NetText.Trim512(text)
+            );
         }
     }
 
@@ -75,8 +78,12 @@ public class ChatSystem : NetworkBehaviour
         }
 
         bool focused = GUI.GetNameOfFocusedControl() == ControlName;
-        bool enterPressed = Event.current.type == EventType.KeyDown &&
-                            (Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter);
+        bool enterPressed =
+            Event.current.type == EventType.KeyDown
+            && (
+                Event.current.keyCode == KeyCode.Return
+                || Event.current.keyCode == KeyCode.KeypadEnter
+            );
 
         if (enterPressed && !focused)
         {
@@ -99,7 +106,12 @@ public class ChatSystem : NetworkBehaviour
         bool touch = MobileInput.Active;
         float height = touch ? 112f : 200f;
         var area = touch
-            ? new Rect(MetaverseUi.Width * 0.5f - 190f, IsTyping ? 16f : MetaverseUi.Height - 54f - height, 380f, height)
+            ? new Rect(
+                MetaverseUi.Width * 0.5f - 190f,
+                IsTyping ? 16f : MetaverseUi.Height - 54f - height,
+                380f,
+                height
+            )
             : new Rect(10f, MetaverseUi.Height - 210f, 380f, height);
         GUILayout.BeginArea(area, GUI.skin.box);
 
@@ -153,7 +165,10 @@ public class ChatSystem : NetworkBehaviour
         ulong senderId = rpcParams.Receive.SenderClientId;
         var sender = new FixedString64Bytes("Unknown");
 
-        if (NetworkManager.ConnectedClients.TryGetValue(senderId, out var client) && client.PlayerObject != null)
+        if (
+            NetworkManager.ConnectedClients.TryGetValue(senderId, out var client)
+            && client.PlayerObject != null
+        )
         {
             var avatar = client.PlayerObject.GetComponent<PlayerAvatar>();
             if (avatar != null)

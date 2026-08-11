@@ -32,7 +32,9 @@ public class Campfire : InteractStation
         }
 
         string fish = gear != null ? $"   붕어 {gear.CountInBag(PlayerGear.FirstFish)}" : "";
-        GUILayout.Label($"광석 {inventory.Ore.Value}   약초 {inventory.Herb.Value}   나무 {inventory.Wood.Value}{fish}");
+        GUILayout.Label(
+            $"광석 {inventory.Ore.Value}   약초 {inventory.Herb.Value}   나무 {inventory.Wood.Value}{fish}"
+        );
         GUILayout.Space(4);
 
         scroll = GUILayout.BeginScrollView(scroll, GUILayout.Height(VisibleRecipes * RowHeight));
@@ -45,13 +47,21 @@ public class Campfire : InteractStation
 
             // Room for the scroll bar, which the rows would otherwise run underneath.
             var slot = GUILayoutUtility.GetRect(PanelSize.x - 44f, RowHeight);
-            string effect = food.Heal > 0
-                ? $"체력 {food.Heal}% 회복"
-                : $"{PlayerBuffs.NameOf(food.Buff)}  {Mathf.RoundToInt(food.BuffSeconds / 60f)}분";
+            string effect =
+                food.Heal > 0
+                    ? $"체력 {food.Heal}% 회복"
+                    : $"{PlayerBuffs.NameOf(food.Buff)}  {Mathf.RoundToInt(food.BuffSeconds / 60f)}분";
             string cost = $"만들기  ({Cost(recipe.Ore, recipe.Herb, recipe.Wood, recipe.Fish)})";
 
             int index = i;
-            MetaverseUi.ItemRow(slot, GearPreview.Piece + piece, food.Name, effect, cost, () => inventory.CookRpc(index));
+            MetaverseUi.ItemRow(
+                slot,
+                GearPreview.Piece + piece,
+                food.Name,
+                effect,
+                cost,
+                () => inventory.CookRpc(index)
+            );
         }
 
         GUILayout.EndScrollView();

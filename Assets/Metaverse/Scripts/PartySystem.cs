@@ -58,12 +58,18 @@ public class PartySystem : NetworkBehaviour
         {
             InviteRpc();
         }
-        else if ((keyboard.uKey.wasPressedThisFrame || MobileInput.Pressed(Key.U)) && inviteFrom.Length > 0)
+        else if (
+            (keyboard.uKey.wasPressedThisFrame || MobileInput.Pressed(Key.U))
+            && inviteFrom.Length > 0
+        )
         {
             AcceptRpc(inviteFromId);
             inviteFrom = "";
         }
-        else if ((keyboard.lKey.wasPressedThisFrame || MobileInput.Pressed(Key.L)) && members.Length > 0)
+        else if (
+            (keyboard.lKey.wasPressedThisFrame || MobileInput.Pressed(Key.L))
+            && members.Length > 0
+        )
         {
             LeaveRpc();
         }
@@ -97,7 +103,11 @@ public class PartySystem : NetworkBehaviour
             }
 
             var stats = MetaverseUi.StatsOf(member);
-            if (stats != null && Vector3.Distance(stats.transform.position, source.transform.position) <= ShareRange)
+            if (
+                stats != null
+                && Vector3.Distance(stats.transform.position, source.transform.position)
+                    <= ShareRange
+            )
             {
                 receivers.Add(stats);
             }
@@ -119,7 +129,10 @@ public class PartySystem : NetworkBehaviour
         List<ulong> party = PartyOf(senderId);
         if (party != null && party.Count >= MaxMembers)
         {
-            NoticeRpc(NetText.Trim512($"파티는 최대 {MaxMembers}명까지입니다."), RpcTarget.Single(senderId, RpcTargetUse.Temp));
+            NoticeRpc(
+                NetText.Trim512($"파티는 최대 {MaxMembers}명까지입니다."),
+                RpcTarget.Single(senderId, RpcTargetUse.Temp)
+            );
             return;
         }
 
@@ -127,12 +140,19 @@ public class PartySystem : NetworkBehaviour
         float bestDistance = InviteRange;
         foreach (var client in NetworkManager.ConnectedClientsList)
         {
-            if (client.ClientId == senderId || client.PlayerObject == null || PartyOf(client.ClientId) != null)
+            if (
+                client.ClientId == senderId
+                || client.PlayerObject == null
+                || PartyOf(client.ClientId) != null
+            )
             {
                 continue;
             }
 
-            float distance = Vector3.Distance(client.PlayerObject.transform.position, sender.transform.position);
+            float distance = Vector3.Distance(
+                client.PlayerObject.transform.position,
+                sender.transform.position
+            );
             if (distance < bestDistance)
             {
                 bestDistance = distance;
@@ -142,14 +162,24 @@ public class PartySystem : NetworkBehaviour
 
         if (best == null)
         {
-            NoticeRpc(NetText.Trim512("근처에 초대할 사람이 없습니다."), RpcTarget.Single(senderId, RpcTargetUse.Temp));
+            NoticeRpc(
+                NetText.Trim512("근처에 초대할 사람이 없습니다."),
+                RpcTarget.Single(senderId, RpcTargetUse.Temp)
+            );
             return;
         }
 
         ulong targetId = best.OwnerClientId;
         invites[targetId] = senderId;
-        InvitedRpc(NetText.Trim64(MetaverseUi.NameOf(senderId)), senderId, RpcTarget.Single(targetId, RpcTargetUse.Temp));
-        NoticeRpc(NetText.Trim512($"{MetaverseUi.NameOf(targetId)}님을 파티에 초대했습니다."), RpcTarget.Single(senderId, RpcTargetUse.Temp));
+        InvitedRpc(
+            NetText.Trim64(MetaverseUi.NameOf(senderId)),
+            senderId,
+            RpcTarget.Single(targetId, RpcTargetUse.Temp)
+        );
+        NoticeRpc(
+            NetText.Trim512($"{MetaverseUi.NameOf(targetId)}님을 파티에 초대했습니다."),
+            RpcTarget.Single(senderId, RpcTargetUse.Temp)
+        );
     }
 
     [Rpc(SendTo.Server)]
@@ -176,7 +206,10 @@ public class PartySystem : NetworkBehaviour
 
         if (party.Count >= MaxMembers)
         {
-            NoticeRpc(NetText.Trim512("그 파티는 이미 가득 찼습니다."), RpcTarget.Single(senderId, RpcTargetUse.Temp));
+            NoticeRpc(
+                NetText.Trim512("그 파티는 이미 가득 찼습니다."),
+                RpcTarget.Single(senderId, RpcTargetUse.Temp)
+            );
             return;
         }
 
@@ -302,7 +335,10 @@ public class PartySystem : NetworkBehaviour
 
         if (inviteFrom.Length > 0 && Time.time < inviteExpiry && members.Length == 0)
         {
-            GUI.Box(new Rect(MetaverseUi.Width * 0.5f - 150f, 66f, 300f, 26f), $"{inviteFrom}님의 파티 초대  -  [U] 수락");
+            GUI.Box(
+                new Rect(MetaverseUi.Width * 0.5f - 150f, 66f, 300f, 26f),
+                $"{inviteFrom}님의 파티 초대  -  [U] 수락"
+            );
         }
 
         if (members.Length == 0)
@@ -312,7 +348,10 @@ public class PartySystem : NetworkBehaviour
 
         float height = 30f + members.Length * 34f;
         GUILayout.BeginArea(new Rect(10, 250, 210, height), GUI.skin.box);
-        GUILayout.Label($"<b>파티</b>  {members.Length}/{MaxMembers}   [L] 나가기", MetaverseUi.Rich);
+        GUILayout.Label(
+            $"<b>파티</b>  {members.Length}/{MaxMembers}   [L] 나가기",
+            MetaverseUi.Rich
+        );
 
         foreach (ulong member in members)
         {
@@ -354,7 +393,10 @@ public class PartySystem : NetworkBehaviour
         GUI.color = new Color(0f, 0f, 0f, 0.5f);
         GUI.DrawTexture(bar, Texture2D.whiteTexture);
         GUI.color = new Color(0.35f, 0.8f, 0.4f, 0.95f);
-        GUI.DrawTexture(new Rect(bar.x, bar.y, bar.width * fill, bar.height), Texture2D.whiteTexture);
+        GUI.DrawTexture(
+            new Rect(bar.x, bar.y, bar.width * fill, bar.height),
+            Texture2D.whiteTexture
+        );
         GUI.color = previous;
     }
 }

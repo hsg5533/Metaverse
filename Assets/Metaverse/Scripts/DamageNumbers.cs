@@ -49,7 +49,15 @@ public static class DamageNumbers
             return;
         }
 
-        entries.Add(new Entry { Position = worldPosition, Amount = amount, Taken = taken, EndTime = Time.time + Lifetime });
+        entries.Add(
+            new Entry
+            {
+                Position = worldPosition,
+                Amount = amount,
+                Taken = taken,
+                EndTime = Time.time + Lifetime,
+            }
+        );
     }
 
     /// <summary>Drawn once from MetaverseHUD, inside the same world-space depth block as the name tags.</summary>
@@ -85,7 +93,12 @@ public static class DamageNumbers
             }
 
             Color previous = GUI.color;
-            GUI.color = new Color(TextColor.r, TextColor.g, TextColor.b, Mathf.Clamp01(remaining / Lifetime));
+            GUI.color = new Color(
+                TextColor.r,
+                TextColor.g,
+                TextColor.b,
+                Mathf.Clamp01(remaining / Lifetime)
+            );
 
             float y = MetaverseUi.Height - screenPoint.y;
             string text = entry.Taken ? $"-{entry.Amount}" : entry.Amount.ToString();

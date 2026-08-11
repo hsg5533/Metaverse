@@ -134,23 +134,30 @@ public class MetaverseHUD : MonoBehaviour
                     break;
                 case "-mvclient":
                     client = true;
-                    if (i + 1 < args.Length) address = args[i + 1];
+                    if (i + 1 < args.Length)
+                        address = args[i + 1];
                     break;
                 case "-mvnick":
-                    if (i + 1 < args.Length) LocalNickname = args[i + 1];
+                    if (i + 1 < args.Length)
+                        LocalNickname = args[i + 1];
                     break;
                 case "-mvport":
-                    if (i + 1 < args.Length) port = args[i + 1];
+                    if (i + 1 < args.Length)
+                        port = args[i + 1];
                     break;
             }
         }
 
         if (host || client)
         {
-            manager.OnClientConnectedCallback += id => Debug.Log($"[Metaverse] client {id} connected");
-            manager.OnClientDisconnectCallback += id => Debug.Log($"[Metaverse] client {id} disconnected");
+            manager.OnClientConnectedCallback += id =>
+                Debug.Log($"[Metaverse] client {id} connected");
+            manager.OnClientDisconnectCallback += id =>
+                Debug.Log($"[Metaverse] client {id} disconnected");
             Connect(manager, host);
-            Debug.Log($"[Metaverse] auto start as {(host ? "host" : "client")} -> {address}:{port}");
+            Debug.Log(
+                $"[Metaverse] auto start as {(host ? "host" : "client")} -> {address}:{port}"
+            );
         }
     }
 
@@ -210,26 +217,41 @@ public class MetaverseHUD : MonoBehaviour
         float panelHeight = rows * rowHeight + 36f + exitHeight;
         var panel = touch
             ? new Rect(MetaverseUi.Width - 366f, button.yMax + 8f, 352f, panelHeight)
-            : new Rect(MetaverseUi.Width - 366f, MetaverseUi.Height - 66f - panelHeight, 352f, panelHeight);
+            : new Rect(
+                MetaverseUi.Width - 366f,
+                MetaverseUi.Height - 66f - panelHeight,
+                352f,
+                panelHeight
+            );
 
         // Only meaningful for a mouse: it stops a click on the gear from also swinging the
         // sword. A touch leaves its last position behind after the finger lifts, which would
         // latch this on for good, and on a phone the attack comes from its own button anyway.
         Vector2 pointer = Event.current.mousePosition;
-        PointerOverHud = !MobileInput.Active
+        PointerOverHud =
+            !MobileInput.Active
             && (button.Contains(pointer) || (helpOpen && panel.Contains(pointer)));
 
         if (helpOpen)
         {
             GUI.Box(panel, "");
-            GUI.Label(new Rect(panel.x + 10f, panel.y + 6f, panel.width, 20f), touch ? "<b>메뉴</b>" : "<b>조작</b>", MetaverseUi.Rich);
+            GUI.Label(
+                new Rect(panel.x + 10f, panel.y + 6f, panel.width, 20f),
+                touch ? "<b>메뉴</b>" : "<b>조작</b>",
+                MetaverseUi.Rich
+            );
 
             if (touch)
             {
                 // Two columns of buttons, each pressing the key it stands for.
                 for (int i = 0; i < TouchActions.Length; i++)
                 {
-                    var cell = new Rect(panel.x + 12f + (i % 2) * 168f, panel.y + 28f + (i / 2) * rowHeight, 160f, rowHeight - 6f);
+                    var cell = new Rect(
+                        panel.x + 12f + (i % 2) * 168f,
+                        panel.y + 28f + (i / 2) * rowHeight,
+                        160f,
+                        rowHeight - 6f
+                    );
                     if (GUI.Button(cell, TouchActions[i].What))
                     {
                         MobileInput.Press(TouchActions[i].Key);
@@ -243,11 +265,20 @@ public class MetaverseHUD : MonoBehaviour
                 {
                     float y = panel.y + 28f + i * 20f;
                     GUI.Label(new Rect(panel.x + 12f, y, 110f, 20f), Controls[i].Keys);
-                    GUI.Label(new Rect(panel.x + 128f, y, panel.width - 140f, 20f), Controls[i].What);
+                    GUI.Label(
+                        new Rect(panel.x + 128f, y, panel.width - 140f, 20f),
+                        Controls[i].What
+                    );
                 }
             }
 
-            if (connected && GUI.Button(new Rect(panel.x + 10f, panel.yMax - exitHeight + 4f, 100f, 24f), "나가기"))
+            if (
+                connected
+                && GUI.Button(
+                    new Rect(panel.x + 10f, panel.yMax - exitHeight + 4f, 100f, 24f),
+                    "나가기"
+                )
+            )
             {
                 manager.Shutdown();
                 message = "";
@@ -279,17 +310,28 @@ public class MetaverseHUD : MonoBehaviour
         for (int i = 0; i < 8; i++)
         {
             float angle = i * 45f * Mathf.Deg2Rad;
-            GUI.DrawTexture(new Rect(
-                centre.x + Mathf.Cos(angle) * radius * 1.15f - tooth * 0.5f,
-                centre.y + Mathf.Sin(angle) * radius * 1.15f - tooth * 0.5f,
-                tooth, tooth), Texture2D.whiteTexture);
+            GUI.DrawTexture(
+                new Rect(
+                    centre.x + Mathf.Cos(angle) * radius * 1.15f - tooth * 0.5f,
+                    centre.y + Mathf.Sin(angle) * radius * 1.15f - tooth * 0.5f,
+                    tooth,
+                    tooth
+                ),
+                Texture2D.whiteTexture
+            );
         }
 
-        GUI.DrawTexture(new Rect(centre.x - radius, centre.y - radius, radius * 2f, radius * 2f), Texture2D.whiteTexture);
+        GUI.DrawTexture(
+            new Rect(centre.x - radius, centre.y - radius, radius * 2f, radius * 2f),
+            Texture2D.whiteTexture
+        );
 
         GUI.color = new Color(0.16f, 0.16f, 0.18f);
         float hole = radius * 0.42f;
-        GUI.DrawTexture(new Rect(centre.x - hole, centre.y - hole, hole * 2f, hole * 2f), Texture2D.whiteTexture);
+        GUI.DrawTexture(
+            new Rect(centre.x - hole, centre.y - hole, hole * 2f, hole * 2f),
+            Texture2D.whiteTexture
+        );
 
         GUI.color = previous;
     }
@@ -336,7 +378,11 @@ public class MetaverseHUD : MonoBehaviour
         var transport = manager.GetComponent<UnityTransport>();
         if (transport != null)
         {
-            transport.SetConnectionData(host ? "0.0.0.0" : address.Trim(), parsedPort, host ? "0.0.0.0" : null);
+            transport.SetConnectionData(
+                host ? "0.0.0.0" : address.Trim(),
+                parsedPort,
+                host ? "0.0.0.0" : null
+            );
         }
 
         // Binding fails after StartHost has already returned true, so the failure only shows
@@ -378,7 +424,10 @@ public class MetaverseHUD : MonoBehaviour
 
         foreach (var iface in NetworkInterface.GetAllNetworkInterfaces())
         {
-            if (iface.OperationalStatus != OperationalStatus.Up || iface.NetworkInterfaceType == NetworkInterfaceType.Loopback)
+            if (
+                iface.OperationalStatus != OperationalStatus.Up
+                || iface.NetworkInterfaceType == NetworkInterfaceType.Loopback
+            )
             {
                 continue;
             }
@@ -387,7 +436,10 @@ public class MetaverseHUD : MonoBehaviour
             {
                 if (address.Address.AddressFamily == AddressFamily.InterNetwork)
                 {
-                    result = result == null ? address.Address.ToString() : $"{result}, {address.Address}";
+                    result =
+                        result == null
+                            ? address.Address.ToString()
+                            : $"{result}, {address.Address}";
                 }
             }
         }

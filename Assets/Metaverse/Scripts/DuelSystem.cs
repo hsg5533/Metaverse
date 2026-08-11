@@ -83,7 +83,10 @@ public class DuelSystem : NetworkBehaviour
         {
             ChallengeRpc();
         }
-        else if ((keyboard.hKey.wasPressedThisFrame || MobileInput.Pressed(Key.H)) && inviteFrom.Length > 0)
+        else if (
+            (keyboard.hKey.wasPressedThisFrame || MobileInput.Pressed(Key.H))
+            && inviteFrom.Length > 0
+        )
         {
             AcceptRpc(inviteFromId);
             inviteFrom = "";
@@ -148,7 +151,10 @@ public class DuelSystem : NetworkBehaviour
             if (!match.Live && Time.time >= match.StartTime)
             {
                 match.Live = true;
-                AnnounceRpc(NetText.Trim512("시작!"), RpcTarget.Group(new[] { match.A, match.B }, RpcTargetUse.Temp));
+                AnnounceRpc(
+                    NetText.Trim512("시작!"),
+                    RpcTarget.Group(new[] { match.A, match.B }, RpcTargetUse.Temp)
+                );
                 continue;
             }
 
@@ -189,7 +195,10 @@ public class DuelSystem : NetworkBehaviour
 
         if (!InArena(sender.transform.position))
         {
-            NoticeRpc(NetText.Trim512("결투는 아레나 안에서만 가능합니다."), RpcTarget.Single(senderId, RpcTargetUse.Temp));
+            NoticeRpc(
+                NetText.Trim512("결투는 아레나 안에서만 가능합니다."),
+                RpcTarget.Single(senderId, RpcTargetUse.Temp)
+            );
             return;
         }
 
@@ -197,12 +206,19 @@ public class DuelSystem : NetworkBehaviour
         float bestDistance = 12f;
         foreach (var client in NetworkManager.ConnectedClientsList)
         {
-            if (client.ClientId == senderId || client.PlayerObject == null || !InArena(client.PlayerObject.transform.position))
+            if (
+                client.ClientId == senderId
+                || client.PlayerObject == null
+                || !InArena(client.PlayerObject.transform.position)
+            )
             {
                 continue;
             }
 
-            float distance = Vector3.Distance(client.PlayerObject.transform.position, sender.transform.position);
+            float distance = Vector3.Distance(
+                client.PlayerObject.transform.position,
+                sender.transform.position
+            );
             if (distance < bestDistance)
             {
                 bestDistance = distance;
@@ -212,20 +228,33 @@ public class DuelSystem : NetworkBehaviour
 
         if (best == null)
         {
-            NoticeRpc(NetText.Trim512("근처에 결투할 상대가 없습니다."), RpcTarget.Single(senderId, RpcTargetUse.Temp));
+            NoticeRpc(
+                NetText.Trim512("근처에 결투할 상대가 없습니다."),
+                RpcTarget.Single(senderId, RpcTargetUse.Temp)
+            );
             return;
         }
 
         ulong targetId = best.OwnerClientId;
         if (MatchOf(targetId) != null)
         {
-            NoticeRpc(NetText.Trim512("상대가 이미 결투 중입니다."), RpcTarget.Single(senderId, RpcTargetUse.Temp));
+            NoticeRpc(
+                NetText.Trim512("상대가 이미 결투 중입니다."),
+                RpcTarget.Single(senderId, RpcTargetUse.Temp)
+            );
             return;
         }
 
         invites[targetId] = senderId;
-        InviteRpc(NetText.Trim64(MetaverseUi.NameOf(senderId)), senderId, RpcTarget.Single(targetId, RpcTargetUse.Temp));
-        NoticeRpc(NetText.Trim512($"{MetaverseUi.NameOf(targetId)}에게 결투를 신청했습니다."), RpcTarget.Single(senderId, RpcTargetUse.Temp));
+        InviteRpc(
+            NetText.Trim64(MetaverseUi.NameOf(senderId)),
+            senderId,
+            RpcTarget.Single(targetId, RpcTargetUse.Temp)
+        );
+        NoticeRpc(
+            NetText.Trim512($"{MetaverseUi.NameOf(targetId)}에게 결투를 신청했습니다."),
+            RpcTarget.Single(senderId, RpcTargetUse.Temp)
+        );
     }
 
     [Rpc(SendTo.Server)]
@@ -243,15 +272,32 @@ public class DuelSystem : NetworkBehaviour
             return;
         }
 
-        var match = new Match { A = fromClientId, B = senderId, StartTime = Time.time + Countdown };
+        var match = new Match
+        {
+            A = fromClientId,
+            B = senderId,
+            StartTime = Time.time + Countdown,
+        };
         matches.Add(match);
 
         Prepare(match.A, CornerA, CornerB);
         Prepare(match.B, CornerB, CornerA);
 
-        StartRpc(NetText.Trim64(MetaverseUi.NameOf(match.B)), Countdown, RoundTime, RpcTarget.Single(match.A, RpcTargetUse.Temp));
-        StartRpc(NetText.Trim64(MetaverseUi.NameOf(match.A)), Countdown, RoundTime, RpcTarget.Single(match.B, RpcTargetUse.Temp));
-        ChatSystem.Announce($"{MetaverseUi.NameOf(match.A)} vs {MetaverseUi.NameOf(match.B)} 결투 시작!");
+        StartRpc(
+            NetText.Trim64(MetaverseUi.NameOf(match.B)),
+            Countdown,
+            RoundTime,
+            RpcTarget.Single(match.A, RpcTargetUse.Temp)
+        );
+        StartRpc(
+            NetText.Trim64(MetaverseUi.NameOf(match.A)),
+            Countdown,
+            RoundTime,
+            RpcTarget.Single(match.B, RpcTargetUse.Temp)
+        );
+        ChatSystem.Announce(
+            $"{MetaverseUi.NameOf(match.A)} vs {MetaverseUi.NameOf(match.B)} 결투 시작!"
+        );
     }
 
     /// <summary>Server side: full health, on your own mark, facing the other side.</summary>
@@ -282,7 +328,9 @@ public class DuelSystem : NetworkBehaviour
         {
             winnerStats.RecordDuel(true);
             MetaverseUi.StatsOf(winner == match.A ? match.B : match.A)?.RecordDuel(false);
-            ChatSystem.Announce($"{MetaverseUi.NameOf(winner)}님이 결투에서 승리했습니다 ({reason}).");
+            ChatSystem.Announce(
+                $"{MetaverseUi.NameOf(winner)}님이 결투에서 승리했습니다 ({reason})."
+            );
         }
 
         EndRpc(RpcTarget.Group(new[] { match.A, match.B }, RpcTargetUse.Temp));
@@ -319,7 +367,12 @@ public class DuelSystem : NetworkBehaviour
     }
 
     [Rpc(SendTo.SpecifiedInParams)]
-    void StartRpc(FixedString64Bytes opponent, float countdown, float roundTime, RpcParams rpcParams)
+    void StartRpc(
+        FixedString64Bytes opponent,
+        float countdown,
+        float roundTime,
+        RpcParams rpcParams
+    )
     {
         inDuel = true;
         opponentName = opponent.ToString();
@@ -377,9 +430,10 @@ public class DuelSystem : NetworkBehaviour
         if (inDuel)
         {
             float remaining = Mathf.Max(0f, localEndTime - Time.time);
-            string headline = Time.time < localStartTime
-                ? $"준비...  {Mathf.CeilToInt(localStartTime - Time.time)}"
-                : $"결투 vs {opponentName}   {Mathf.FloorToInt(remaining / 60f)}:{Mathf.FloorToInt(remaining % 60f):00}";
+            string headline =
+                Time.time < localStartTime
+                    ? $"준비...  {Mathf.CeilToInt(localStartTime - Time.time)}"
+                    : $"결투 vs {opponentName}   {Mathf.FloorToInt(remaining / 60f)}:{Mathf.FloorToInt(remaining % 60f):00}";
 
             GUI.Box(new Rect(MetaverseUi.Width * 0.5f - 140f, 34f, 280f, 26f), headline);
             return;
@@ -387,7 +441,10 @@ public class DuelSystem : NetworkBehaviour
 
         if (inviteFrom.Length > 0 && Time.time < inviteExpiry)
         {
-            GUI.Box(new Rect(MetaverseUi.Width * 0.5f - 150f, 34f, 300f, 26f), $"{inviteFrom}님이 결투를 신청했습니다  -  [H] 수락");
+            GUI.Box(
+                new Rect(MetaverseUi.Width * 0.5f - 150f, 34f, 300f, 26f),
+                $"{inviteFrom}님이 결투를 신청했습니다  -  [H] 수락"
+            );
             return;
         }
 
@@ -396,7 +453,10 @@ public class DuelSystem : NetworkBehaviour
         flat.y = 0f;
         if (flat.magnitude <= ArenaRadius)
         {
-            GUI.Box(new Rect(MetaverseUi.Width * 0.5f - 130f, 34f, 260f, 26f), "[G] 가장 가까운 상대에게 결투 신청");
+            GUI.Box(
+                new Rect(MetaverseUi.Width * 0.5f - 130f, 34f, 260f, 26f),
+                "[G] 가장 가까운 상대에게 결투 신청"
+            );
         }
     }
 }

@@ -27,7 +27,9 @@ public class MobileInput : MonoBehaviour
 
     /// <summary>Each press is handed out once, the same way a key press is.</summary>
     public static bool ConsumeJump() => Take(ref jump);
+
     public static bool ConsumeAttack() => Take(ref attack);
+
     public static bool ConsumeInteract() => Take(ref interact);
 
     /// <summary>
@@ -71,7 +73,10 @@ public class MobileInput : MonoBehaviour
 
         if (FindAnyObjectByType<MobileInput>() == null)
         {
-            new GameObject("MobileInput") { hideFlags = HideFlags.HideInHierarchy }.AddComponent<MobileInput>();
+            new GameObject("MobileInput")
+            {
+                hideFlags = HideFlags.HideInHierarchy,
+            }.AddComponent<MobileInput>();
         }
     }
 
@@ -90,8 +95,8 @@ public class MobileInput : MonoBehaviour
 
     const int NoRole = -1;
     const int StickRole = 0;
-    const int LookRole = 4;   // 1, 2 and 3 are the three buttons
-    const int SpentRole = 5;  // touched a button and then dragged: it does nothing now
+    const int LookRole = 4; // 1, 2 and 3 are the three buttons
+    const int SpentRole = 5; // touched a button and then dragged: it does nothing now
 
     /// <summary>How far a finger may wander and still count as a tap.</summary>
     const float TapSlack = 22f;
@@ -235,8 +240,14 @@ public class MobileInput : MonoBehaviour
     /// </summary>
     static void PressButton(int assigned)
     {
-        if (assigned == 1) { attack = Time.frameCount; }
-        else if (assigned == 2) { jump = Time.frameCount; }
+        if (assigned == 1)
+        {
+            attack = Time.frameCount;
+        }
+        else if (assigned == 2)
+        {
+            jump = Time.frameCount;
+        }
     }
 
     /// <summary>Attack, jump, interact: a cluster in the bottom right corner, thumb sized.</summary>
@@ -252,7 +263,12 @@ public class MobileInput : MonoBehaviour
             // Attack under the thumb, jump beside it with room between, and interact set
             // well clear of both: pressing E mid fight is worse than reaching for it.
             0 => new Rect(right - ButtonSize, bottom - ButtonSize, ButtonSize, ButtonSize),
-            1 => new Rect(right - ButtonSize * 2.25f, bottom - ButtonSize * 0.85f, ButtonSize, ButtonSize),
+            1 => new Rect(
+                right - ButtonSize * 2.25f,
+                bottom - ButtonSize * 0.85f,
+                ButtonSize,
+                ButtonSize
+            ),
             _ => new Rect(right - ButtonSize, bottom - ButtonSize * 2.2f, ButtonSize, ButtonSize),
         };
     }
@@ -276,13 +292,19 @@ public class MobileInput : MonoBehaviour
         {
             for (int x = 0; x < size; x++)
             {
-                float distance = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(radius, radius));
+                float distance = Vector2.Distance(
+                    new Vector2(x + 0.5f, y + 0.5f),
+                    new Vector2(radius, radius)
+                );
                 byte alpha = (byte)(Mathf.Clamp01(radius - distance) * 255f);
                 pixels[y * size + x] = new Color32(255, 255, 255, alpha);
             }
         }
 
-        disc = new Texture2D(size, size, TextureFormat.RGBA32, false) { hideFlags = HideFlags.HideAndDontSave };
+        disc = new Texture2D(size, size, TextureFormat.RGBA32, false)
+        {
+            hideFlags = HideFlags.HideAndDontSave,
+        };
         disc.SetPixels32(pixels);
         disc.Apply();
         return disc;
@@ -315,7 +337,10 @@ public class MobileInput : MonoBehaviour
         {
             Rect rect = ButtonRect(i);
             DrawDisc(rect, new Color(0f, 0f, 0f, 0.35f));
-            DrawDisc(new Rect(rect.x + 3f, rect.y + 3f, rect.width - 6f, rect.height - 6f), new Color(1f, 1f, 1f, 0.3f));
+            DrawDisc(
+                new Rect(rect.x + 3f, rect.y + 3f, rect.width - 6f, rect.height - 6f),
+                new Color(1f, 1f, 1f, 0.3f)
+            );
             GUI.Label(rect, labels[i], MetaverseUi.Centered);
         }
 
@@ -323,13 +348,22 @@ public class MobileInput : MonoBehaviour
         Vector2 centre = StickHome;
         float top = MetaverseUi.Height - centre.y;
 
-        DrawDisc(new Rect(centre.x - StickRadius, top - StickRadius, StickRadius * 2f, StickRadius * 2f),
-            new Color(0f, 0f, 0f, stickHeld ? 0.45f : 0.3f));
+        DrawDisc(
+            new Rect(centre.x - StickRadius, top - StickRadius, StickRadius * 2f, StickRadius * 2f),
+            new Color(0f, 0f, 0f, stickHeld ? 0.45f : 0.3f)
+        );
 
         Vector2 knob = centre + Move * StickRadius * 0.7f;
         const float knobRadius = 32f;
-        DrawDisc(new Rect(knob.x - knobRadius, MetaverseUi.Height - knob.y - knobRadius, knobRadius * 2f, knobRadius * 2f),
-            new Color(1f, 1f, 1f, 0.55f));
+        DrawDisc(
+            new Rect(
+                knob.x - knobRadius,
+                MetaverseUi.Height - knob.y - knobRadius,
+                knobRadius * 2f,
+                knobRadius * 2f
+            ),
+            new Color(1f, 1f, 1f, 0.55f)
+        );
     }
 
     /// <summary>

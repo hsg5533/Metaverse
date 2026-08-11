@@ -57,7 +57,6 @@ public class PlayerInventory : NetworkBehaviour
     public NetworkVariable<int> Herb = new(0, writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<int> Wood = new(0, writePerm: NetworkVariableWritePermission.Server);
 
-
     PlayerStats stats;
     PlayerGear gear;
 
@@ -88,9 +87,15 @@ public class PlayerInventory : NetworkBehaviour
 
         switch (kind)
         {
-            case GatherKind.Ore: Ore.Value += amount; break;
-            case GatherKind.Herb: Herb.Value += amount; break;
-            default: Wood.Value += amount; break;
+            case GatherKind.Ore:
+                Ore.Value += amount;
+                break;
+            case GatherKind.Herb:
+                Herb.Value += amount;
+                break;
+            default:
+                Wood.Value += amount;
+                break;
         }
 
         Reorder();
@@ -130,12 +135,16 @@ public class PlayerInventory : NetworkBehaviour
         if (entry.Weapon)
         {
             stats.WeaponLevel.Value++;
-            NoticeRpc(NetText.Trim512($"검 Lv.{stats.WeaponLevel.Value}! 공격력 {stats.AttackPower}"));
+            NoticeRpc(
+                NetText.Trim512($"검 Lv.{stats.WeaponLevel.Value}! 공격력 {stats.AttackPower}")
+            );
         }
         else
         {
             stats.ArmorLevel.Value++;
-            NoticeRpc(NetText.Trim512($"방어구 Lv.{stats.ArmorLevel.Value}! 방어력 {stats.Defense}"));
+            NoticeRpc(
+                NetText.Trim512($"방어구 Lv.{stats.ArmorLevel.Value}! 방어력 {stats.Defense}")
+            );
         }
     }
 
@@ -201,7 +210,11 @@ public class PlayerInventory : NetworkBehaviour
         }
 
         int paid = count * MaterialPrices[material];
-        SetAll(material == 0 ? 0 : Ore.Value, material == 1 ? 0 : Herb.Value, material == 2 ? 0 : Wood.Value);
+        SetAll(
+            material == 0 ? 0 : Ore.Value,
+            material == 1 ? 0 : Herb.Value,
+            material == 2 ? 0 : Wood.Value
+        );
         stats.Gold.Value += paid;
         NoticeRpc(NetText.Trim512($"{Slots[material]} {count}개를 {paid} 골드에 팔았습니다."));
     }
@@ -241,7 +254,6 @@ public class PlayerInventory : NetworkBehaviour
         Reorder();
     }
 
-
     public override void OnNetworkDespawn()
     {
         if (IsOwner && WindowOpen)
@@ -265,7 +277,10 @@ public class PlayerInventory : NetworkBehaviour
         }
 
         // The bag cannot be opened on top of a shop, and Escape always closes it.
-        if ((keyboard.iKey.wasPressedThisFrame || MobileInput.Pressed(Key.I)) && (WindowOpen || !ShopNpc.PanelOpen))
+        if (
+            (keyboard.iKey.wasPressedThisFrame || MobileInput.Pressed(Key.I))
+            && (WindowOpen || !ShopNpc.PanelOpen)
+        )
         {
             SetWindow(!WindowOpen);
         }
@@ -309,25 +324,44 @@ public class PlayerInventory : NetworkBehaviour
         float gridWidth = columns * (slotSize + padding) + padding;
         float width = gearWidth + gridWidth;
         float height = Mathf.Max(rows * (slotSize + padding) + padding + 96f, 300f);
-        var window = new Rect(MetaverseUi.Width * 0.5f - width * 0.5f, MetaverseUi.Height * 0.5f - height * 0.5f, width, height);
+        var window = new Rect(
+            MetaverseUi.Width * 0.5f - width * 0.5f,
+            MetaverseUi.Height * 0.5f - height * 0.5f,
+            width,
+            height
+        );
 
         GUI.Box(window, "");
-        GUI.Label(new Rect(window.x + padding, window.y + 6f, width, 22f), "<b>인벤토리</b>   [I] 닫기", MetaverseUi.Rich);
+        GUI.Label(
+            new Rect(window.x + padding, window.y + 6f, width, 22f),
+            "<b>인벤토리</b>   [I] 닫기",
+            MetaverseUi.Rich
+        );
 
         if (stats != null)
         {
-            GUI.Label(new Rect(window.x + padding, window.y + 28f, width, 22f),
-                $"골드 {stats.Gold.Value}     공격력 {stats.AttackPower}     방어력 {stats.Defense}");
+            GUI.Label(
+                new Rect(window.x + padding, window.y + 28f, width, 22f),
+                $"골드 {stats.Gold.Value}     공격력 {stats.AttackPower}     방어력 {stats.Defense}"
+            );
         }
 
         float contentTop = window.y + 54f;
-        DrawEquipment(new Rect(window.x + padding, contentTop, gearWidth - padding * 2f, height - 62f), stats);
+        DrawEquipment(
+            new Rect(window.x + padding, contentTop, gearWidth - padding * 2f, height - 62f),
+            stats
+        );
 
         // Three rows are on show and the rest is scrolled to: the bag itself has no limit.
         int carried = gear != null ? gear.Bag.Count : 0;
         int contentRows = Mathf.Max(rows, Mathf.CeilToInt(carried / (float)columns));
 
-        var view = new Rect(window.x + gearWidth, contentTop, gridWidth, rows * (slotSize + padding));
+        var view = new Rect(
+            window.x + gearWidth,
+            contentTop,
+            gridWidth,
+            rows * (slotSize + padding)
+        );
         var content = new Rect(0f, 0f, gridWidth - 20f, contentRows * (slotSize + padding));
 
         bagScroll = GUI.BeginScrollView(view, bagScroll, content);
@@ -336,14 +370,18 @@ public class PlayerInventory : NetworkBehaviour
             var slot = new Rect(
                 (index % columns) * (slotSize + padding),
                 (index / columns) * (slotSize + padding),
-                slotSize, slotSize);
+                slotSize,
+                slotSize
+            );
 
             DrawSlot(slot, index);
         }
         GUI.EndScrollView();
 
-        GUI.Label(new Rect(window.x + gearWidth, window.y + height - 26f, gridWidth, 22f),
-            "가방의 장비는 착용, 요리는 섭취. 장비 칸을 누르면 벗는다.");
+        GUI.Label(
+            new Rect(window.x + gearWidth, window.y + height - 26f, gridWidth, 22f),
+            "가방의 장비는 착용, 요리는 섭취. 장비 칸을 누르면 벗는다."
+        );
     }
 
     /// <summary>
@@ -359,14 +397,26 @@ public class PlayerInventory : NetworkBehaviour
             return;
         }
 
-        DrawGearSlot(new Rect(area.x, area.y + 20f, area.width, 66f), "무기", stats.WeaponName,
-            $"+{stats.WeaponBonus} ATK", GearPreview.Weapon);
+        DrawGearSlot(
+            new Rect(area.x, area.y + 20f, area.width, 66f),
+            "무기",
+            stats.WeaponName,
+            $"+{stats.WeaponBonus} ATK",
+            GearPreview.Weapon
+        );
 
-        DrawGearSlot(new Rect(area.x, area.y + 94f, area.width, 66f), "방어구", stats.ArmorName,
-            $"+{stats.ArmorBonus} DEF", GearPreview.Armor);
+        DrawGearSlot(
+            new Rect(area.x, area.y + 94f, area.width, 66f),
+            "방어구",
+            stats.ArmorName,
+            $"+{stats.ArmorBonus} DEF",
+            GearPreview.Armor
+        );
 
-        GUI.Label(new Rect(area.x, area.y + 170f, area.width, 60f),
-            "상점과 모루에서 강화하고,\n몬스터에게서 얻는다.");
+        GUI.Label(
+            new Rect(area.x, area.y + 170f, area.width, 60f),
+            "상점과 모루에서 강화하고,\n몬스터에게서 얻는다."
+        );
     }
 
     void DrawGearSlot(Rect slot, string label, string name, string bonus, int preview)
@@ -418,17 +468,33 @@ public class PlayerInventory : NetworkBehaviour
     {
         // Materials are modelled the same way the gear is: slot 0 and 1 are the weapon and
         // the armour, so the material models start after them.
-        GearPreview.Draw(new Rect(slot.x + 6f, slot.y + 2f, slot.width - 12f, slot.height - 20f), GearPreview.Ore + material);
+        GearPreview.Draw(
+            new Rect(slot.x + 6f, slot.y + 2f, slot.width - 12f, slot.height - 20f),
+            GearPreview.Ore + material
+        );
 
-        GUI.Label(new Rect(slot.x + 4f, slot.y + slot.height - 20f, slot.width - 8f, 18f), Slots[material]);
-        GUI.Label(new Rect(slot.x, slot.y + slot.height - 20f, slot.width - 6f, 18f), CountOf(material).ToString(), RightAligned());
+        GUI.Label(
+            new Rect(slot.x + 4f, slot.y + slot.height - 20f, slot.width - 8f, 18f),
+            Slots[material]
+        );
+        GUI.Label(
+            new Rect(slot.x, slot.y + slot.height - 20f, slot.width - 6f, 18f),
+            CountOf(material).ToString(),
+            RightAligned()
+        );
     }
 
     /// <summary>One piece; clicking the slot puts it on, or eats it if it is one of the campfire's dishes.</summary>
     void DrawBagSlot(Rect slot, int bagIndex, int piece)
     {
-        GearPreview.Draw(new Rect(slot.x + 4f, slot.y, slot.width - 8f, slot.height - 18f), GearPreview.Piece + piece);
-        GUI.Label(new Rect(slot.x + 4f, slot.y + slot.height - 20f, slot.width - 8f, 18f), PlayerGear.Pieces[piece].Name);
+        GearPreview.Draw(
+            new Rect(slot.x + 4f, slot.y, slot.width - 8f, slot.height - 18f),
+            GearPreview.Piece + piece
+        );
+        GUI.Label(
+            new Rect(slot.x + 4f, slot.y + slot.height - 20f, slot.width - 8f, 18f),
+            PlayerGear.Pieces[piece].Name
+        );
 
         // A fish is neither worn nor eaten - it is sold - so its slot takes no click at all,
         // which is also what stops it answering with a refusal and a chime.
@@ -455,7 +521,11 @@ public class PlayerInventory : NetworkBehaviour
 
     static GUIStyle RightAligned()
     {
-        rightAligned ??= new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleRight, fontStyle = FontStyle.Bold };
+        rightAligned ??= new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleRight,
+            fontStyle = FontStyle.Bold,
+        };
         return rightAligned;
     }
 }

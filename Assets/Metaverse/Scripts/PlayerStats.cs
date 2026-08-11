@@ -22,23 +22,35 @@ public class PlayerStats : NetworkBehaviour
     public NetworkVariable<int> Exp = new(0, writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<int> Gold = new(0, writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<int> Hp = new(100, writePerm: NetworkVariableWritePermission.Server);
-    public NetworkVariable<int> WeaponLevel = new(0, writePerm: NetworkVariableWritePermission.Server);
-    public NetworkVariable<int> ArmorLevel = new(0, writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<int> WeaponLevel = new(
+        0,
+        writePerm: NetworkVariableWritePermission.Server
+    );
+    public NetworkVariable<int> ArmorLevel = new(
+        0,
+        writePerm: NetworkVariableWritePermission.Server
+    );
     public NetworkVariable<int> BestFish = new(0, writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<int> DuelWins = new(0, writePerm: NetworkVariableWritePermission.Server);
-    public NetworkVariable<int> DuelLosses = new(0, writePerm: NetworkVariableWritePermission.Server);
-
+    public NetworkVariable<int> DuelLosses = new(
+        0,
+        writePerm: NetworkVariableWritePermission.Server
+    );
 
     public int MaxHp => 100 + (Level.Value - 1) * 20;
-    public int AttackPower => 8 + (Level.Value - 1) * 3 + WeaponBonus + (buffs != null ? buffs.AttackBonus : 0);
-    public int Defense => 8 + (Level.Value - 1) * 2 + ArmorBonus + (buffs != null ? buffs.DefenseBonus : 0);
+    public int AttackPower =>
+        8 + (Level.Value - 1) * 3 + WeaponBonus + (buffs != null ? buffs.AttackBonus : 0);
+    public int Defense =>
+        8 + (Level.Value - 1) * 2 + ArmorBonus + (buffs != null ? buffs.DefenseBonus : 0);
     public int ExpToNextLevel => 40 + (Level.Value - 1) * 30;
     public int WeaponPrice => 60 * (WeaponLevel.Value + 1);
     public int ArmorPrice => 50 * (ArmorLevel.Value + 1);
 
     /// <summary>A dropped piece is named; the plain sword is named by its upgrade level.</summary>
-    public string WeaponName => gear != null && gear.WeaponName != null ? gear.WeaponName : $"검 Lv.{WeaponLevel.Value}";
-    public string ArmorName => gear != null && gear.ArmorName != null ? gear.ArmorName : $"방어구 Lv.{ArmorLevel.Value}";
+    public string WeaponName =>
+        gear != null && gear.WeaponName != null ? gear.WeaponName : $"검 Lv.{WeaponLevel.Value}";
+    public string ArmorName =>
+        gear != null && gear.ArmorName != null ? gear.ArmorName : $"방어구 Lv.{ArmorLevel.Value}";
 
     /// <summary>What the gear adds on its own: the upgrade level plus whatever is worn.</summary>
     public int WeaponBonus => WeaponLevel.Value * 4 + (gear != null ? gear.AttackBonus : 0);
@@ -130,8 +142,8 @@ public class PlayerStats : NetworkBehaviour
     }
 
     bool InVillage =>
-        Mathf.Abs(transform.position.x) <= VillageHalfSize &&
-        Mathf.Abs(transform.position.z) <= VillageHalfSize;
+        Mathf.Abs(transform.position.x) <= VillageHalfSize
+        && Mathf.Abs(transform.position.z) <= VillageHalfSize;
 
     void OnLevelChanged(int previous, int current)
     {
@@ -183,7 +195,11 @@ public class PlayerStats : NetworkBehaviour
             Exp.Value -= ExpToNextLevel;
             Level.Value++;
             Hp.Value = MaxHp;
-            NoticeRpc(NetText.Trim512($"레벨 업! Lv.{Level.Value} (체력 {MaxHp}, 공격 {AttackPower}, 방어 {Defense})"));
+            NoticeRpc(
+                NetText.Trim512(
+                    $"레벨 업! Lv.{Level.Value} (체력 {MaxHp}, 공격 {AttackPower}, 방어 {Defense})"
+                )
+            );
         }
     }
 
@@ -339,7 +355,12 @@ public class PlayerStats : NetworkBehaviour
     void DrawHealthBar()
     {
         const float width = 260f;
-        var rect = new Rect(MetaverseUi.Width * 0.5f - width * 0.5f, MetaverseUi.Height - 46f, width, 20f);
+        var rect = new Rect(
+            MetaverseUi.Width * 0.5f - width * 0.5f,
+            MetaverseUi.Height - 46f,
+            width,
+            20f
+        );
 
         MetaverseUi.Bar(rect, Hp.Value / (float)MaxHp, new Color(0.80f, 0.24f, 0.24f, 0.95f));
         GUI.Label(rect, $"<b>{Hp.Value} / {MaxHp}</b>", MetaverseUi.Centered);
@@ -369,7 +390,9 @@ public class PlayerStats : NetworkBehaviour
 
         GUILayout.BeginArea(new Rect(MetaverseUi.Width - 250, 10, 240, 220), GUI.skin.box);
         GUILayout.Label($"<b>Lv.{Level.Value}</b>  {Nickname()}   [P] 닫기", MetaverseUi.Rich);
-        GUILayout.Label($"체력    {Hp.Value} / {MaxHp}{(InVillage && Hp.Value < MaxHp ? "  (휴식 중)" : "")}");
+        GUILayout.Label(
+            $"체력    {Hp.Value} / {MaxHp}{(InVillage && Hp.Value < MaxHp ? "  (휴식 중)" : "")}"
+        );
         GUILayout.Label($"경험치  {Exp.Value} / {ExpToNextLevel}");
         GUILayout.Label($"골드    {Gold.Value}");
         GUILayout.Label($"공격력  {AttackPower}  ({WeaponName})");

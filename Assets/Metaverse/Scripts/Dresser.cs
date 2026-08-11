@@ -37,15 +37,33 @@ public class Dresser : InteractStation
         int skin = player.SkinTint.Value;
 
         float width = PanelSize.x - 24f;
-        int pickedSkin = Row(width, "피부", PlayerAvatar.SkinPaletteCount, skin, PlayerAvatar.SkinSwatch);
+        int pickedSkin = Row(
+            width,
+            "피부",
+            PlayerAvatar.SkinPaletteCount,
+            skin,
+            PlayerAvatar.SkinSwatch
+        );
         int pickedBody = Row(width, "상의", PlayerAvatar.SwatchCount, body, PlayerAvatar.Swatch);
         int pickedPants = Row(width, "바지", PlayerAvatar.SwatchCount, pants, PlayerAvatar.Swatch);
-        int pickedHair = Row(width, "염색", PlayerAvatar.SwatchCount, hair, PlayerAvatar.HairSwatch);
+        int pickedHair = Row(
+            width,
+            "염색",
+            PlayerAvatar.SwatchCount,
+            hair,
+            PlayerAvatar.HairSwatch
+        );
 
         int styles = player.HairStyles != null ? player.HairStyles.Length : 1;
         int pickedStyle = Row(width, "헤어", styles, style, null);
 
-        if (pickedBody != body || pickedPants != pants || pickedHair != hair || pickedStyle != style || pickedSkin != skin)
+        if (
+            pickedBody != body
+            || pickedPants != pants
+            || pickedHair != hair
+            || pickedStyle != style
+            || pickedSkin != skin
+        )
         {
             player.SetLookRpc(pickedBody, pickedPants, pickedHair, pickedStyle, pickedSkin);
         }
@@ -55,7 +73,13 @@ public class Dresser : InteractStation
     /// One line of choices, named on the left, returning what is chosen after the click. A null
     /// palette means the row is not about colour and gets numbered buttons: styles have no swatch.
     /// </summary>
-    static int Row(float width, string label, int count, int chosen, System.Func<int, Color> palette)
+    static int Row(
+        float width,
+        string label,
+        int count,
+        int chosen,
+        System.Func<int, Color> palette
+    )
     {
         var row = GUILayoutUtility.GetRect(width, RowHeight);
         GUI.Label(new Rect(row.x, row.y + 4f, LabelWidth, 22f), label);
@@ -63,7 +87,12 @@ public class Dresser : InteractStation
         int picked = chosen;
         for (int i = 0; i < count; i++)
         {
-            var slot = new Rect(row.x + LabelWidth + i * (SwatchSize + SwatchGap), row.y + 2f, SwatchSize, SwatchSize);
+            var slot = new Rect(
+                row.x + LabelWidth + i * (SwatchSize + SwatchGap),
+                row.y + 2f,
+                SwatchSize,
+                SwatchSize
+            );
 
             // The one being worn is drawn a size larger, which is the only marking IMGUI gives
             // for free that survives being a coloured box.
@@ -78,7 +107,12 @@ public class Dresser : InteractStation
                 GUI.backgroundColor = palette(i);
             }
 
-            if (GUI.Button(slot, palette != null ? GUIContent.none : new GUIContent(i == 0 ? "-" : i.ToString())))
+            if (
+                GUI.Button(
+                    slot,
+                    palette != null ? GUIContent.none : new GUIContent(i == 0 ? "-" : i.ToString())
+                )
+            )
             {
                 picked = i;
             }

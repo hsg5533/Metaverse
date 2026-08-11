@@ -57,7 +57,12 @@ public abstract class InteractStation : MonoBehaviour
 
         if (open)
         {
-            var area = new Rect(MetaverseUi.Width * 0.5f - PanelSize.x * 0.5f, MetaverseUi.Height * 0.5f - PanelSize.y * 0.5f, PanelSize.x, PanelSize.y);
+            var area = new Rect(
+                MetaverseUi.Width * 0.5f - PanelSize.x * 0.5f,
+                MetaverseUi.Height * 0.5f - PanelSize.y * 0.5f,
+                PanelSize.x,
+                PanelSize.y
+            );
             GUILayout.BeginArea(area, GUI.skin.box);
             GUILayout.Label($"<b>{Title}</b>", MetaverseUi.Rich);
             DrawPanel(player);
@@ -80,6 +85,7 @@ public abstract class InteractStation : MonoBehaviour
 
     bool InRange()
     {
-        return Vector3.Distance(PlayerAvatar.Local.transform.position, transform.position) <= InteractRange;
+        return Vector3.Distance(PlayerAvatar.Local.transform.position, transform.position)
+            <= InteractRange;
     }
 }

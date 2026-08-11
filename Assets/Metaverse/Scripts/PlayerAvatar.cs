@@ -58,9 +58,11 @@ public class PlayerAvatar : NetworkBehaviour
 
     public static Color Swatch(int index) => Palette[Mathf.Clamp(index, 0, Palette.Length - 1)];
 
-    public static Color HairSwatch(int index) => HairPalette[Mathf.Clamp(index, 0, HairPalette.Length - 1)];
+    public static Color HairSwatch(int index) =>
+        HairPalette[Mathf.Clamp(index, 0, HairPalette.Length - 1)];
 
-    public static Color SkinSwatch(int index) => SkinPalette[Mathf.Clamp(index, 0, SkinPalette.Length - 1)];
+    public static Color SkinSwatch(int index) =>
+        SkinPalette[Mathf.Clamp(index, 0, SkinPalette.Length - 1)];
 
     /// <summary>Body parts tinted with the player colour (shirt and arms).</summary>
     public Renderer[] ColoredParts;
@@ -74,7 +76,6 @@ public class PlayerAvatar : NetworkBehaviour
     /// <summary>One head of hair per style, only ever one of them switched on. Zero is bald.</summary>
     public GameObject[] HairStyles;
 
-
     /// <summary>Local height the name tag is drawn at.</summary>
     public float NameTagHeight = 2.3f;
 
@@ -83,9 +84,10 @@ public class PlayerAvatar : NetworkBehaviour
     public float JumpHeight = 1.3f;
     public float Gravity = -22f;
 
-
-    public NetworkVariable<FixedString64Bytes> Nickname =
-        new(new FixedString64Bytes("Player"), writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<FixedString64Bytes> Nickname = new(
+        new FixedString64Bytes("Player"),
+        writePerm: NetworkVariableWritePermission.Server
+    );
 
     /// <summary>
     /// What the avatar looks like, as places in the palettes rather than colours: the server
@@ -94,11 +96,17 @@ public class PlayerAvatar : NetworkBehaviour
     /// </summary>
     public NetworkVariable<int> BodyTint = new(0, writePerm: NetworkVariableWritePermission.Server);
 
-    public NetworkVariable<int> PantsTint = new(7, writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<int> PantsTint = new(
+        7,
+        writePerm: NetworkVariableWritePermission.Server
+    );
 
     public NetworkVariable<int> HairTint = new(0, writePerm: NetworkVariableWritePermission.Server);
 
-    public NetworkVariable<int> HairStyle = new(1, writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<int> HairStyle = new(
+        1,
+        writePerm: NetworkVariableWritePermission.Server
+    );
 
     public NetworkVariable<int> SkinTint = new(0, writePerm: NetworkVariableWritePermission.Server);
 
@@ -196,13 +204,18 @@ public class PlayerAvatar : NetworkBehaviour
         Vector2 input = lineOut ? Vector2.zero : MobileInput.Move;
         if (acceptInput && !lineOut)
         {
-            if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) input.y += 1f;
-            if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed) input.y -= 1f;
-            if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) input.x += 1f;
-            if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) input.x -= 1f;
+            if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed)
+                input.y += 1f;
+            if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed)
+                input.y -= 1f;
+            if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed)
+                input.x += 1f;
+            if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed)
+                input.x -= 1f;
         }
 
-        float cameraYaw = FollowCamera.Instance != null ? FollowCamera.Instance.Yaw : transform.eulerAngles.y;
+        float cameraYaw =
+            FollowCamera.Instance != null ? FollowCamera.Instance.Yaw : transform.eulerAngles.y;
         Vector3 direction = Quaternion.Euler(0f, cameraYaw, 0f) * new Vector3(input.x, 0f, input.y);
         if (direction.sqrMagnitude > 1f)
         {
@@ -233,7 +246,8 @@ public class PlayerAvatar : NetworkBehaviour
             verticalVelocity += Gravity * Time.deltaTime;
         }
 
-        float speed = acceptInput && keyboard.leftShiftKey.isPressed ? MoveSpeed * RunMultiplier : MoveSpeed;
+        float speed =
+            acceptInput && keyboard.leftShiftKey.isPressed ? MoveSpeed * RunMultiplier : MoveSpeed;
         if (buffs != null)
         {
             speed *= buffs.SpeedMultiplier;
@@ -242,7 +256,11 @@ public class PlayerAvatar : NetworkBehaviour
 
         if (direction.sqrMagnitude > 0.01f)
         {
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(direction), 12f * Time.deltaTime);
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                Quaternion.LookRotation(direction),
+                12f * Time.deltaTime
+            );
         }
 
         if (transform.position.y < -20f)
@@ -284,7 +302,10 @@ public class PlayerAvatar : NetworkBehaviour
             return;
         }
 
-        Vector3 screenPoint = MetaverseUi.ScreenPoint(camera, transform.position + Vector3.up * NameTagHeight);
+        Vector3 screenPoint = MetaverseUi.ScreenPoint(
+            camera,
+            transform.position + Vector3.up * NameTagHeight
+        );
         if (screenPoint.z <= 0f)
         {
             return;
@@ -300,7 +321,12 @@ public class PlayerAvatar : NetworkBehaviour
             clipping = TextClipping.Overflow,
         };
 
-        var rect = new Rect(screenPoint.x - 100f, MetaverseUi.Height - screenPoint.y - 20f, 200f, 20f);
+        var rect = new Rect(
+            screenPoint.x - 100f,
+            MetaverseUi.Height - screenPoint.y - 20f,
+            200f,
+            20f
+        );
         float barTop = rect.yMax;
 
         Color previous = GUI.color;
@@ -317,8 +343,11 @@ public class PlayerAvatar : NetworkBehaviour
         if (stats != null && stats.MaxHp > 0)
         {
             const float barWidth = 70f;
-            MetaverseUi.Bar(new Rect(screenPoint.x - barWidth * 0.5f, barTop, barWidth, 5f),
-                stats.Hp.Value / (float)stats.MaxHp, new Color(0.35f, 0.80f, 0.40f, 0.95f));
+            MetaverseUi.Bar(
+                new Rect(screenPoint.x - barWidth * 0.5f, barTop, barWidth, 5f),
+                stats.Hp.Value / (float)stats.MaxHp,
+                new Color(0.35f, 0.80f, 0.40f, 0.95f)
+            );
         }
     }
 
@@ -343,7 +372,14 @@ public class PlayerAvatar : NetworkBehaviour
     /// clamping it is the whole of the checking that needs doing.
     /// </summary>
     [Rpc(SendTo.Server)]
-    public void SetLookRpc(int body, int pants, int hair, int style, int skin, RpcParams rpcParams = default)
+    public void SetLookRpc(
+        int body,
+        int pants,
+        int hair,
+        int style,
+        int skin,
+        RpcParams rpcParams = default
+    )
     {
         if (this.IsFromOwner(rpcParams))
         {
@@ -389,7 +425,10 @@ public class PlayerAvatar : NetworkBehaviour
             HairStyles[i].SetActive(worn);
             if (worn)
             {
-                ApplyColor(HairStyles[i].GetComponentsInChildren<Renderer>(true), HairSwatch(HairTint.Value));
+                ApplyColor(
+                    HairStyles[i].GetComponentsInChildren<Renderer>(true),
+                    HairSwatch(HairTint.Value)
+                );
             }
         }
     }

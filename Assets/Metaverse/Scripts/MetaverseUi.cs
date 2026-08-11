@@ -81,7 +81,10 @@ public static class MetaverseUi
             searched = true;
             // Smaller on a phone: the whole interface is already blown up to stay thumb
             // sized, and text does not need the same treatment to stay readable.
-            font = Font.CreateDynamicFontFromOSFont(PreferredFonts(), Application.isMobilePlatform ? 11 : 14);
+            font = Font.CreateDynamicFontFromOSFont(
+                PreferredFonts(),
+                Application.isMobilePlatform ? 11 : 14
+            );
         }
 
         if (font != null && GUI.skin.font != font)
@@ -117,7 +120,9 @@ public static class MetaverseUi
 
         if (wanted.Count == 0)
         {
-            Debug.LogWarning("[Metaverse] no preferred font on this device; falling back to all of them.");
+            Debug.LogWarning(
+                "[Metaverse] no preferred font on this device; falling back to all of them."
+            );
             return installed;
         }
 
@@ -129,7 +134,11 @@ public static class MetaverseUi
     public static GUIStyle Rich => rich ??= new GUIStyle(GUI.skin.label) { richText = true };
 
     public static GUIStyle Centered =>
-        centered ??= new GUIStyle(GUI.skin.label) { richText = true, alignment = TextAnchor.MiddleCenter };
+        centered ??= new GUIStyle(GUI.skin.label)
+        {
+            richText = true,
+            alignment = TextAnchor.MiddleCenter,
+        };
 
     /// <summary>
     /// Depth for anything drawn out in the world - name tags, prompts, health bars. Higher
@@ -144,7 +153,10 @@ public static class MetaverseUi
         GUI.color = new Color(0f, 0f, 0f, 0.6f);
         GUI.DrawTexture(rect, Texture2D.whiteTexture);
         GUI.color = colour;
-        GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width * Mathf.Clamp01(fill), rect.height), Texture2D.whiteTexture);
+        GUI.DrawTexture(
+            new Rect(rect.x, rect.y, rect.width * Mathf.Clamp01(fill), rect.height),
+            Texture2D.whiteTexture
+        );
         GUI.color = previous;
     }
 
@@ -162,7 +174,14 @@ public static class MetaverseUi
     /// One icon, a name and a detail line, and a button that fires an action - the shop's buy
     /// and sell lists, and the campfire's recipes, all draw their rows with this.
     /// </summary>
-    public static void ItemRow(Rect slot, int preview, string name, string detail, string actionLabel, System.Action action)
+    public static void ItemRow(
+        Rect slot,
+        int preview,
+        string name,
+        string detail,
+        string actionLabel,
+        System.Action action
+    )
     {
         var icon = new Rect(slot.x, slot.y, 60f, 60f);
         SlotBackground(icon);
@@ -199,18 +218,23 @@ public static class MetaverseUi
 
         var content = new GUIContent(text);
         Vector2 size = GUI.skin.box.CalcSize(content);
-        GUI.Box(new Rect(screenPoint.x - size.x * 0.5f, Height - screenPoint.y, size.x, size.y), content);
+        GUI.Box(
+            new Rect(screenPoint.x - size.x * 0.5f, Height - screenPoint.y, size.x, size.y),
+            content
+        );
     }
 
     /// <summary>
     /// A window is up, so the world underneath it takes no input: the shop, the bag, a warp
     /// list or the menu behind the gear.
     /// </summary>
-    public static bool WindowOpen => ShopNpc.PanelOpen || PlayerInventory.WindowOpen || MetaverseHUD.MenuOpen;
+    public static bool WindowOpen =>
+        ShopNpc.PanelOpen || PlayerInventory.WindowOpen || MetaverseHUD.MenuOpen;
 
     /// <summary>E on the keyboard. Every station and node reads this one check.</summary>
     public static bool InteractPressed =>
-        (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame) || MobileInput.ConsumeInteract();
+        (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+        || MobileInput.ConsumeInteract();
 
     /// <summary>The avatar a client owns, or null when it has not spawned.</summary>
     public static NetworkObject PlayerObject(ulong clientId)

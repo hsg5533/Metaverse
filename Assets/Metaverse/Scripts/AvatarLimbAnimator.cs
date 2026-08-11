@@ -63,7 +63,11 @@ public class AvatarLimbAnimator : MonoBehaviour
         phase += delta.magnitude * StepsPerMeter * Mathf.PI * 2f;
         if (intensity < 0.01f)
         {
-            phase = Mathf.Lerp(phase, Mathf.Round(phase / Mathf.PI) * Mathf.PI, 10f * Time.deltaTime);
+            phase = Mathf.Lerp(
+                phase,
+                Mathf.Round(phase / Mathf.PI) * Mathf.PI,
+                10f * Time.deltaTime
+            );
         }
 
         if (Emote != PlayerEmotes.None && intensity < 0.05f)
@@ -148,9 +152,14 @@ public class AvatarLimbAnimator : MonoBehaviour
         const float windupPart = 0.35f;
         float progress = 1f - remaining / AttackDuration;
 
-        pitch = progress < windupPart
-            ? Mathf.Lerp(0f, -150f, Mathf.SmoothStep(0f, 1f, progress / windupPart))
-            : Mathf.Lerp(-150f, -40f, Mathf.SmoothStep(0f, 1f, (progress - windupPart) / (1f - windupPart)));
+        pitch =
+            progress < windupPart
+                ? Mathf.Lerp(0f, -150f, Mathf.SmoothStep(0f, 1f, progress / windupPart))
+                : Mathf.Lerp(
+                    -150f,
+                    -40f,
+                    Mathf.SmoothStep(0f, 1f, (progress - windupPart) / (1f - windupPart))
+                );
 
         return true;
     }

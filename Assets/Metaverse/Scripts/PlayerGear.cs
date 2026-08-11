@@ -33,7 +33,16 @@ public class PlayerGear : NetworkBehaviour
 
         public bool IsFood => Buff >= 0 || Heal > 0;
 
-        public Piece(string name, bool weapon, int bonus, int theme, bool wearable = true, int buff = -1, float buffSeconds = 0f, int heal = 0)
+        public Piece(
+            string name,
+            bool weapon,
+            int bonus,
+            int theme,
+            bool wearable = true,
+            int buff = -1,
+            float buffSeconds = 0f,
+            int heal = 0
+        )
         {
             Name = name;
             Weapon = weapon;
@@ -55,17 +64,14 @@ public class PlayerGear : NetworkBehaviour
         new("서리 갑옷", false, 10, 1),
         new("용암 검", true, 20, 2),
         new("용암 갑옷", false, 16, 2),
-
         // Past here nothing is dropped by a monster: PieceFor only reaches the themed pairs.
         new("낚싯대", true, 0, 3),
-
         // The catch. Not worn, so its "armour model" slot is only ever used by the icon.
         new("붕어", false, 3, 3, false),
         new("잉어", false, 6, 4, false),
         new("메기", false, 9, 5, false),
         new("무지개송어", false, 12, 6, false),
         new("황금잉어", false, 33, 7, false),
-
         // The shop's own stock: never dropped by anything, only ever bought outright. A tier
         // below the ground's steel and a tier above its lava, so there is a reason to buy at
         // every point in the run instead of only farming.
@@ -75,11 +81,9 @@ public class PlayerGear : NetworkBehaviour
         new("은 갑옷", false, 9, 9),
         new("미스릴 검", true, 24, 6),
         new("미스릴 갑옷", false, 18, 10),
-
         // Sold over the counter, which is the only healing that can be bought on the way out
         // of the village. Deliberately the weaker of the two: no gathering went into it.
         new("체력 포션", false, 3, -1, false, heal: 45),
-
         // The campfire's dishes: cooking no longer applies the buff on the spot, it hands over
         // one of these instead, and eating it - a click in the bag - is what applies it.
         new("약초 스튜", false, 0, -1, false, PlayerBuffs.Attack, 180f),
@@ -333,7 +337,12 @@ public class PlayerGear : NetworkBehaviour
     public void BuyPieceRpc(int piece, RpcParams rpcParams = default)
     {
         var stats = GetComponent<PlayerStats>();
-        if (!this.IsFromOwner(rpcParams) || stats == null || piece < ShopFirst || piece >= ShopFirst + ShopCount)
+        if (
+            !this.IsFromOwner(rpcParams)
+            || stats == null
+            || piece < ShopFirst
+            || piece >= ShopFirst + ShopCount
+        )
         {
             return;
         }
@@ -384,7 +393,9 @@ public class PlayerGear : NetworkBehaviour
             stats.Gold.Value += PriceOf(piece);
         }
 
-        NoticeRpc(NetText.Trim512($"{Pieces[piece].Name}을(를) {PriceOf(piece)} 골드에 팔았습니다."));
+        NoticeRpc(
+            NetText.Trim512($"{Pieces[piece].Name}을(를) {PriceOf(piece)} 골드에 팔았습니다.")
+        );
     }
 
     /// <summary>Eat or drink a dish from the bag: applies its buff and removes it.</summary>
@@ -425,7 +436,8 @@ public class PlayerGear : NetworkBehaviour
                 buffs.Apply(eaten.Buff, eaten.BuffSeconds);
             }
 
-            effect = $"{PlayerBuffs.NameOf(eaten.Buff)} {Mathf.RoundToInt(eaten.BuffSeconds / 60f)}분.";
+            effect =
+                $"{PlayerBuffs.NameOf(eaten.Buff)} {Mathf.RoundToInt(eaten.BuffSeconds / 60f)}분.";
         }
 
         NoticeRpc(NetText.Trim512($"{eaten.Name}을(를) 먹었습니다. {effect}"));
@@ -453,7 +465,12 @@ public class PlayerGear : NetworkBehaviour
         Piece entry = Pieces[piece];
         return entry.Weapon
             ? new[] { At(WeaponModels, entry.Theme + 1) }
-            : new[] { At(ArmorModels, entry.Theme), At(ArmorLeftArmModels, entry.Theme), At(ArmorRightArmModels, entry.Theme) };
+            : new[]
+            {
+                At(ArmorModels, entry.Theme),
+                At(ArmorLeftArmModels, entry.Theme),
+                At(ArmorRightArmModels, entry.Theme),
+            };
     }
 
     /// <summary>The same, for what is worn: the bare sword when no weapon is on.</summary>

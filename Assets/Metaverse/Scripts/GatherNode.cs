@@ -16,7 +16,10 @@ public class GatherNode : NetworkBehaviour
     public float InteractRange = 3f;
     public float PromptHeight = 1.8f;
 
-    public NetworkVariable<bool> Ready = new(true, writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> Ready = new(
+        true,
+        writePerm: NetworkVariableWritePermission.Server
+    );
 
     Renderer[] visuals;
     Collider[] blockers;
@@ -38,7 +41,13 @@ public class GatherNode : NetworkBehaviour
             Ready.Value = true;
         }
 
-        if (!Ready.Value || PlayerAvatar.Local == null || ChatSystem.IsTyping || ShopNpc.PanelOpen || !InRange())
+        if (
+            !Ready.Value
+            || PlayerAvatar.Local == null
+            || ChatSystem.IsTyping
+            || ShopNpc.PanelOpen
+            || !InRange()
+        )
         {
             return;
         }
@@ -60,7 +69,10 @@ public class GatherNode : NetworkBehaviour
         var player = MetaverseUi.PlayerObject(rpcParams.Receive.SenderClientId);
 
         // The client asked, but the server decides whether they are actually standing here.
-        if (player == null || Vector3.Distance(player.transform.position, transform.position) > InteractRange + 1f)
+        if (
+            player == null
+            || Vector3.Distance(player.transform.position, transform.position) > InteractRange + 1f
+        )
         {
             return;
         }
@@ -105,16 +117,18 @@ public class GatherNode : NetworkBehaviour
         }
     }
 
-    string KoreanName => Kind switch
-    {
-        GatherKind.Ore => "광석",
-        GatherKind.Herb => "약초",
-        _ => "나무",
-    };
+    string KoreanName =>
+        Kind switch
+        {
+            GatherKind.Ore => "광석",
+            GatherKind.Herb => "약초",
+            _ => "나무",
+        };
 
     bool InRange()
     {
-        return Vector3.Distance(PlayerAvatar.Local.transform.position, transform.position) <= InteractRange;
+        return Vector3.Distance(PlayerAvatar.Local.transform.position, transform.position)
+            <= InteractRange;
     }
 
     void OnGUI()
@@ -126,6 +140,9 @@ public class GatherNode : NetworkBehaviour
             return;
         }
 
-        MetaverseUi.WorldPrompt(transform.position + Vector3.up * PromptHeight, $"[E] {KoreanName} 채집");
+        MetaverseUi.WorldPrompt(
+            transform.position + Vector3.up * PromptHeight,
+            $"[E] {KoreanName} 채집"
+        );
     }
 }

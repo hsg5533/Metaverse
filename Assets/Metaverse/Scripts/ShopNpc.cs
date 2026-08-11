@@ -28,8 +28,13 @@ public class ShopNpc : MonoBehaviour
 
     void Update()
     {
-        var stats = PlayerAvatar.Local != null ? PlayerAvatar.Local.GetComponent<PlayerStats>() : null;
-        if (stats == null || Vector3.Distance(PlayerAvatar.Local.transform.position, transform.position) > InteractRange)
+        var stats =
+            PlayerAvatar.Local != null ? PlayerAvatar.Local.GetComponent<PlayerStats>() : null;
+        if (
+            stats == null
+            || Vector3.Distance(PlayerAvatar.Local.transform.position, transform.position)
+                > InteractRange
+        )
         {
             Close();
             return;
@@ -57,8 +62,14 @@ public class ShopNpc : MonoBehaviour
         buyScroll = GUI.BeginScrollView(area, buyScroll, content);
         float y = 0f;
 
-        MetaverseUi.ItemRow(new Rect(0f, y, content.width, rowHeight - 6f), GearPreview.Piece + PlayerGear.Rod,
-            "낚싯대", "호수에서 쓴다", $"구매  ({PlayerGear.RodPrice} 골드)", () => gear.BuyRodRpc());
+        MetaverseUi.ItemRow(
+            new Rect(0f, y, content.width, rowHeight - 6f),
+            GearPreview.Piece + PlayerGear.Rod,
+            "낚싯대",
+            "호수에서 쓴다",
+            $"구매  ({PlayerGear.RodPrice} 골드)",
+            () => gear.BuyRodRpc()
+        );
         y += rowHeight;
 
         for (int i = 0; i < PlayerGear.ShopCount; i++)
@@ -68,8 +79,14 @@ public class ShopNpc : MonoBehaviour
             string bonus = Detail(info);
             int price = PlayerGear.BuyPriceOf(piece);
 
-            MetaverseUi.ItemRow(new Rect(0f, y, content.width, rowHeight - 6f), GearPreview.Piece + piece,
-                info.Name, bonus, $"구매  ({price} 골드)", () => gear.BuyPieceRpc(piece));
+            MetaverseUi.ItemRow(
+                new Rect(0f, y, content.width, rowHeight - 6f),
+                GearPreview.Piece + piece,
+                info.Name,
+                bonus,
+                $"구매  ({price} 골드)",
+                () => gear.BuyPieceRpc(piece)
+            );
             y += rowHeight;
         }
 
@@ -78,9 +95,14 @@ public class ShopNpc : MonoBehaviour
             int material = i;
             int price = PlayerInventory.MaterialBuyPrices[material];
 
-            MetaverseUi.ItemRow(new Rect(0f, y, content.width, rowHeight - 6f), GearPreview.Ore + material,
-                PlayerInventory.Slots[material], $"보유 {inventory.CountOf(material)}개",
-                $"구매  ({price} 골드)", () => inventory.BuyMaterialRpc(material));
+            MetaverseUi.ItemRow(
+                new Rect(0f, y, content.width, rowHeight - 6f),
+                GearPreview.Ore + material,
+                PlayerInventory.Slots[material],
+                $"보유 {inventory.CountOf(material)}개",
+                $"구매  ({price} 골드)",
+                () => inventory.BuyMaterialRpc(material)
+            );
             y += rowHeight;
         }
 
@@ -91,7 +113,8 @@ public class ShopNpc : MonoBehaviour
     static string Detail(PlayerGear.Piece info)
     {
         return info.IsFood ? $"체력 {info.Heal}% 회복"
-            : info.Weapon ? $"공격 +{info.Bonus}" : $"방어 +{info.Bonus}";
+            : info.Weapon ? $"공격 +{info.Bonus}"
+            : $"방어 +{info.Bonus}";
     }
 
     /// <summary>
@@ -103,13 +126,23 @@ public class ShopNpc : MonoBehaviour
     {
         const float rowHeight = MetaverseUi.ItemRowHeight + 4f;
 
-        MetaverseUi.ItemRow(new Rect(area.x, area.y, area.width, rowHeight), GearPreview.Weapon,
-            $"검 Lv.{stats.WeaponLevel.Value}", $"공격 +{stats.WeaponBonus}",
-            $"Lv.{stats.WeaponLevel.Value + 1}로 강화  ({stats.WeaponPrice} 골드)", () => stats.BuyWeaponRpc());
+        MetaverseUi.ItemRow(
+            new Rect(area.x, area.y, area.width, rowHeight),
+            GearPreview.Weapon,
+            $"검 Lv.{stats.WeaponLevel.Value}",
+            $"공격 +{stats.WeaponBonus}",
+            $"Lv.{stats.WeaponLevel.Value + 1}로 강화  ({stats.WeaponPrice} 골드)",
+            () => stats.BuyWeaponRpc()
+        );
 
-        MetaverseUi.ItemRow(new Rect(area.x, area.y + rowHeight + 8f, area.width, rowHeight), GearPreview.Armor,
-            $"방어구 Lv.{stats.ArmorLevel.Value}", $"방어 +{stats.ArmorBonus}",
-            $"Lv.{stats.ArmorLevel.Value + 1}로 강화  ({stats.ArmorPrice} 골드)", () => stats.BuyArmorRpc());
+        MetaverseUi.ItemRow(
+            new Rect(area.x, area.y + rowHeight + 8f, area.width, rowHeight),
+            GearPreview.Armor,
+            $"방어구 Lv.{stats.ArmorLevel.Value}",
+            $"방어 +{stats.ArmorBonus}",
+            $"Lv.{stats.ArmorLevel.Value + 1}로 강화  ({stats.ArmorPrice} 골드)",
+            () => stats.BuyArmorRpc()
+        );
     }
 
     /// <summary>
@@ -141,9 +174,14 @@ public class ShopNpc : MonoBehaviour
             }
 
             int paid = count * PlayerInventory.MaterialPrices[material];
-            MetaverseUi.ItemRow(new Rect(0f, y, content.width, rowHeight - 6f), GearPreview.Ore + material,
-                PlayerInventory.Slots[material], $"보유 {count}개",
-                $"판매  ({paid} 골드)", () => inventory.SellRpc(material));
+            MetaverseUi.ItemRow(
+                new Rect(0f, y, content.width, rowHeight - 6f),
+                GearPreview.Ore + material,
+                PlayerInventory.Slots[material],
+                $"보유 {count}개",
+                $"판매  ({paid} 골드)",
+                () => inventory.SellRpc(material)
+            );
             y += rowHeight;
         }
 
@@ -160,8 +198,14 @@ public class ShopNpc : MonoBehaviour
             string bonus = Detail(info);
             int price = PlayerGear.PriceOf(piece);
 
-            MetaverseUi.ItemRow(new Rect(0f, y, content.width, rowHeight - 6f), GearPreview.Piece + piece,
-                info.Name, bonus, $"판매  ({price} 골드)", () => gear.SellRpc(bagIndex));
+            MetaverseUi.ItemRow(
+                new Rect(0f, y, content.width, rowHeight - 6f),
+                GearPreview.Piece + piece,
+                info.Name,
+                bonus,
+                $"판매  ({price} 골드)",
+                () => gear.SellRpc(bagIndex)
+            );
             y += rowHeight;
         }
 
@@ -181,7 +225,8 @@ public class ShopNpc : MonoBehaviour
     {
         MetaverseUi.ApplyFont();
 
-        var stats = PlayerAvatar.Local != null ? PlayerAvatar.Local.GetComponent<PlayerStats>() : null;
+        var stats =
+            PlayerAvatar.Local != null ? PlayerAvatar.Local.GetComponent<PlayerStats>() : null;
         if (stats == null)
         {
             return;
@@ -193,7 +238,10 @@ public class ShopNpc : MonoBehaviour
             return;
         }
 
-        if (Vector3.Distance(PlayerAvatar.Local.transform.position, transform.position) > InteractRange)
+        if (
+            Vector3.Distance(PlayerAvatar.Local.transform.position, transform.position)
+            > InteractRange
+        )
         {
             return;
         }
@@ -204,15 +252,32 @@ public class ShopNpc : MonoBehaviour
     void DrawShop(PlayerStats stats)
     {
         var gear = stats.GetComponent<PlayerGear>();
-        var window = new Rect(MetaverseUi.Width * 0.5f - 200f, MetaverseUi.Height * 0.5f - 200f, 400f, 400f);
+        var window = new Rect(
+            MetaverseUi.Width * 0.5f - 200f,
+            MetaverseUi.Height * 0.5f - 200f,
+            400f,
+            400f
+        );
 
         GUI.Box(window, "");
-        GUI.Label(new Rect(window.x + 10f, window.y + 6f, window.width - 20f, 22f),
-            $"<b>{ShopName}</b>   골드 {stats.Gold.Value}", MetaverseUi.Rich);
+        GUI.Label(
+            new Rect(window.x + 10f, window.y + 6f, window.width - 20f, 22f),
+            $"<b>{ShopName}</b>   골드 {stats.Gold.Value}",
+            MetaverseUi.Rich
+        );
 
-        tab = GUI.Toolbar(new Rect(window.x + 10f, window.y + 30f, window.width - 20f, 24f), tab, Tabs);
+        tab = GUI.Toolbar(
+            new Rect(window.x + 10f, window.y + 30f, window.width - 20f, 24f),
+            tab,
+            Tabs
+        );
 
-        var content = new Rect(window.x + 10f, window.y + 60f, window.width - 20f, window.height - 128f);
+        var content = new Rect(
+            window.x + 10f,
+            window.y + 60f,
+            window.width - 20f,
+            window.height - 128f
+        );
         switch (tab)
         {
             case 0:
@@ -226,10 +291,17 @@ public class ShopNpc : MonoBehaviour
                 break;
         }
 
-        GUI.Label(new Rect(window.x + 10f, window.y + window.height - 58f, window.width - 20f, 22f),
-            $"체력 {stats.Hp.Value}/{stats.MaxHp}   공격 {stats.AttackPower}   방어 {stats.Defense}");
+        GUI.Label(
+            new Rect(window.x + 10f, window.y + window.height - 58f, window.width - 20f, 22f),
+            $"체력 {stats.Hp.Value}/{stats.MaxHp}   공격 {stats.AttackPower}   방어 {stats.Defense}"
+        );
 
-        if (GUI.Button(new Rect(window.x + 10f, window.y + window.height - 32f, window.width - 20f, 24f), "닫기  [E]"))
+        if (
+            GUI.Button(
+                new Rect(window.x + 10f, window.y + window.height - 32f, window.width - 20f, 24f),
+                "닫기  [E]"
+            )
+        )
         {
             Close();
         }

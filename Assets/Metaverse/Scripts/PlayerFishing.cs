@@ -30,7 +30,13 @@ public class PlayerFishing : NetworkBehaviour
     /// <summary>The float, made of two cubes when the first cast happens.</summary>
     Transform bobber;
 
-    enum Phase { Idle, Casting, Waiting, Biting }
+    enum Phase
+    {
+        Idle,
+        Casting,
+        Waiting,
+        Biting,
+    }
 
     Phase phase = Phase.Idle;
     float phaseEnds;
@@ -79,7 +85,8 @@ public class PlayerFishing : NetworkBehaviour
         }
 
         var mouse = Mouse.current;
-        return (mouse != null && mouse.leftButton.wasPressedThisFrame) || MobileInput.ConsumeAttack();
+        return (mouse != null && mouse.leftButton.wasPressedThisFrame)
+            || MobileInput.ConsumeAttack();
     }
 
     /// <summary>One button does the lot: cast, then strike, and anything else reels in.</summary>
@@ -199,10 +206,18 @@ public class PlayerFishing : NetworkBehaviour
         var root = new GameObject("Bobber") { hideFlags = HideFlags.HideInHierarchy };
         var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
 
-        Part(root.transform, new Vector3(0f, 0.08f, 0f), new Vector3(0.16f, 0.16f, 0.16f),
-            new Material(shader) { color = new Color(0.90f, 0.25f, 0.22f) });
-        Part(root.transform, new Vector3(0f, -0.06f, 0f), new Vector3(0.13f, 0.13f, 0.13f),
-            new Material(shader) { color = Color.white });
+        Part(
+            root.transform,
+            new Vector3(0f, 0.08f, 0f),
+            new Vector3(0.16f, 0.16f, 0.16f),
+            new Material(shader) { color = new Color(0.90f, 0.25f, 0.22f) }
+        );
+        Part(
+            root.transform,
+            new Vector3(0f, -0.06f, 0f),
+            new Vector3(0.13f, 0.13f, 0.13f),
+            new Material(shader) { color = Color.white }
+        );
 
         return root.transform;
     }
@@ -239,9 +254,11 @@ public class PlayerFishing : NetworkBehaviour
     void CatchRpc(Vector3 float3, RpcParams rpcParams = default)
     {
         // The float has to be on water and within a cast of whoever claims to be holding it.
-        if (!this.IsFromOwner(rpcParams)
+        if (
+            !this.IsFromOwner(rpcParams)
             || !FishingSpot.OnWater(float3)
-            || Vector3.Distance(transform.position, float3) > CastRange + 3f)
+            || Vector3.Distance(transform.position, float3) > CastRange + 3f
+        )
         {
             return;
         }
@@ -285,8 +302,12 @@ public class PlayerFishing : NetworkBehaviour
         };
 
         // Between the character and the health bar, where the eye already is during a fight.
-        var rect = new Rect(MetaverseUi.Width * 0.5f - 140f,
-            MetaverseUi.Height - (MobileInput.Active ? 210f : 130f), 280f, 30f);
+        var rect = new Rect(
+            MetaverseUi.Width * 0.5f - 140f,
+            MetaverseUi.Height - (MobileInput.Active ? 210f : 130f),
+            280f,
+            30f
+        );
 
         // An empty bar is the dark plate this needs; pale text over water reads as nothing.
         MetaverseUi.Bar(rect, 0f, Color.clear);

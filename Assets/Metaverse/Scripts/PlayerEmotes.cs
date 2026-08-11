@@ -70,11 +70,16 @@ public class PlayerEmotes : NetworkBehaviour
     static bool Moving(Keyboard keyboard)
     {
         // The stick counts too, or a phone has no way to stand back up.
-        return MobileInput.Move.sqrMagnitude > 0.05f ||
-               keyboard.wKey.isPressed || keyboard.aKey.isPressed || keyboard.sKey.isPressed || keyboard.dKey.isPressed ||
-               keyboard.upArrowKey.isPressed || keyboard.downArrowKey.isPressed ||
-               keyboard.leftArrowKey.isPressed || keyboard.rightArrowKey.isPressed ||
-               keyboard.spaceKey.isPressed;
+        return MobileInput.Move.sqrMagnitude > 0.05f
+            || keyboard.wKey.isPressed
+            || keyboard.aKey.isPressed
+            || keyboard.sKey.isPressed
+            || keyboard.dKey.isPressed
+            || keyboard.upArrowKey.isPressed
+            || keyboard.downArrowKey.isPressed
+            || keyboard.leftArrowKey.isPressed
+            || keyboard.rightArrowKey.isPressed
+            || keyboard.spaceKey.isPressed;
     }
 
     [Rpc(SendTo.Server)]
