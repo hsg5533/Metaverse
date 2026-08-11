@@ -15,11 +15,11 @@ public class Campfire : InteractStation
 
     void Awake()
     {
-        // Everything that is not the scrolling list: the title, the line of materials, the
-        // line underneath, and the close button the station draws below all of it - plus the
-        // margin GUILayout puts around each of them. Budget this short and the close button is
-        // the thing that falls off the bottom, which on a phone leaves no way out of the panel.
-        PanelSize = new Vector2(380f, 132f + VisibleRecipes * RowHeight);
+        // Everything that is not the scrolling list: the title, the line of materials, and
+        // the close button the station draws below all of it - plus the margin GUILayout puts
+        // around each of them. Budget this short and the close button is the thing that falls
+        // off the bottom, which on a phone leaves no way out of the panel.
+        PanelSize = new Vector2(380f, 108f + VisibleRecipes * RowHeight);
     }
 
     protected override void DrawPanel(PlayerAvatar player)
@@ -65,9 +65,6 @@ public class Campfire : InteractStation
         }
 
         GUILayout.EndScrollView();
-
-        GUILayout.Space(2);
-        GUILayout.Label("가방에서 눌러 먹는다.");
     }
 
     static string Cost(int ore, int herb, int wood, int fish)

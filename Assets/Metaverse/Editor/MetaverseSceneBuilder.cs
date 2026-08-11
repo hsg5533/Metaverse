@@ -1636,7 +1636,9 @@ public static class MetaverseSceneBuilder
 
         var npc = new GameObject("ShopNpc");
         npc.transform.SetParent(parent, false);
-        npc.transform.localPosition = new Vector3(-9f, 0f, 7f);
+        // Level with the players: a CharacterController rests its capsule a skin width clear
+        // of the floor, so an avatar stands that much higher than anything placed flat on it.
+        npc.transform.localPosition = new Vector3(-9f, 0.08f, 7f);
         npc.transform.localRotation = Quaternion.LookRotation(new Vector3(9f, 0f, -7f));
 
         var shopkeeper = BuildHumanoid(

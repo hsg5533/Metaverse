@@ -323,7 +323,7 @@ public class PlayerInventory : NetworkBehaviour
 
         float gridWidth = columns * (slotSize + padding) + padding;
         float width = gearWidth + gridWidth;
-        float height = Mathf.Max(rows * (slotSize + padding) + padding + 96f, 300f);
+        float height = Mathf.Max(rows * (slotSize + padding) + padding + 74f, 300f);
         var window = new Rect(
             MetaverseUi.Width * 0.5f - width * 0.5f,
             MetaverseUi.Height * 0.5f - height * 0.5f,
@@ -377,11 +377,6 @@ public class PlayerInventory : NetworkBehaviour
             DrawSlot(slot, index);
         }
         GUI.EndScrollView();
-
-        GUI.Label(
-            new Rect(window.x + gearWidth, window.y + height - 26f, gridWidth, 22f),
-            "가방의 장비는 착용, 요리는 섭취. 장비 칸을 누르면 벗는다."
-        );
     }
 
     /// <summary>
@@ -411,11 +406,6 @@ public class PlayerInventory : NetworkBehaviour
             stats.ArmorName,
             $"+{stats.ArmorBonus} DEF",
             GearPreview.Armor
-        );
-
-        GUI.Label(
-            new Rect(area.x, area.y + 170f, area.width, 60f),
-            "상점과 모루에서 강화하고,\n몬스터에게서 얻는다."
         );
     }
 
