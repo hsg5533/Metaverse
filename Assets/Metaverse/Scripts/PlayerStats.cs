@@ -389,7 +389,7 @@ public class PlayerStats : NetworkBehaviour
         }
 
         GUILayout.BeginArea(new Rect(MetaverseUi.Width - 250, 10, 240, 220), GUI.skin.box);
-        GUILayout.Label($"<b>Lv.{Level.Value}</b>  {Nickname()}   [P] 닫기", MetaverseUi.Rich);
+        GUILayout.Label($"<b>Lv.{Level.Value}</b>  {Nickname()}", MetaverseUi.Rich);
         GUILayout.Label(
             $"체력    {Hp.Value} / {MaxHp}{(InVillage && Hp.Value < MaxHp ? "  (휴식 중)" : "")}"
         );

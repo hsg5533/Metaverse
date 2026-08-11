@@ -299,7 +299,7 @@ public class ShopNpc : MonoBehaviour
         if (
             GUI.Button(
                 new Rect(window.x + 10f, window.y + window.height - 32f, window.width - 20f, 24f),
-                "닫기  [E]"
+                "닫기"
             )
         )
         {

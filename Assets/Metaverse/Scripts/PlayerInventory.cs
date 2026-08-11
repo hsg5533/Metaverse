@@ -334,7 +334,7 @@ public class PlayerInventory : NetworkBehaviour
         GUI.Box(window, "");
         GUI.Label(
             new Rect(window.x + padding, window.y + 6f, width, 22f),
-            "<b>인벤토리</b>   [I] 닫기",
+            "<b>인벤토리</b>",
             MetaverseUi.Rich
         );
 

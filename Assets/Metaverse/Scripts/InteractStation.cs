@@ -67,7 +67,7 @@ public abstract class InteractStation : MonoBehaviour
             GUILayout.Label($"<b>{Title}</b>", MetaverseUi.Rich);
             DrawPanel(player);
             GUILayout.Space(4);
-            if (GUILayout.Button("닫기  [E]"))
+            if (GUILayout.Button("닫기"))
             {
                 Close();
             }
