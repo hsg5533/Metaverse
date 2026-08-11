@@ -111,6 +111,13 @@ public class PlayerAvatar : NetworkBehaviour
     CharacterController controller;
     PlayerBuffs buffs;
     PlayerFishing fishing;
+    PlayerStats stats;
+
+    // The name tag is drawn several times a frame, once per avatar on screen. Reading the
+    // networked name gives a fresh string every time, which is a bagful of garbage for a line
+    // that changes when somebody joins.
+    string tag;
+    FixedString64Bytes taggedName;
     float verticalVelocity;
     Vector3 lastStepPosition;
     float stepDistance;
@@ -122,6 +129,7 @@ public class PlayerAvatar : NetworkBehaviour
         controller = GetComponent<CharacterController>();
         buffs = GetComponent<PlayerBuffs>();
         fishing = GetComponent<PlayerFishing>();
+        stats = GetComponent<PlayerStats>();
     }
 
     public override void OnNetworkSpawn()
@@ -297,10 +305,15 @@ public class PlayerAvatar : NetworkBehaviour
 
         Color previous = GUI.color;
         GUI.color = IsOwner ? new Color(1f, 0.92f, 0.4f) : Color.white;
-        GUI.Label(rect, Nickname.Value.ToString(), nameTagStyle);
+        if (tag == null || !taggedName.Equals(Nickname.Value))
+        {
+            taggedName = Nickname.Value;
+            tag = taggedName.ToString();
+        }
+
+        GUI.Label(rect, tag, nameTagStyle);
         GUI.color = previous;
 
-        var stats = GetComponent<PlayerStats>();
         if (stats != null && stats.MaxHp > 0)
         {
             const float barWidth = 70f;

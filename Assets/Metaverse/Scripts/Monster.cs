@@ -103,13 +103,18 @@ public class Monster : NetworkBehaviour
     public float RespawnDelay = 6f;
     public float NameTagHeight = 1.8f;
 
-    public NetworkVariable<FixedString64Bytes> MonsterName =
-        new(new FixedString64Bytes("Slime"), writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<FixedString64Bytes> MonsterName = new(
+        new FixedString64Bytes("Slime"),
+        writePerm: NetworkVariableWritePermission.Server
+    );
 
     public NetworkVariable<int> Level = new(1, writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<int> Hp = new(40, writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<int> MaxHp = new(40, writePerm: NetworkVariableWritePermission.Server);
-    public NetworkVariable<Color> Tint = new(new Color(0.4f, 0.8f, 0.4f), writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<Color> Tint = new(
+        new Color(0.4f, 0.8f, 0.4f),
+        writePerm: NetworkVariableWritePermission.Server
+    );
 
     public bool IsAlive => Hp.Value > 0;
 
@@ -118,7 +123,8 @@ public class Monster : NetworkBehaviour
     public int Damage => 6 + Level.Value * 4;
 
     /// <summary>Higher level monsters are visibly bigger, so a tough one reads at a glance.</summary>
-    public float LevelScale => Mathf.Min(1f + 0.04f * (Level.Value - 1), 1.8f) * (IsBossShape ? 1.6f : 1f);
+    public float LevelScale =>
+        Mathf.Min(1f + 0.04f * (Level.Value - 1), 1.8f) * (IsBossShape ? 1.6f : 1f);
 
     /// <summary>True while one of the boss bodies is the one on show.</summary>
     public bool IsBossShape => Shape.Value >= Kinds.Length;
@@ -164,6 +170,10 @@ public class Monster : NetworkBehaviour
     bool visualsAlive = true;
     bool flashing;
     static GUIStyle nameTagStyle;
+
+    string tag;
+    int taggedLevel = int.MinValue;
+    FixedString64Bytes taggedName;
 
     void Awake()
     {
@@ -315,10 +325,18 @@ public class Monster : NetworkBehaviour
     /// </summary>
     static readonly float[] HoverHeights =
     {
-        0f, 0f, 0f,         // slime, goblin, orc
-        0f, 0.5f, 0f,       // wolf, wraith, ice golem
-        0f, 0f, 0.45f,      // toad, scorpion, wisp
-        0f, 0f, 0f,         // the three bosses
+        0f,
+        0f,
+        0f, // slime, goblin, orc
+        0f,
+        0.5f,
+        0f, // wolf, wraith, ice golem
+        0f,
+        0f,
+        0.45f, // toad, scorpion, wisp
+        0f,
+        0f,
+        0f, // the three bosses
     };
 
     /// <summary>A limb that swings while the monster walks, and where it swings about.</summary>
@@ -359,7 +377,11 @@ public class Monster : NetworkBehaviour
         }
 
         float delta = Time.deltaTime;
-        float speed = delta > 0f ? Vector3.Distance(FlatPosition(transform.position), FlatPosition(lastPosition)) / delta : 0f;
+        float speed =
+            delta > 0f
+                ? Vector3.Distance(FlatPosition(transform.position), FlatPosition(lastPosition))
+                    / delta
+                : 0f;
         lastPosition = transform.position;
 
         if (hoverHeight > 0f)
@@ -395,9 +417,10 @@ public class Monster : NetworkBehaviour
             // Nothing to step with: rise and fall on the spot instead, and a winged one sits
             // up off the ground the whole time. Only the height is touched, so an attack
             // lunge still carries the body forward underneath it.
-            float height = hoverHeight > 0f
-                ? hoverHeight + Mathf.Sin(walkCycle) * 0.16f
-                : Mathf.Abs(Mathf.Sin(walkCycle)) * 0.22f * walkBlend;
+            float height =
+                hoverHeight > 0f
+                    ? hoverHeight + Mathf.Sin(walkCycle) * 0.16f
+                    : Mathf.Abs(Mathf.Sin(walkCycle)) * 0.22f * walkBlend;
 
             Vector3 position = body.localPosition;
             body.localPosition = new Vector3(position.x, height, position.z);
@@ -439,16 +462,18 @@ public class Monster : NetworkBehaviour
                 phase += Mathf.PI;
             }
 
-            walkParts.Add(new WalkPart
-            {
-                Part = child,
-                BasePosition = position,
-                BaseRotation = child.localRotation,
-                Pivot = position + Vector3.up * child.localScale.y * 0.5f,
-                Axis = Vector3.right,
-                Phase = phase,
-                Swing = leg ? 26f : 14f,
-            });
+            walkParts.Add(
+                new WalkPart
+                {
+                    Part = child,
+                    BasePosition = position,
+                    BaseRotation = child.localRotation,
+                    Pivot = position + Vector3.up * child.localScale.y * 0.5f,
+                    Axis = Vector3.right,
+                    Phase = phase,
+                    Swing = leg ? 26f : 14f,
+                }
+            );
 
             walkPartsAreLegs |= leg;
         }
@@ -500,18 +525,20 @@ public class Monster : NetworkBehaviour
             }
 
             WalkPart limb = walkParts[nearest];
-            walkParts.Add(new WalkPart
-            {
-                Part = child,
-                BasePosition = position,
-                BaseRotation = child.localRotation,
+            walkParts.Add(
+                new WalkPart
+                {
+                    Part = child,
+                    BasePosition = position,
+                    BaseRotation = child.localRotation,
 
-                // The limb's pivot, so the pair turns as one piece.
-                Pivot = limb.Pivot,
-                Axis = limb.Axis,
-                Phase = limb.Phase,
-                Swing = limb.Swing,
-            });
+                    // The limb's pivot, so the pair turns as one piece.
+                    Pivot = limb.Pivot,
+                    Axis = limb.Axis,
+                    Phase = limb.Phase,
+                    Swing = limb.Swing,
+                }
+            );
         }
     }
 
@@ -541,11 +568,15 @@ public class Monster : NetworkBehaviour
         flashing = true;
         float strength = remaining / HitFlashDuration;
         ApplyTint(Color.Lerp(BodyColor, Color.white, strength));
-        transform.localScale = Vector3.Scale(bodyScale, new Vector3(1f + 0.2f * strength, 1f - 0.2f * strength, 1f + 0.2f * strength));
+        transform.localScale = Vector3.Scale(
+            bodyScale,
+            new Vector3(1f + 0.2f * strength, 1f - 0.2f * strength, 1f + 0.2f * strength)
+        );
     }
 
     /// <summary>The kind's colour, deepened as the monster levels so tough ones look tough.</summary>
-    Color BodyColor => Color.Lerp(Tint.Value, Tint.Value * 0.45f, Mathf.Min((Level.Value - 1) * 0.06f, 1f));
+    Color BodyColor =>
+        Color.Lerp(Tint.Value, Tint.Value * 0.45f, Mathf.Min((Level.Value - 1) * 0.06f, 1f));
 
     /// <summary>Server side: give the freshly spawned monster its kind, stats and home point.</summary>
     public void Configure(int kind, int extraLevels = 0, bool isBoss = false, int theme = 0)
@@ -657,7 +688,9 @@ public class Monster : NetworkBehaviour
                 }
             }
 
-            ChatSystem.Announce($"{MonsterName.Value} Lv.{Level.Value} 토벌 성공! 참가자 {contributors.Count}명");
+            ChatSystem.Announce(
+                $"{MonsterName.Value} Lv.{Level.Value} 토벌 성공! 참가자 {contributors.Count}명"
+            );
             TreasureChest.UnlockNear(transform.position);
             contributors.Clear();
             return;
@@ -675,9 +708,10 @@ public class Monster : NetworkBehaviour
     /// </summary>
     void Reward(PlayerStats player, int multiplier)
     {
-        var receivers = PartySystem.Instance != null
-            ? PartySystem.Instance.Share(player)
-            : new System.Collections.Generic.List<PlayerStats> { player };
+        var receivers =
+            PartySystem.Instance != null
+                ? PartySystem.Instance.Share(player)
+                : new System.Collections.Generic.List<PlayerStats> { player };
 
         int exp = ExpReward * multiplier;
         int gold = GoldReward * multiplier;
@@ -708,7 +742,11 @@ public class Monster : NetworkBehaviour
         foreach (var client in NetworkManager.ConnectedClientsList)
         {
             var playerObject = client.PlayerObject;
-            if (playerObject == null || Vector3.Distance(playerObject.transform.position, transform.position) > SlamRadius)
+            if (
+                playerObject == null
+                || Vector3.Distance(playerObject.transform.position, transform.position)
+                    > SlamRadius
+            )
             {
                 continue;
             }
@@ -722,7 +760,12 @@ public class Monster : NetworkBehaviour
     }
 
     /// <summary>Server side: closest living monster inside the attacker's cone.</summary>
-    public static Monster FindTarget(Vector3 origin, Vector3 forward, float range, float coneDegrees)
+    public static Monster FindTarget(
+        Vector3 origin,
+        Vector3 forward,
+        float range,
+        float coneDegrees
+    )
     {
         Monster best = null;
         float bestDistance = range;
@@ -791,7 +834,10 @@ public class Monster : NetworkBehaviour
         }
 
         Vector3 targetPosition = target.transform.position;
-        if (Vector3.Distance(FlatPosition(targetPosition), FlatPosition(transform.position)) > AttackRange)
+        if (
+            Vector3.Distance(FlatPosition(targetPosition), FlatPosition(transform.position))
+            > AttackRange
+        )
         {
             MoveTowards(targetPosition);
             return;
@@ -894,7 +940,11 @@ public class Monster : NetworkBehaviour
         Vector3 direction = FlatPosition(target) - FlatPosition(transform.position);
         if (direction.sqrMagnitude > 0.0001f)
         {
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(direction), 8f * Time.deltaTime);
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                Quaternion.LookRotation(direction),
+                8f * Time.deltaTime
+            );
         }
     }
 
@@ -934,7 +984,10 @@ public class Monster : NetworkBehaviour
         // doomed ones straight back up: Destroy does not take effect until the end of the
         // frame, and from the next frame those references throw when touched.
         Transform body = ActiveBody();
-        renderers = body != null ? body.GetComponentsInChildren<Renderer>(true) : System.Array.Empty<Renderer>();
+        renderers =
+            body != null
+                ? body.GetComponentsInChildren<Renderer>(true)
+                : System.Array.Empty<Renderer>();
     }
 
     void SyncVisuals()
@@ -1002,10 +1055,18 @@ public class Monster : NetworkBehaviour
     /// <summary>Where the name floats, per body, since they are nowhere near the same size.</summary>
     static readonly float[] TagHeights =
     {
-        1.5f, 2.0f, 2.5f,   // slime, goblin, orc
-        1.6f, 2.9f, 2.9f,   // wolf, wraith, ice golem
-        1.4f, 1.5f, 2.75f,  // toad, scorpion, wisp
-        3.6f, 4.0f, 3.4f,   // the three bosses
+        1.5f,
+        2.0f,
+        2.5f, // slime, goblin, orc
+        1.6f,
+        2.9f,
+        2.9f, // wolf, wraith, ice golem
+        1.4f,
+        1.5f,
+        2.75f, // toad, scorpion, wisp
+        3.6f,
+        4.0f,
+        3.4f, // the three bosses
     };
 
     /// <summary>Parts named like this keep their own colour: eyes, tusks, horns, claws.</summary>
@@ -1092,6 +1153,24 @@ public class Monster : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// The label over its head, built once and kept. OnGUI runs several times a frame and a
+    /// dozen monsters can be on screen, so building this each time is a hundred strings a
+    /// frame to collect for a line that changes when a monster levels or respawns as another
+    /// kind, and at no other time.
+    /// </summary>
+    string Tag()
+    {
+        if (tag == null || taggedLevel != Level.Value || !taggedName.Equals(MonsterName.Value))
+        {
+            taggedLevel = Level.Value;
+            taggedName = MonsterName.Value;
+            tag = $"{taggedName} Lv.{taggedLevel}";
+        }
+
+        return tag;
+    }
+
     void DrawTag(Camera camera)
     {
         // Off screen there is nothing to label, and the areas are open enough that a monster
@@ -1107,7 +1186,10 @@ public class Monster : NetworkBehaviour
             return;
         }
 
-        Vector3 screenPoint = MetaverseUi.ScreenPoint(camera, transform.position + Vector3.up * NameTagHeight);
+        Vector3 screenPoint = MetaverseUi.ScreenPoint(
+            camera,
+            transform.position + Vector3.up * NameTagHeight
+        );
         if (screenPoint.z <= 0f)
         {
             return;
@@ -1116,10 +1198,14 @@ public class Monster : NetworkBehaviour
         float x = screenPoint.x;
         float y = MetaverseUi.Height - screenPoint.y;
 
-        GUI.Label(new Rect(x - 110f, y - 20f, 220f, 20f), $"{MonsterName.Value} Lv.{Level.Value}", nameTagStyle);
+        GUI.Label(new Rect(x - 110f, y - 20f, 220f, 20f), Tag(), nameTagStyle);
 
         const float barWidth = 60f;
         float fill = MaxHp.Value > 0 ? Hp.Value / (float)MaxHp.Value : 0f;
-        MetaverseUi.Bar(new Rect(x - barWidth * 0.5f, y, barWidth, 5f), fill, new Color(0.85f, 0.25f, 0.25f, 0.95f));
+        MetaverseUi.Bar(
+            new Rect(x - barWidth * 0.5f, y, barWidth, 5f),
+            fill,
+            new Color(0.85f, 0.25f, 0.25f, 0.95f)
+        );
     }
 }
