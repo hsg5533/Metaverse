@@ -2206,11 +2206,7 @@ public static class MetaverseSceneBuilder
 
         // A controller rather than a plain collider: the server moves monsters with it, so
         // they collide with walls instead of sliding through them.
-        var controller = root.AddComponent<CharacterController>();
-        controller.height = 2.2f;
-        controller.radius = 0.5f;
-        controller.skinWidth = 0.03f;
-        controller.center = new Vector3(0f, 1.13f, 0f);
+        var controller = Walker(root, 2.2f, 0.5f);
         controller.slopeLimit = 55f;
         controller.stepOffset = 0.5f;
 
@@ -4030,14 +4026,7 @@ public static class MetaverseSceneBuilder
             caught.SetActive(false);
         }
 
-        var controller = root.AddComponent<CharacterController>();
-        controller.height = 1.95f;
-        controller.radius = 0.3f;
-        // A controller parks its capsule a skin width clear of the floor, so the body hangs
-        // that far above it unless the capsule is lifted by the same amount inside the body.
-        // Half the height plus the skin puts the feet on the ground.
-        controller.skinWidth = 0.03f;
-        controller.center = new Vector3(0f, 1.005f, 0f);
+        var controller = Walker(root, 1.95f, 0.3f);
         controller.slopeLimit = 50f;
         controller.stepOffset = 0.4f;
 
@@ -4741,6 +4730,22 @@ public static class MetaverseSceneBuilder
             new Vector3(1f, 4f, 60f),
             material
         );
+    }
+
+    /// <summary>
+    /// The capsule anything that walks is moved by. A controller parks its capsule a skin
+    /// width clear of the floor, so the body hangs that far above it unless the capsule is
+    /// lifted by the same amount inside the body: half the height plus the skin is what puts
+    /// the feet on the ground, whatever the thing is the size of.
+    /// </summary>
+    static CharacterController Walker(GameObject root, float height, float radius)
+    {
+        var controller = root.AddComponent<CharacterController>();
+        controller.height = height;
+        controller.radius = radius;
+        controller.skinWidth = 0.03f;
+        controller.center = new Vector3(0f, height * 0.5f + controller.skinWidth, 0f);
+        return controller;
     }
 
     /// <summary>Static body part with its primitive collider removed.</summary>
