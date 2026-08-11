@@ -3824,8 +3824,8 @@ public static class MetaverseSceneBuilder
                 PrimitiveType.Cube,
                 "Leg" + suffix,
                 body.transform,
-                new Vector3(side * 0.52f, 0.46f, 0f),
-                new Vector3(0.56f, 0.64f, 0.62f),
+                new Vector3(side * 0.52f, 0.39f, 0f),
+                new Vector3(0.56f, 0.78f, 0.62f),
                 bodyMaterial
             );
         }
