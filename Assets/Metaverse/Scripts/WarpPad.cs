@@ -70,6 +70,13 @@ public class WarpPad : MonoBehaviour
 
         if (HasMenu)
         {
+            // The same key both ways, the way the anvil and the campfire already work.
+            if (openPad == this)
+            {
+                Close();
+                return;
+            }
+
             openPad = this;
             // The shared "a panel is up" flag, so the bag and the shop stay shut behind it.
             ShopNpc.PanelOpen = true;
