@@ -167,6 +167,9 @@ public class PlayerGear : NetworkBehaviour
     public NetworkVariable<int> Armor = new(-1, writePerm: NetworkVariableWritePermission.Server);
     public NetworkList<int> Bag = new();
 
+    /// <summary>What the village chest is holding for this player: pieces only, no materials.</summary>
+    public NetworkList<int> Storage = new();
+
     public int AttackBonus => Held(Weapon)?.Bonus ?? 0;
     public int DefenseBonus => Held(Armor)?.Bonus ?? 0;
     public string WeaponName => Held(Weapon)?.Name;
@@ -174,6 +177,15 @@ public class PlayerGear : NetworkBehaviour
 
     /// <summary>What a piece is called, or an empty string when nothing is worn.</summary>
     public static string NameOf(int piece) => Valid(piece) ? Pieces[piece].Name : "";
+
+    /// <summary>The one line under a piece's name wherever it is listed.</summary>
+    public static string DetailOf(int piece)
+    {
+        Piece info = Pieces[piece];
+        return info.IsFood ? $"체력 {info.Heal}% 회복"
+            : info.Weapon ? $"공격 +{info.Bonus}"
+            : $"방어 +{info.Bonus}";
+    }
 
     /// <summary>What the shop pays for a piece: worth about two levels of the upgrade it saves.</summary>
     public static int PriceOf(int piece) => Pieces[piece].Bonus * 12;
@@ -256,7 +268,7 @@ public class PlayerGear : NetworkBehaviour
     }
 
     /// <summary>Server side: used by the save file.</summary>
-    public void Restore(int weapon, int armor, List<int> bag)
+    public void Restore(int weapon, int armor, List<int> bag, List<int> storage)
     {
         if (!IsServer)
         {
@@ -266,15 +278,23 @@ public class PlayerGear : NetworkBehaviour
         Weapon.Value = Valid(weapon) ? weapon : -1;
         Armor.Value = Valid(armor) ? armor : -1;
 
-        Bag.Clear();
-        if (bag != null)
+        Fill(Bag, bag);
+        Fill(Storage, storage);
+    }
+
+    static void Fill(NetworkList<int> list, List<int> pieces)
+    {
+        list.Clear();
+        if (pieces == null)
         {
-            foreach (int piece in bag)
+            return;
+        }
+
+        foreach (int piece in pieces)
+        {
+            if (Valid(piece))
             {
-                if (Valid(piece))
-                {
-                    Bag.Add(piece);
-                }
+                list.Add(piece);
             }
         }
     }
@@ -358,6 +378,24 @@ public class PlayerGear : NetworkBehaviour
 
         Bag.Add(slot.Value);
         slot.Value = -1;
+    }
+
+    /// <summary>
+    /// Move one item between the bag and the village chest. A negative entry is a material
+    /// stack, which is counted in PlayerInventory and moves as a whole stack instead.
+    /// </summary>
+    [Rpc(SendTo.Server)]
+    public void MoveStoredRpc(int index, bool intoChest, RpcParams rpcParams = default)
+    {
+        NetworkList<int> from = intoChest ? Bag : Storage;
+        NetworkList<int> to = intoChest ? Storage : Bag;
+        if (!this.IsFromOwner(rpcParams) || index < 0 || index >= from.Count || from[index] < 0)
+        {
+            return;
+        }
+
+        to.Add(from[index]);
+        from.RemoveAt(index);
     }
 
     /// <summary>Sell a bag item to the shopkeeper. Worn gear has to come off first.</summary>

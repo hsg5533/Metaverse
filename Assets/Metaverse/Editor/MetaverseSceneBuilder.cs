@@ -20,6 +20,8 @@ public static class MetaverseSceneBuilder
     const string ScenePath = Root + "/Scenes/Metaverse.unity";
     const string PrefabPath = Root + "/Prefabs/PlayerAvatar.prefab";
     const string MonsterPrefabPath = Root + "/Prefabs/Monster.prefab";
+    const string BackgroundPrefabPath = Root + "/Prefabs/MetaverseBackground.prefab";
+    const string SkyboxPath = Root + "/Materials/FantasySkybox.mat";
     const string NetworkPrefabsListPath = "Assets/DefaultNetworkPrefabs.asset";
     const string MaterialFolder = Root + "/Materials";
 
@@ -234,6 +236,7 @@ public static class MetaverseSceneBuilder
         BuildNetworking(playerPrefab, monsterPrefab);
         SetupCamera();
         SetupLight();
+        SetupBackground();
 
         // Scenery never moves, so Unity is allowed to fold it into a handful of draw calls.
         // Anything spawned or animated carries a NetworkObject and is left alone.
@@ -851,6 +854,40 @@ public static class MetaverseSceneBuilder
         int piece
     )
     {
+        var (chest, lid) = BuildChestModel(parent, name, localPosition);
+
+        chest.AddComponent<NetworkObject>();
+        var treasure = chest.AddComponent<TreasureChest>();
+        treasure.Lid = lid;
+        treasure.Gold = gold;
+        treasure.Exp = exp;
+        treasure.Ore = ore;
+        treasure.Piece = piece;
+    }
+
+    /// <summary>
+    /// The village chest: the same shell without the loot or the lock. It keeps nothing of
+    /// its own - what it shows belongs to whoever opened it.
+    /// </summary>
+    static void BuildStorageChest(Transform parent, Vector3 localPosition)
+    {
+        var (chest, _) = BuildChestModel(parent, "StorageChest", localPosition);
+
+        // The lock is on the chest's back face, so pointing that face outward leaves the
+        // lid opening towards the middle of the village, which is where you stand.
+        chest.transform.localRotation = Quaternion.LookRotation(localPosition.normalized);
+
+        var storage = chest.AddComponent<StorageChest>();
+        storage.PromptHeight = 1.4f;
+    }
+
+    /// <summary>The shell both chests are built from: banded body and a lid on the back edge.</summary>
+    static (GameObject Chest, Transform Lid) BuildChestModel(
+        Transform parent,
+        string name,
+        Vector3 localPosition
+    )
+    {
         Material woodMaterial = CreateMaterial("ChestWood", new Color(0.42f, 0.28f, 0.16f));
         Material bandMaterial = CreateMaterial("ChestBand", new Color(0.80f, 0.66f, 0.28f));
 
@@ -911,13 +948,7 @@ public static class MetaverseSceneBuilder
             bandMaterial
         );
 
-        chest.AddComponent<NetworkObject>();
-        var treasure = chest.AddComponent<TreasureChest>();
-        treasure.Lid = lid.transform;
-        treasure.Gold = gold;
-        treasure.Exp = exp;
-        treasure.Ore = ore;
-        treasure.Piece = piece;
+        return (chest, lid.transform);
     }
 
     /// <summary>Anvil, campfire and quest board, all within sight of the plaza.</summary>
@@ -929,6 +960,10 @@ public static class MetaverseSceneBuilder
         BuildAnvil(parent, new Vector3(-5f, 0f, 10f), woodMaterial);
         BuildDresser(parent, new Vector3(13f, 0f, -4f));
         BuildCampfire(parent, new Vector3(6f, 0f, 9f), woodMaterial, emberMaterial);
+
+        // Still even between the mirror and the campfire, but pushed out from the middle of
+        // the plaza so it stands at the edge rather than in the walking line.
+        BuildStorageChest(parent, new Vector3(16f, 0f, 5.7f));
 
         var board = new GameObject("QuestBoard");
         board.transform.SetParent(parent, false);
@@ -4891,7 +4926,8 @@ public static class MetaverseSceneBuilder
             new Vector3(0f, 8f, -12f),
             Quaternion.Euler(20f, 0f, 0f)
         );
-        camera.farClipPlane = 300f;
+        // Far enough to see the whole mountain basin: its outer ring stands 570 out.
+        camera.farClipPlane = 800f;
 
         if (camera.GetComponent<FollowCamera>() == null)
         {
@@ -4913,6 +4949,31 @@ public static class MetaverseSceneBuilder
             light.transform.rotation = Quaternion.Euler(48f, 35f, 0f);
             light.intensity = 1.2f;
             light.shadows = LightShadows.Soft;
+        }
+    }
+
+    /// <summary>
+    /// The mountain basin and the sky behind it. Neither is built here - they are meshes and
+    /// materials on disk - but the scene is made from nothing on every run, so they have to
+    /// be put back each time or the world just stops at the boundary wall.
+    /// </summary>
+    static void SetupBackground()
+    {
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(BackgroundPrefabPath);
+        if (prefab != null)
+        {
+            PrefabUtility.InstantiatePrefab(prefab);
+        }
+        else
+        {
+            Debug.LogWarning($"{BackgroundPrefabPath} is missing: the world has no mountains.");
+        }
+
+        var skybox = AssetDatabase.LoadAssetAtPath<Material>(SkyboxPath);
+        if (skybox != null)
+        {
+            RenderSettings.skybox = skybox;
+            DynamicGI.UpdateEnvironment();
         }
     }
 

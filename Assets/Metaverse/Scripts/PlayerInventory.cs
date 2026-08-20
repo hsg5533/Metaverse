@@ -57,6 +57,24 @@ public class PlayerInventory : NetworkBehaviour
     public NetworkVariable<int> Herb = new(0, writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<int> Wood = new(0, writePerm: NetworkVariableWritePermission.Server);
 
+    /// <summary>
+    /// What the village chest holds of each stack, in the same order as <see cref="Slots"/>.
+    /// One list rather than a second Ore/Herb/Wood trio: everything that reads it walks the
+    /// slots anyway.
+    /// </summary>
+    public NetworkList<int> Stored = new();
+
+    public override void OnNetworkSpawn()
+    {
+        if (IsServer && Stored.Count == 0)
+        {
+            for (int i = 0; i < Slots.Length; i++)
+            {
+                Stored.Add(0);
+            }
+        }
+    }
+
     PlayerStats stats;
     PlayerGear gear;
 
@@ -85,20 +103,43 @@ public class PlayerInventory : NetworkBehaviour
             return;
         }
 
-        switch (kind)
+        Shift((int)kind, amount);
+    }
+
+    /// <summary>Server side: one stack changes by this much; a negative amount takes from it.</summary>
+    void Shift(int material, int amount)
+    {
+        switch (material)
         {
-            case GatherKind.Ore:
-                Ore.Value += amount;
+            case 0:
+                Ore.Value = Mathf.Max(0, Ore.Value + amount);
                 break;
-            case GatherKind.Herb:
-                Herb.Value += amount;
+            case 1:
+                Herb.Value = Mathf.Max(0, Herb.Value + amount);
                 break;
             default:
-                Wood.Value += amount;
+                Wood.Value = Mathf.Max(0, Wood.Value + amount);
                 break;
         }
 
         Reorder();
+    }
+
+    /// <summary>
+    /// Move a stack between the bag and the chest. Whole stacks only - there is no amount to
+    /// pick, so the button says everything it needs to.
+    /// </summary>
+    [Rpc(SendTo.Server)]
+    public void MoveMaterialRpc(int material, bool intoChest, RpcParams rpcParams = default)
+    {
+        if (!this.IsFromOwner(rpcParams) || material < 0 || material >= Stored.Count)
+        {
+            return;
+        }
+
+        int amount = intoChest ? CountOf(material) : Stored[material];
+        Shift(material, intoChest ? -amount : amount);
+        Stored[material] += intoChest ? amount : -amount;
     }
 
     /// <summary>Server side: takes the materials only if all of them are there.</summary>
@@ -281,6 +322,20 @@ public class PlayerInventory : NetworkBehaviour
     {
         WindowOpen = open;
         ShopNpc.PanelOpen = open;
+    }
+
+    /// <summary>Server side: used by the save file.</summary>
+    public void SetStored(int[] counts)
+    {
+        if (!IsServer || counts == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < Stored.Count && i < counts.Length; i++)
+        {
+            Stored[i] = Mathf.Max(0, counts[i]);
+        }
     }
 
     public int CountOf(int slot)

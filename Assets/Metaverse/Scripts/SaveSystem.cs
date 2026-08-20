@@ -48,6 +48,9 @@ public class SaveSystem : MonoBehaviour
         public int hairStyle = -1;
         public int skinTint = -1;
         public List<BagEntry> bag = new();
+
+        /// <summary>What the village chest is holding for this player.</summary>
+        public List<BagEntry> storage = new();
     }
 
     [Serializable]
@@ -126,6 +129,26 @@ public class SaveSystem : MonoBehaviour
     /// has no name where the weapon goes, and that is not the same as choosing to fight
     /// bare-handed: only <see cref="BareHands"/> means that.
     /// </summary>
+    /// <summary>Splits saved lines into material counts and pieces; a name that is neither is dropped.</summary>
+    static void Read(List<BagEntry> entries, int[] counts, List<int> pieces)
+    {
+        foreach (var entry in entries)
+        {
+            int material = PlayerInventory.IndexOf(entry.item);
+            if (material >= 0)
+            {
+                counts[material] += Mathf.Max(0, entry.count);
+                continue;
+            }
+
+            int piece = PlayerGear.IndexOf(entry.item);
+            for (int i = 0; i < Mathf.Max(1, entry.count) && piece >= 0; i++)
+            {
+                pieces.Add(piece);
+            }
+        }
+    }
+
     static int WeaponFrom(string name)
     {
         if (name == BareHands)
@@ -179,24 +202,15 @@ public class SaveSystem : MonoBehaviour
             stats.RestoreDuels(record.duelWins, record.duelLosses);
         }
 
-        // The bag holds both: stacks of material and pieces of gear, told apart by name.
+        // The bag and the chest both hold stacks of material and pieces of gear, told apart
+        // by name, so both are read the same way.
         var counts = new int[PlayerInventory.Slots.Length];
         var pieces = new List<int>();
-        foreach (var entry in record.bag)
-        {
-            int material = PlayerInventory.IndexOf(entry.item);
-            if (material >= 0)
-            {
-                counts[material] += Mathf.Max(0, entry.count);
-                continue;
-            }
+        Read(record.bag, counts, pieces);
 
-            int piece = PlayerGear.IndexOf(entry.item);
-            for (int i = 0; i < Mathf.Max(1, entry.count) && piece >= 0; i++)
-            {
-                pieces.Add(piece);
-            }
-        }
+        var storedCounts = new int[PlayerInventory.Slots.Length];
+        var stored = new List<int>();
+        Read(record.storage, storedCounts, stored);
 
         var quests = avatar.GetComponent<PlayerQuests>();
         if (quests != null)
@@ -211,7 +225,8 @@ public class SaveSystem : MonoBehaviour
             gear.Restore(
                 WeaponFrom(record.gearWeapon),
                 PlayerGear.IndexOf(record.gearArmor),
-                pieces
+                pieces,
+                stored
             );
         }
 
@@ -219,6 +234,7 @@ public class SaveSystem : MonoBehaviour
         if (inventory != null)
         {
             inventory.SetAll(counts[0], counts[1], counts[2]);
+            inventory.SetStored(storedCounts);
         }
 
         Debug.Log(
@@ -277,7 +293,11 @@ public class SaveSystem : MonoBehaviour
             record.hairStyle = avatar.HairStyle.Value;
             record.skinTint = avatar.SkinTint.Value;
 
+            // Both lists are rebuilt from what the player is holding right now. The record
+            // itself is reused between saves, so anything not cleared here is written again
+            // on top of what a previous save left - which reads back as a copy of every item.
             record.bag.Clear();
+            record.storage.Clear();
 
             var inventory = player.GetComponent<PlayerInventory>();
             if (inventory != null)
@@ -307,16 +327,34 @@ public class SaveSystem : MonoBehaviour
                 record.gearWeapon =
                     gear.Weapon.Value >= 0 ? PlayerGear.NameOf(gear.Weapon.Value) : BareHands;
                 record.gearArmor = PlayerGear.NameOf(gear.Armor.Value);
+                // Negative entries are material-carried markers, not gear; the materials
+                // themselves are already saved above from the inventory counts.
                 foreach (int piece in gear.Bag)
                 {
-                    // Negative entries are material-carried markers, not gear; the materials
-                    // themselves are already saved above from the inventory counts.
-                    if (piece < 0)
+                    if (piece >= 0)
                     {
-                        continue;
+                        record.bag.Add(new BagEntry { item = PlayerGear.Pieces[piece].Name });
                     }
+                }
 
-                    record.bag.Add(new BagEntry { item = PlayerGear.Pieces[piece].Name });
+                foreach (int piece in gear.Storage)
+                {
+                    record.storage.Add(new BagEntry { item = PlayerGear.Pieces[piece].Name });
+                }
+
+                var stacks = player.GetComponent<PlayerInventory>();
+                for (int i = 0; stacks != null && i < stacks.Stored.Count; i++)
+                {
+                    if (stacks.Stored[i] > 0)
+                    {
+                        record.storage.Add(
+                            new BagEntry
+                            {
+                                item = PlayerInventory.Slots[i],
+                                count = stacks.Stored[i],
+                            }
+                        );
+                    }
                 }
             }
         }

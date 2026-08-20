@@ -75,14 +75,13 @@ public class ShopNpc : MonoBehaviour
         for (int i = 0; i < PlayerGear.ShopCount; i++)
         {
             int piece = PlayerGear.ShopFirst + i;
-            PlayerGear.Piece info = PlayerGear.Pieces[piece];
-            string bonus = Detail(info);
+            string bonus = PlayerGear.DetailOf(piece);
             int price = PlayerGear.BuyPriceOf(piece);
 
             MetaverseUi.ItemRow(
                 new Rect(0f, y, content.width, rowHeight - 6f),
                 GearPreview.Piece + piece,
-                info.Name,
+                PlayerGear.Pieces[piece].Name,
                 bonus,
                 $"구매  ({price} 골드)",
                 () => gear.BuyPieceRpc(piece)
@@ -110,13 +109,6 @@ public class ShopNpc : MonoBehaviour
     }
 
     /// <summary>What a piece says about itself in a list: what it heals, hits or blocks for.</summary>
-    static string Detail(PlayerGear.Piece info)
-    {
-        return info.IsFood ? $"체력 {info.Heal}% 회복"
-            : info.Weapon ? $"공격 +{info.Bonus}"
-            : $"방어 +{info.Bonus}";
-    }
-
     /// <summary>
     /// The old generic level-up path, now with the same 3D preview as everything else: what is
     /// actually worn, and an empty slot when nothing is.
@@ -193,14 +185,13 @@ public class ShopNpc : MonoBehaviour
             }
 
             int bagIndex = i;
-            PlayerGear.Piece info = PlayerGear.Pieces[piece];
-            string bonus = Detail(info);
+            string bonus = PlayerGear.DetailOf(piece);
             int price = PlayerGear.PriceOf(piece);
 
             MetaverseUi.ItemRow(
                 new Rect(0f, y, content.width, rowHeight - 6f),
                 GearPreview.Piece + piece,
-                info.Name,
+                PlayerGear.Pieces[piece].Name,
                 bonus,
                 $"판매  ({price} 골드)",
                 () => gear.SellRpc(bagIndex)
