@@ -119,7 +119,7 @@ public class SaveSystem : MonoBehaviour
     }
 
     /// <summary>What an empty weapon slot is written as, so it survives a reload.</summary>
-    const string BareHands = "맨손";
+    const string BareHands = "주먹";
 
     /// <summary>
     /// Which weapon a save meant. A file written before the plain sword was an item of its own
