@@ -349,18 +349,26 @@ public static class MetaverseSceneBuilder
         // Houses: walls, a roof that overhangs, a door and lit windows. Nothing else in the
         // world has this silhouette, so a house never reads as a rock or a resource.
         // Size is the outline each house ends up standing in, whichever way it has to turn
-        // to put its front towards the plaza.
-        var houses = new (Vector3 position, Vector3 size)[]
+        // to put its front towards the plaza. A facing given here overrules that turn.
+        var houses = new (Vector3 position, Vector3 size, float? facing)[]
         {
-            (new Vector3(-18f, 0f, 14f), new Vector3(10f, 6f, 8f)),
-            (new Vector3(-6f, 0f, 20f), new Vector3(8f, 9f, 8f)),
-            (new Vector3(14f, 0f, 16f), new Vector3(12f, 7f, 9f)),
-            (new Vector3(20f, 0f, -6f), new Vector3(9f, 10f, 12f)),
-            (new Vector3(-20f, 0f, -10f), new Vector3(8f, 8f, 10f)),
+            // Straight behind the shop, where the rule would have it open sideways across
+            // the path from the plaza. Pointed south instead, along the way people walk.
+            (new Vector3(-18f, 0f, 14f), new Vector3(10f, 6f, 8f), 0f),
+            (new Vector3(-6f, 0f, 20f), new Vector3(8f, 9f, 8f), null),
+            (new Vector3(14f, 0f, 16f), new Vector3(12f, 7f, 9f), null),
+            (new Vector3(20f, 0f, -6f), new Vector3(9f, 10f, 12f), null),
+            (new Vector3(-20f, 0f, -10f), new Vector3(8f, 8f, 10f), null),
         };
         for (int i = 0; i < houses.Length; i++)
         {
-            BuildHouse(world.transform, $"House{i}", houses[i].position, houses[i].size);
+            BuildHouse(
+                world.transform,
+                $"House{i}",
+                houses[i].position,
+                houses[i].size,
+                houses[i].facing
+            );
         }
 
         BuildMonument(world.transform, accentMaterial, buildingMaterial);
@@ -431,7 +439,13 @@ public static class MetaverseSceneBuilder
     }
 
     /// <summary>A house: walls, overhanging roof, door and windows.</summary>
-    static void BuildHouse(Transform parent, string name, Vector3 groundPosition, Vector3 size)
+    static void BuildHouse(
+        Transform parent,
+        string name,
+        Vector3 groundPosition,
+        Vector3 size,
+        float? given = null
+    )
     {
         Material wallMaterial = CreateMaterial("HouseWall", new Color(0.82f, 0.78f, 0.70f));
         Material beamMaterial = CreateMaterial("HouseBeam", new Color(0.42f, 0.30f, 0.20f));
@@ -447,7 +461,7 @@ public static class MetaverseSceneBuilder
         // plaza greets it with its back wall. Turned in quarters rather than aimed exactly, so
         // the walls stay square to the world and nothing ends up standing in a doorway.
         float degrees = Mathf.Atan2(groundPosition.x, groundPosition.z) * Mathf.Rad2Deg;
-        float facing = Mathf.Round(degrees / 90f) * 90f;
+        float facing = given ?? Mathf.Round(degrees / 90f) * 90f;
         house.transform.localRotation = Quaternion.Euler(0f, facing, 0f);
 
         // A quarter turn trades the house's width for its depth, so it is laid out the other
