@@ -47,7 +47,7 @@ public class PlayerStats : NetworkBehaviour
     public int ArmorPrice => 50 * (ArmorLevel.Value + 1);
 
     /// <summary>A worn piece is named; an empty hand or chest says so.</summary>
-    public string WeaponName => gear != null && gear.WeaponName != null ? gear.WeaponName : "맨손";
+    public string WeaponName => gear != null && gear.WeaponName != null ? gear.WeaponName : "없음";
     public string ArmorName => gear != null && gear.ArmorName != null ? gear.ArmorName : "없음";
 
     /// <summary>What the gear adds on its own: the upgrade level plus whatever is worn.</summary>
