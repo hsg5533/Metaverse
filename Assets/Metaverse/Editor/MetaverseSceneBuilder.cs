@@ -27,8 +27,8 @@ public static class MetaverseSceneBuilder
 
     // Hunting grounds and dungeons are further areas of the same scene, far enough away
     // that the village never sees them. Warp pads are the only way across.
-    static readonly Vector3 VillagePad = new(10f, 0f, -12f);
-    static readonly Vector3 VillageArrival = new(13.5f, 1f, -12f);
+    static readonly Vector3 VillagePad = new(12f, 0f, -20.8f);
+    static readonly Vector3 VillageArrival = new(15.5f, 1f, -20.8f);
 
     /// <summary>A hunting ground: where it stands, how hard it hits, and its palette.</summary>
     class FieldArea
@@ -189,22 +189,22 @@ public static class MetaverseSceneBuilder
     const float ArenaRadius = 22f;
     static readonly Vector3 CornerA = new(0f, 1f, 106f);
     static readonly Vector3 CornerB = new(0f, 1f, 134f);
-    static readonly Vector3 VillageArenaPad = new(0f, 0f, -13f);
+    static readonly Vector3 VillageArenaPad = new(0f, 0f, -26f);
     static readonly Vector3 ArenaPad = new(0f, 0f, 96f);
-    static readonly Vector3 VillageArenaArrival = new(0f, 1f, -9.5f);
+    static readonly Vector3 VillageArenaArrival = new(0f, 1f, -22.5f);
     static readonly Vector3 ArenaArrival = new(0f, 1f, 99.5f);
 
     // The dungeon gate stands on the far side of the plaza from the hunting gate.
-    static readonly Vector3 VillageDungeonPad = new(-10f, 0f, -12f);
-    static readonly Vector3 VillageDungeonArrival = new(-13.5f, 1f, -12f);
+    static readonly Vector3 VillageDungeonPad = new(-12f, 0f, -20.8f);
+    static readonly Vector3 VillageDungeonArrival = new(-15.5f, 1f, -20.8f);
 
     // The lake, and the gate to it: tucked between the two houses behind the shopkeeper.
     static readonly Vector3 LakeCentre = new(0f, 0f, -120f);
-    static readonly Vector3 VillageLakePad = new(-17f, 0f, 4f);
+    static readonly Vector3 VillageLakePad = new(-26f, 0f, 3f);
 
     // Beside the arch rather than in front of it: the gate faces along the gap now, and the
     // tree behind it is something to walk into.
-    static readonly Vector3 VillageLakeArrival = new(-13.5f, 1f, 2f);
+    static readonly Vector3 VillageLakeArrival = new(-22.5f, 1f, 1f);
     static readonly Vector3 LakeArrival = new(0f, 1f, -142f);
 
     [MenuItem("Tools/Metaverse/Build World Scene")]
@@ -348,6 +348,8 @@ public static class MetaverseSceneBuilder
 
         // Houses: walls, a roof that overhangs, a door and lit windows. Nothing else in the
         // world has this silhouette, so a house never reads as a rock or a resource.
+        // Size is the outline each house ends up standing in, whichever way it has to turn
+        // to put its front towards the plaza.
         var houses = new (Vector3 position, Vector3 size)[]
         {
             (new Vector3(-18f, 0f, 14f), new Vector3(10f, 6f, 8f)),
@@ -355,7 +357,6 @@ public static class MetaverseSceneBuilder
             (new Vector3(14f, 0f, 16f), new Vector3(12f, 7f, 9f)),
             (new Vector3(20f, 0f, -6f), new Vector3(9f, 10f, 12f)),
             (new Vector3(-20f, 0f, -10f), new Vector3(8f, 8f, 10f)),
-            (new Vector3(2f, 0f, -20f), new Vector3(14f, 5f, 8f)),
         };
         for (int i = 0; i < houses.Length; i++)
         {
@@ -441,6 +442,21 @@ public static class MetaverseSceneBuilder
         house.transform.SetParent(parent, false);
         house.transform.localPosition = groundPosition;
 
+        // The door and the windows sit on the house's own -Z face, so the house is turned to
+        // put that face towards the middle of the village - without this a house south of the
+        // plaza greets it with its back wall. Turned in quarters rather than aimed exactly, so
+        // the walls stay square to the world and nothing ends up standing in a doorway.
+        float degrees = Mathf.Atan2(groundPosition.x, groundPosition.z) * Mathf.Rad2Deg;
+        float facing = Mathf.Round(degrees / 90f) * 90f;
+        house.transform.localRotation = Quaternion.Euler(0f, facing, 0f);
+
+        // A quarter turn trades the house's width for its depth, so it is laid out the other
+        // way round and comes out standing in the outline that was asked for.
+        if (Mathf.Abs(Mathf.Cos(facing * Mathf.Deg2Rad)) < 0.5f)
+        {
+            size = new Vector3(size.z, size.y, size.x);
+        }
+
         CreatePrimitive(
             PrimitiveType.Cube,
             "Walls",
@@ -494,7 +510,7 @@ public static class MetaverseSceneBuilder
             );
         }
 
-        // Door and windows on the plaza facing side.
+        // Door and windows on the face the house was just turned towards the plaza.
         float front = -halfZ - 0.06f;
         BodyPart(
             PrimitiveType.Cube,
@@ -683,6 +699,38 @@ public static class MetaverseSceneBuilder
                 reedMaterial,
                 Quaternion.Euler(i % 3 * 6f, i * 24f, i % 5 * 5f)
             );
+        }
+
+        // The bank is the one place worth picking over, so it gets a lot of it, scattered.
+        // The golden angle never lines two up, the radius wanders in and out, and both come
+        // from the index alone - no dice, so every build lays out the same lake.
+        var kinds = new[] { GatherKind.Ore, GatherKind.Herb, GatherKind.Wood };
+        var placed = new List<Vector3>();
+        for (int i = 0; placed.Count < 16 && i < 40; i++)
+        {
+            float angle = i * 137.508f * Mathf.Deg2Rad;
+            float radius = 20f + (i * 7 % 5) * 1.5f + (i * 3 % 4) * 0.9f;
+            var at = new Vector3(Mathf.Sin(angle) * radius, 0f, lakeZ + Mathf.Cos(angle) * radius);
+
+            // Inside the walls, off the way home, and never crowding one already placed.
+            if (Mathf.Abs(at.x) > 27f || Mathf.Abs(at.z) > 27f)
+            {
+                continue;
+            }
+
+            if (Vector3.Distance(at, new Vector3(0f, 0f, -25f)) < 8f)
+            {
+                continue;
+            }
+
+            if (placed.Exists(other => Vector3.Distance(other, at) < 6f))
+            {
+                continue;
+            }
+
+            int n = placed.Count;
+            BuildGatherNode(lake.transform, "LakeNode" + n, at, kinds[(n * 2 + n / 3) % 3]);
+            placed.Add(at);
         }
 
         var spot = new GameObject("FishingSpot");
@@ -1257,35 +1305,60 @@ public static class MetaverseSceneBuilder
     }
 
     /// <summary>Herbs and trees around the village; most of the ore sits out in the field.</summary>
+    /// <summary>A run of gathering spots of one kind, numbered in the order they are given.</summary>
+    static void BuildGatherNodes(
+        Transform parent,
+        string name,
+        GatherKind kind,
+        params Vector3[] spots
+    )
+    {
+        for (int i = 0; i < spots.Length; i++)
+        {
+            BuildGatherNode(parent, name + i, spots[i], kind);
+        }
+    }
+
+    /// <summary>
+    /// What the village itself gives up. The last few of each stand in the empty ground
+    /// between the houses and the wall, which was otherwise nothing but grass.
+    /// </summary>
     static void BuildVillageNodes(Transform parent)
     {
-        var herbs = new[]
-        {
+        BuildGatherNodes(
+            parent,
+            "Herb",
+            GatherKind.Herb,
             new Vector3(-12f, 0f, 2f),
             new Vector3(10f, 0f, 4f),
             new Vector3(-4f, 0f, -10f),
             new Vector3(6f, 0f, -14f),
             new Vector3(-16f, 0f, 8f),
-        };
-        for (int i = 0; i < herbs.Length; i++)
-        {
-            BuildGatherNode(parent, "Herb" + i, herbs[i], GatherKind.Herb);
-        }
+            new Vector3(24f, 0f, -18f),
+            new Vector3(-24f, 0f, -24f)
+        );
 
-        var trees = new[]
-        {
+        BuildGatherNodes(
+            parent,
+            "Tree",
+            GatherKind.Wood,
             new Vector3(18f, 0f, 4f),
             new Vector3(-16f, 0f, -2f),
             new Vector3(4f, 0f, 17f),
             new Vector3(-11f, 0f, 13f),
-        };
-        for (int i = 0; i < trees.Length; i++)
-        {
-            BuildGatherNode(parent, "Tree" + i, trees[i], GatherKind.Wood);
-        }
+            new Vector3(2f, 0f, 26f),
+            new Vector3(25f, 0f, 24f)
+        );
 
-        BuildGatherNode(parent, "VillageOre0", new Vector3(22f, 0f, 8f), GatherKind.Ore);
-        BuildGatherNode(parent, "VillageOre1", new Vector3(-26f, 0f, -18f), GatherKind.Ore);
+        BuildGatherNodes(
+            parent,
+            "VillageOre",
+            GatherKind.Ore,
+            new Vector3(22f, 0f, 8f),
+            new Vector3(-26f, 0f, -18f),
+            new Vector3(-27f, 0f, -8f),
+            new Vector3(10f, 0f, 24f)
+        );
     }
 
     /// <summary>
@@ -1718,6 +1791,14 @@ public static class MetaverseSceneBuilder
         pad.transform.SetParent(parent, false);
         pad.transform.localPosition = position;
 
+        // The gate is a pair of posts with a beam across: turning it to look at the middle of
+        // its own area means you walk through it rather than past its side, and the three that
+        // stand together south of the plaza fan out instead of lining up.
+        if (position.sqrMagnitude > 0.01f)
+        {
+            pad.transform.localRotation = Quaternion.LookRotation(position.normalized);
+        }
+
         // Just over the plaza, which is itself a disc two centimetres up: enough not to
         // fight it for the same pixels, not enough to look propped up.
         CreateDisc("Base", pad.transform, new Vector3(0f, 0.03f, 0f), 5f, trimMaterial);
@@ -2108,17 +2189,15 @@ public static class MetaverseSceneBuilder
             new Color(0.30f, 0.80f, 0.85f)
         );
 
-        var oreSpots = new[]
-        {
+        BuildGatherNodes(
+            field.transform,
+            $"FieldOre{area.Key}",
+            GatherKind.Ore,
             new Vector3(-12f, 0f, 12f),
             new Vector3(14f, 0f, -6f),
             new Vector3(-4f, 0f, -18f),
-            new Vector3(20f, 0f, 16f),
-        };
-        for (int i = 0; i < oreSpots.Length; i++)
-        {
-            BuildGatherNode(field.transform, $"FieldOre{area.Key}{i}", oreSpots[i], GatherKind.Ore);
-        }
+            new Vector3(20f, 0f, 16f)
+        );
 
         var spawnerObject = new GameObject("MonsterSpawner");
         spawnerObject.transform.SetParent(field.transform, false);
@@ -2245,13 +2324,7 @@ public static class MetaverseSceneBuilder
         controller.slopeLimit = 55f;
         controller.stepOffset = 0.5f;
 
-        root.AddComponent<NetworkObject>();
-
-        var networkTransform = root.AddComponent<NetworkTransform>();
-        networkTransform.Interpolate = true;
-        networkTransform.SyncScaleX = false;
-        networkTransform.SyncScaleY = false;
-        networkTransform.SyncScaleZ = false;
+        Networked(root);
 
         Material ringMaterial = CreateMaterial("SlamRing", new Color(1f, 0.62f, 0.30f));
         var slamRing = CreateDisc(
@@ -4082,14 +4155,7 @@ public static class MetaverseSceneBuilder
         limbAnimator.LeftLeg = humanoid.LeftLeg;
         limbAnimator.RightLeg = humanoid.RightLeg;
 
-        root.AddComponent<NetworkObject>();
-
-        var networkTransform = root.AddComponent<NetworkTransform>();
-        networkTransform.AuthorityMode = NetworkTransform.AuthorityModes.Owner;
-        networkTransform.Interpolate = true;
-        networkTransform.SyncScaleX = false;
-        networkTransform.SyncScaleY = false;
-        networkTransform.SyncScaleZ = false;
+        Networked(root).AuthorityMode = NetworkTransform.AuthorityModes.Owner;
 
         var avatar = root.AddComponent<PlayerAvatar>();
         avatar.ColoredParts = new[]
@@ -4975,6 +5041,22 @@ public static class MetaverseSceneBuilder
             RenderSettings.skybox = skybox;
             DynamicGI.UpdateEnvironment();
         }
+    }
+
+    /// <summary>
+    /// Puts an object on the network: where it stands and which way it looks are followed, its
+    /// size never changes and is not worth the bytes.
+    /// </summary>
+    static NetworkTransform Networked(GameObject root)
+    {
+        root.AddComponent<NetworkObject>();
+
+        var networkTransform = root.AddComponent<NetworkTransform>();
+        networkTransform.Interpolate = true;
+        networkTransform.SyncScaleX = false;
+        networkTransform.SyncScaleY = false;
+        networkTransform.SyncScaleZ = false;
+        return networkTransform;
     }
 
     static GameObject CreatePrimitive(
