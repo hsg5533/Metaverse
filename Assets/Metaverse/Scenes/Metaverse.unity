@@ -45648,7 +45648,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6c0d06c9f7ca6474cb72f97ea0237642, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SaveSystem
-  SaveInterval: 15
+  SaveInterval: 5
 --- !u!114 &1228741760
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -11,7 +11,7 @@ using UnityEngine;
 /// </summary>
 public class SaveSystem : MonoBehaviour
 {
-    public float SaveInterval = 15f;
+    public float SaveInterval = 5f;
 
     /// <summary>
     /// One line of the bag. Named rather than numbered so the file stays readable and can be
