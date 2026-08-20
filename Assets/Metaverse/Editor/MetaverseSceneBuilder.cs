@@ -253,7 +253,7 @@ public static class MetaverseSceneBuilder
 
         // NetworkObject ids are derived from the asset/scene path, so they can only be
         // generated once the prefab and the scene exist on disk. Regenerate, then save again.
-        RegenerateNetworkIds(playerPrefab, monsterPrefab);
+        RegenerateNetworkIds();
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene, ScenePath);
 
@@ -263,7 +263,7 @@ public static class MetaverseSceneBuilder
         Debug.Log($"Metaverse world built: {ScenePath}");
     }
 
-    static void RegenerateNetworkIds(GameObject playerPrefab, GameObject monsterPrefab)
+    static void RegenerateNetworkIds()
     {
         var onValidate = typeof(NetworkObject).GetMethod(
             "OnValidate",

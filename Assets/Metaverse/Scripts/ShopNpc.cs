@@ -68,7 +68,7 @@ public class ShopNpc : MonoBehaviour
             "낚싯대",
             "호수에서 쓴다",
             $"구매  ({PlayerGear.RodPrice} 골드)",
-            () => gear.BuyRodRpc()
+            () => gear.BuyPieceRpc(PlayerGear.Rod)
         );
         y += rowHeight;
 
@@ -118,11 +118,10 @@ public class ShopNpc : MonoBehaviour
     }
 
     /// <summary>
-    /// The old generic level-up path, now with the same 3D preview as everything else: the
-    /// bare sword and, when nothing fancier is worn, the plain armour <see cref="GearPreview"/>
-    /// falls back to.
+    /// The old generic level-up path, now with the same 3D preview as everything else: what is
+    /// actually worn, and an empty slot when nothing is.
     /// </summary>
-    void DrawUpgrading(Rect area, PlayerStats stats, PlayerGear gear)
+    void DrawUpgrading(Rect area, PlayerStats stats)
     {
         const float rowHeight = MetaverseUi.ItemRowHeight + 4f;
 
@@ -132,7 +131,7 @@ public class ShopNpc : MonoBehaviour
             $"검 Lv.{stats.WeaponLevel.Value}",
             $"공격 +{stats.WeaponBonus}",
             $"Lv.{stats.WeaponLevel.Value + 1}로 강화  ({stats.WeaponPrice} 골드)",
-            () => stats.BuyWeaponRpc()
+            () => stats.BuyUpgradeRpc(true)
         );
 
         MetaverseUi.ItemRow(
@@ -141,7 +140,7 @@ public class ShopNpc : MonoBehaviour
             $"방어구 Lv.{stats.ArmorLevel.Value}",
             $"방어 +{stats.ArmorBonus}",
             $"Lv.{stats.ArmorLevel.Value + 1}로 강화  ({stats.ArmorPrice} 골드)",
-            () => stats.BuyArmorRpc()
+            () => stats.BuyUpgradeRpc(false)
         );
     }
 
@@ -284,7 +283,7 @@ public class ShopNpc : MonoBehaviour
                 DrawBuying(content, stats, gear);
                 break;
             case 1:
-                DrawUpgrading(content, stats, gear);
+                DrawUpgrading(content, stats);
                 break;
             default:
                 DrawSelling(content, stats, gear);

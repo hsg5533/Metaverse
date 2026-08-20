@@ -195,10 +195,7 @@ public class DuelSystem : NetworkBehaviour
 
         if (!InArena(sender.transform.position))
         {
-            NoticeRpc(
-                NetText.Trim512("결투는 아레나 안에서만 가능합니다."),
-                RpcTarget.Single(senderId, RpcTargetUse.Temp)
-            );
+            Notice("결투는 아레나 안에서만 가능합니다.", senderId);
             return;
         }
 
@@ -228,20 +225,14 @@ public class DuelSystem : NetworkBehaviour
 
         if (best == null)
         {
-            NoticeRpc(
-                NetText.Trim512("근처에 결투할 상대가 없습니다."),
-                RpcTarget.Single(senderId, RpcTargetUse.Temp)
-            );
+            Notice("근처에 결투할 상대가 없습니다.", senderId);
             return;
         }
 
         ulong targetId = best.OwnerClientId;
         if (MatchOf(targetId) != null)
         {
-            NoticeRpc(
-                NetText.Trim512("상대가 이미 결투 중입니다."),
-                RpcTarget.Single(senderId, RpcTargetUse.Temp)
-            );
+            Notice("상대가 이미 결투 중입니다.", senderId);
             return;
         }
 
@@ -251,10 +242,7 @@ public class DuelSystem : NetworkBehaviour
             senderId,
             RpcTarget.Single(targetId, RpcTargetUse.Temp)
         );
-        NoticeRpc(
-            NetText.Trim512($"{MetaverseUi.NameOf(targetId)}에게 결투를 신청했습니다."),
-            RpcTarget.Single(senderId, RpcTargetUse.Temp)
-        );
+        Notice($"{MetaverseUi.NameOf(targetId)}에게 결투를 신청했습니다.", senderId);
     }
 
     [Rpc(SendTo.Server)]
@@ -403,6 +391,15 @@ public class DuelSystem : NetworkBehaviour
     void AnnounceRpc(FixedString512Bytes text, RpcParams rpcParams)
     {
         ChatSystem.Local(text.ToString());
+    }
+
+    /// <summary>Server side: one line of notice to whoever is listed. Nobody listed, nothing sent.</summary>
+    void Notice(string text, params ulong[] clients)
+    {
+        if (clients.Length > 0)
+        {
+            NoticeRpc(NetText.Trim512(text), RpcTarget.Group(clients, RpcTargetUse.Temp));
+        }
     }
 
     [Rpc(SendTo.SpecifiedInParams)]

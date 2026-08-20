@@ -118,6 +118,28 @@ public class SaveSystem : MonoBehaviour
         SaveAll();
     }
 
+    /// <summary>What an empty weapon slot is written as, so it survives a reload.</summary>
+    const string BareHands = "맨손";
+
+    /// <summary>
+    /// Which weapon a save meant. A file written before the plain sword was an item of its own
+    /// has no name where the weapon goes, and that is not the same as choosing to fight
+    /// bare-handed: only <see cref="BareHands"/> means that.
+    /// </summary>
+    static int WeaponFrom(string name)
+    {
+        if (name == BareHands)
+        {
+            return -1;
+        }
+
+        // Anything else - an old save with no name where the weapon goes, or one naming
+        // something that is not a weapon at all - starts over with the sword every player
+        // begins with.
+        int piece = PlayerGear.IndexOf(name);
+        return piece >= 0 && PlayerGear.Pieces[piece].Weapon ? piece : PlayerGear.BasicSword;
+    }
+
     /// <summary>
     /// Server side: called once the nickname is known, which is the key everything hangs off.
     /// </summary>
@@ -187,7 +209,7 @@ public class SaveSystem : MonoBehaviour
         if (gear != null)
         {
             gear.Restore(
-                PlayerGear.IndexOf(record.gearWeapon),
+                WeaponFrom(record.gearWeapon),
                 PlayerGear.IndexOf(record.gearArmor),
                 pieces
             );
@@ -282,7 +304,8 @@ public class SaveSystem : MonoBehaviour
             var gear = player.GetComponent<PlayerGear>();
             if (gear != null)
             {
-                record.gearWeapon = PlayerGear.NameOf(gear.Weapon.Value);
+                record.gearWeapon =
+                    gear.Weapon.Value >= 0 ? PlayerGear.NameOf(gear.Weapon.Value) : BareHands;
                 record.gearArmor = PlayerGear.NameOf(gear.Armor.Value);
                 foreach (int piece in gear.Bag)
                 {

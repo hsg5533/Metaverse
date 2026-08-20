@@ -46,11 +46,9 @@ public class PlayerStats : NetworkBehaviour
     public int WeaponPrice => 60 * (WeaponLevel.Value + 1);
     public int ArmorPrice => 50 * (ArmorLevel.Value + 1);
 
-    /// <summary>A dropped piece is named; the plain sword is named by its upgrade level.</summary>
-    public string WeaponName =>
-        gear != null && gear.WeaponName != null ? gear.WeaponName : $"검 Lv.{WeaponLevel.Value}";
-    public string ArmorName =>
-        gear != null && gear.ArmorName != null ? gear.ArmorName : $"방어구 Lv.{ArmorLevel.Value}";
+    /// <summary>A worn piece is named; an empty hand or chest says so.</summary>
+    public string WeaponName => gear != null && gear.WeaponName != null ? gear.WeaponName : "맨손";
+    public string ArmorName => gear != null && gear.ArmorName != null ? gear.ArmorName : "없음";
 
     /// <summary>What the gear adds on its own: the upgrade level plus whatever is worn.</summary>
     public int WeaponBonus => WeaponLevel.Value * 4 + (gear != null ? gear.AttackBonus : 0);
@@ -241,40 +239,47 @@ public class PlayerStats : NetworkBehaviour
         return true;
     }
 
-    [Rpc(SendTo.Server)]
-    public void BuyArmorRpc(RpcParams rpcParams = default)
+    /// <summary>
+    /// Server side: one more level on the plain gear, and the notice that says so. The
+    /// shopkeeper and the crafting bench both end here, so they always word it the same way.
+    /// </summary>
+    public void LevelUpGear(bool weapon)
     {
-        if (!this.IsFromOwner(rpcParams))
+        if (weapon)
         {
-            return;
+            WeaponLevel.Value++;
+        }
+        else
+        {
+            ArmorLevel.Value++;
         }
 
-        if (!TrySpendGold(ArmorPrice))
-        {
-            NoticeRpc(NetText.Trim512(InsufficientGold), sound: true);
-            return;
-        }
-
-        ArmorLevel.Value++;
-        NoticeRpc(NetText.Trim512($"방어구 Lv.{ArmorLevel.Value}! 방어력 {Defense}"), sound: true);
+        NoticeRpc(
+            NetText.Trim512(
+                weapon
+                    ? $"검 Lv.{WeaponLevel.Value}! 공격력 {AttackPower}"
+                    : $"방어구 Lv.{ArmorLevel.Value}! 방어력 {Defense}"
+            ),
+            sound: true
+        );
     }
 
+    /// <summary>Pay the shopkeeper for the next level of the plain sword or the plain armour.</summary>
     [Rpc(SendTo.Server)]
-    public void BuyWeaponRpc(RpcParams rpcParams = default)
+    public void BuyUpgradeRpc(bool weapon, RpcParams rpcParams = default)
     {
         if (!this.IsFromOwner(rpcParams))
         {
             return;
         }
 
-        if (!TrySpendGold(WeaponPrice))
+        if (!TrySpendGold(weapon ? WeaponPrice : ArmorPrice))
         {
             NoticeRpc(NetText.Trim512(InsufficientGold), sound: true);
             return;
         }
 
-        WeaponLevel.Value++;
-        NoticeRpc(NetText.Trim512($"검 Lv.{WeaponLevel.Value}! 공격력 {AttackPower}"), sound: true);
+        LevelUpGear(weapon);
     }
 
     /// <summary>

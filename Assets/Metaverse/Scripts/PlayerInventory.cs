@@ -132,20 +132,7 @@ public class PlayerInventory : NetworkBehaviour
             return;
         }
 
-        if (entry.Weapon)
-        {
-            stats.WeaponLevel.Value++;
-            NoticeRpc(
-                NetText.Trim512($"검 Lv.{stats.WeaponLevel.Value}! 공격력 {stats.AttackPower}")
-            );
-        }
-        else
-        {
-            stats.ArmorLevel.Value++;
-            NoticeRpc(
-                NetText.Trim512($"방어구 Lv.{stats.ArmorLevel.Value}! 방어력 {stats.Defense}")
-            );
-        }
+        stats.LevelUpGear(entry.Weapon);
     }
 
     [Rpc(SendTo.Server)]
@@ -417,8 +404,8 @@ public class PlayerInventory : NetworkBehaviour
         // The real models, turning slowly, rendered by GearPreview.
         GearPreview.Draw(icon, preview);
 
-        // Clicking what is worn takes it off; the plain sword comes back and the piece
-        // returns to the bag.
+        // Clicking what is worn takes it off: the piece returns to the bag and the slot
+        // is left empty.
         if (GUI.Button(icon, GUIContent.none, GUIStyle.none) && gear != null)
         {
             gear.UnequipRpc(preview == GearPreview.Weapon);

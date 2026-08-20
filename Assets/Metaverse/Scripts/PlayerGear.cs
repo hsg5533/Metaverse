@@ -91,7 +91,14 @@ public class PlayerGear : NetworkBehaviour
         new("여행자의 차", false, 0, -1, false, PlayerBuffs.Speed, 120f),
         new("생선구이", false, 0, -1, false, PlayerBuffs.AttackSpeed, 180f),
         new("회복 죽", false, 0, -1, false, heal: 70),
+        // The sword everyone starts with. Theme -1 puts it at WeaponModels[0], the plain
+        // blade. It has to stay LAST: Rod, FirstFish, ShopFirst, Potion and FoodFirst below
+        // are positions in this list, and PieceFor reads the themed pairs off the front.
+        new("철 검", true, 2, -1),
     };
+
+    /// <summary>What a new player has in hand. Taking it off leaves them bare-handed.</summary>
+    public static readonly int BasicSword = Pieces.Length - 1;
 
     /// <summary>The rod, which the shop sells and the lake needs.</summary>
     public const int Rod = 6;
@@ -153,7 +160,10 @@ public class PlayerGear : NetworkBehaviour
     public GameObject[] ArmorLeftArmModels;
     public GameObject[] ArmorRightArmModels;
 
-    public NetworkVariable<int> Weapon = new(-1, writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<int> Weapon = new(
+        BasicSword,
+        writePerm: NetworkVariableWritePermission.Server
+    );
     public NetworkVariable<int> Armor = new(-1, writePerm: NetworkVariableWritePermission.Server);
     public NetworkList<int> Bag = new();
 
@@ -163,10 +173,7 @@ public class PlayerGear : NetworkBehaviour
     public string ArmorName => Held(Armor)?.Name;
 
     /// <summary>What a piece is called, or an empty string when nothing is worn.</summary>
-    public static string NameOf(int piece)
-    {
-        return Valid(piece) ? Pieces[piece].Name : "";
-    }
+    public static string NameOf(int piece) => Valid(piece) ? Pieces[piece].Name : "";
 
     /// <summary>What the shop pays for a piece: worth about two levels of the upgrade it saves.</summary>
     public static int PriceOf(int piece) => Pieces[piece].Bonus * 12;
@@ -179,24 +186,12 @@ public class PlayerGear : NetworkBehaviour
     public static int BuyPriceOf(int piece) => Pieces[piece].Bonus * 20;
 
     /// <summary>Which piece a saved name refers to, or -1 when it is not gear.</summary>
-    public static int IndexOf(string name)
-    {
-        for (int i = 0; i < Pieces.Length; i++)
-        {
-            if (Pieces[i].Name == name)
-            {
-                return i;
-            }
-        }
-
-        return -1;
-    }
+    public static int IndexOf(string name) =>
+        System.Array.FindIndex(Pieces, piece => piece.Name == name);
 
     /// <summary>The piece index a monster of this ground drops: the themed pairs only.</summary>
-    public static int PieceFor(int theme, bool weapon)
-    {
-        return Mathf.Clamp(theme, 0, 2) * 2 + (weapon ? 0 : 1);
-    }
+    public static int PieceFor(int theme, bool weapon) =>
+        Mathf.Clamp(theme, 0, 2) * 2 + (weapon ? 0 : 1);
 
     public override void OnNetworkSpawn()
     {
@@ -284,16 +279,43 @@ public class PlayerGear : NetworkBehaviour
         }
     }
 
-    /// <summary>Wear a bag item; whatever came off goes back into the bag.</summary>
-    [Rpc(SendTo.Server)]
-    public void EquipRpc(int bagIndex, RpcParams rpcParams = default)
+    /// <summary>
+    /// The piece at a bag slot, for the RPCs that act on one. -1 for anyone but the owner, a
+    /// slot that is not there, and a material marker: none of them are a piece to act on.
+    /// </summary>
+    int PieceAt(int bagIndex, RpcParams rpcParams)
     {
         if (!this.IsFromOwner(rpcParams) || bagIndex < 0 || bagIndex >= Bag.Count)
+        {
+            return -1;
+        }
+
+        return Bag[bagIndex] >= 0 ? Bag[bagIndex] : -1;
+    }
+
+    /// <summary>Server side: charge for a piece and hand it over, or say the gold is short.</summary>
+    void Buy(int piece, int price)
+    {
+        var stats = GetComponent<PlayerStats>();
+        if (stats == null)
         {
             return;
         }
 
-        int piece = Bag[bagIndex];
+        if (!stats.TrySpendGold(price))
+        {
+            NoticeRpc(NetText.Trim512(PlayerStats.InsufficientGold));
+            return;
+        }
+
+        Give(piece);
+    }
+
+    /// <summary>Wear a bag item; whatever came off goes back into the bag.</summary>
+    [Rpc(SendTo.Server)]
+    public void EquipRpc(int bagIndex, RpcParams rpcParams = default)
+    {
+        int piece = PieceAt(bagIndex, rpcParams);
         if (piece < 0 || !Pieces[piece].Wearable)
         {
             return;
@@ -311,52 +333,20 @@ public class PlayerGear : NetworkBehaviour
         }
     }
 
-    /// <summary>Server side: the shopkeeper hands one over for gold.</summary>
-    [Rpc(SendTo.Server)]
-    public void BuyRodRpc(RpcParams rpcParams = default)
-    {
-        var stats = GetComponent<PlayerStats>();
-        if (!this.IsFromOwner(rpcParams) || stats == null)
-        {
-            return;
-        }
-
-        if (!stats.TrySpendGold(RodPrice))
-        {
-            NoticeRpc(NetText.Trim512(PlayerStats.InsufficientGold));
-            return;
-        }
-
-        Give(Rod);
-    }
-
     public const int RodPrice = 120;
 
-    /// <summary>Server side: the shopkeeper hands over one of its own weapons or armour for gold.</summary>
+    /// <summary>Server side: the shopkeeper hands over the rod or one of its own gear pieces.</summary>
     [Rpc(SendTo.Server)]
     public void BuyPieceRpc(int piece, RpcParams rpcParams = default)
     {
-        var stats = GetComponent<PlayerStats>();
-        if (
-            !this.IsFromOwner(rpcParams)
-            || stats == null
-            || piece < ShopFirst
-            || piece >= ShopFirst + ShopCount
-        )
+        bool soldHere = piece == Rod || (piece >= ShopFirst && piece < ShopFirst + ShopCount);
+        if (this.IsFromOwner(rpcParams) && soldHere)
         {
-            return;
+            Buy(piece, piece == Rod ? RodPrice : BuyPriceOf(piece));
         }
-
-        if (!stats.TrySpendGold(BuyPriceOf(piece)))
-        {
-            NoticeRpc(NetText.Trim512(PlayerStats.InsufficientGold));
-            return;
-        }
-
-        Give(piece);
     }
 
-    /// <summary>Take a piece off: it goes back to the bag and the plain gear comes back.</summary>
+    /// <summary>Take a piece off: it goes back to the bag and the hand is left empty.</summary>
     [Rpc(SendTo.Server)]
     public void UnequipRpc(bool weapon, RpcParams rpcParams = default)
     {
@@ -374,12 +364,7 @@ public class PlayerGear : NetworkBehaviour
     [Rpc(SendTo.Server)]
     public void SellRpc(int bagIndex, RpcParams rpcParams = default)
     {
-        if (!this.IsFromOwner(rpcParams) || bagIndex < 0 || bagIndex >= Bag.Count)
-        {
-            return;
-        }
-
-        int piece = Bag[bagIndex];
+        int piece = PieceAt(bagIndex, rpcParams);
         if (piece < 0)
         {
             return;
@@ -402,12 +387,7 @@ public class PlayerGear : NetworkBehaviour
     [Rpc(SendTo.Server)]
     public void UseFoodRpc(int bagIndex, RpcParams rpcParams = default)
     {
-        if (!this.IsFromOwner(rpcParams) || bagIndex < 0 || bagIndex >= Bag.Count)
-        {
-            return;
-        }
-
-        int piece = Bag[bagIndex];
+        int piece = PieceAt(bagIndex, rpcParams);
         if (piece < 0 || !Pieces[piece].IsFood)
         {
             return;
@@ -473,21 +453,9 @@ public class PlayerGear : NetworkBehaviour
             };
     }
 
-    /// <summary>The same, for what is worn: the bare sword when no weapon is on.</summary>
-    public GameObject[] EquippedParts(bool weapon)
-    {
-        int piece = (weapon ? Weapon : Armor).Value;
-        if (Valid(piece))
-        {
-            return PartsFor(piece);
-        }
-
-        return weapon ? new[] { At(WeaponModels, 0) } : System.Array.Empty<GameObject>();
-    }
-
     void ApplyModels()
     {
-        Show(WeaponModels, Held(Weapon)?.Theme + 1 ?? 0);
+        Show(WeaponModels, Held(Weapon)?.Theme + 1 ?? -1);
 
         int armor = Held(Armor)?.Theme ?? -1;
         Show(ArmorModels, armor);
@@ -511,18 +479,10 @@ public class PlayerGear : NetworkBehaviour
         }
     }
 
-    static GameObject At(GameObject[] models, int index)
-    {
-        return models != null && index >= 0 && index < models.Length ? models[index] : null;
-    }
+    static GameObject At(GameObject[] models, int index) =>
+        models != null && index >= 0 && index < models.Length ? models[index] : null;
 
-    static bool Valid(int piece)
-    {
-        return piece >= 0 && piece < Pieces.Length;
-    }
+    static bool Valid(int piece) => piece >= 0 && piece < Pieces.Length;
 
-    Piece? Held(NetworkVariable<int> slot)
-    {
-        return Valid(slot.Value) ? Pieces[slot.Value] : null;
-    }
+    Piece? Held(NetworkVariable<int> slot) => Valid(slot.Value) ? Pieces[slot.Value] : null;
 }

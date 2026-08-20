@@ -9,6 +9,9 @@ using UnityEngine;
 /// </summary>
 public class GearPreview : MonoBehaviour
 {
+    /// <summary>Shorthand for a literal vector, so a part fits on one line.</summary>
+    static Vector3 V(float x, float y, float z) => new(x, y, z);
+
     public const int Weapon = 0;
     public const int Armor = 1;
     public const int Ore = 2;
@@ -55,7 +58,7 @@ public class GearPreview : MonoBehaviour
             // A recompile resets the static but leaves the rig itself alive. Keep the first
             // one and bin the rest: two rigs sit at the same spot and every camera films both,
             // which reads as the old gear refusing to go away.
-            var rigs = FindObjectsByType<GearPreview>(FindObjectsSortMode.None);
+            var rigs = FindObjectsByType<GearPreview>();
             for (int i = 1; i < rigs.Length; i++)
             {
                 Destroy(rigs[i].gameObject);
@@ -81,7 +84,7 @@ public class GearPreview : MonoBehaviour
 
     void Awake()
     {
-        foreach (var other in FindObjectsByType<GearPreview>(FindObjectsSortMode.None))
+        foreach (var other in FindObjectsByType<GearPreview>())
         {
             if (other != this)
             {
@@ -89,7 +92,7 @@ public class GearPreview : MonoBehaviour
             }
         }
 
-        rigOrigin = new Vector3(Random.Range(-4000f, 4000f), -1000f, Random.Range(-4000f, 4000f));
+        rigOrigin = V(Random.Range(-4000f, 4000f), -1000f, Random.Range(-4000f, 4000f));
         transform.position = rigOrigin;
     }
 
@@ -101,7 +104,7 @@ public class GearPreview : MonoBehaviour
     /// </summary>
     Slot Stand(int index)
     {
-        return slots[index] ??= Setup(new Vector3(index * 10f, 0f, 0f), ViewSize(index));
+        return slots[index] ??= Setup(V(index * 10f, 0f, 0f), ViewSize(index));
     }
 
     void OnDestroy()
@@ -195,7 +198,7 @@ public class GearPreview : MonoBehaviour
 
         var camera = new GameObject("PreviewCamera").AddComponent<Camera>();
         camera.transform.SetParent(transform, false);
-        camera.transform.localPosition = pivot + new Vector3(0f, 0f, -4f);
+        camera.transform.localPosition = pivot + V(0f, 0f, -4f);
         camera.orthographic = true;
         camera.orthographicSize = size;
         camera.nearClipPlane = 0.1f;
@@ -229,11 +232,11 @@ public class GearPreview : MonoBehaviour
 
             Clear(slots[i].Mount);
 
-            // Only the armour, the material stacks and the campfire's dishes have a model of
-            // their own to fall back on; the rest wait for the avatar to exist.
+            // Only the material stacks and the campfire's dishes have a model of their own
+            // to fall back on; the rest wait for the avatar to exist. An empty gear slot
+            // draws nothing: there is no such thing as default gear any more.
             bool buildsItsOwn =
-                i == Armor
-                || i == Ore
+                i == Ore
                 || i == Herb
                 || i == Wood
                 || (i >= Piece && PlayerGear.Pieces[i - Piece].IsFood);
@@ -269,8 +272,8 @@ public class GearPreview : MonoBehaviour
 
         return slot switch
         {
-            Weapon => gear.EquippedParts(true),
-            Armor => gear.EquippedParts(false),
+            Weapon => gear.PartsFor(gear.Weapon.Value),
+            Armor => gear.PartsFor(gear.Armor.Value),
             Ore or Herb or Wood => System.Array.Empty<GameObject>(),
             _ => gear.PartsFor(slot - Piece),
         };
@@ -360,7 +363,7 @@ public class GearPreview : MonoBehaviour
 
         if (slot >= Piece && PlayerGear.Pieces[slot - Piece].IsFood)
         {
-            BuildFood(root, slot - Piece - PlayerGear.FoodFirst);
+            BuildFood(root, slot - Piece);
             return root.gameObject;
         }
 
@@ -375,37 +378,33 @@ public class GearPreview : MonoBehaviour
             case Wood:
                 BuildWood(root);
                 break;
-            default:
-                BuildArmor(root);
-                break;
         }
 
         return root.gameObject;
     }
 
-    /// <summary>Dish index within <see cref="PlayerGear.FoodFirst"/>: a distinct shape per recipe, not just a recolour.</summary>
-    static void BuildFood(Transform root, int foodIndex)
+    /// <summary>A distinct shape per piece of food, not just a recolour.</summary>
+    static void BuildFood(Transform root, int piece)
     {
-        switch (foodIndex)
+        switch (piece)
         {
-            case 0:
+            case PlayerGear.Potion:
+                BuildPotion(root);
+                break;
+            case PlayerGear.FoodFirst:
                 BuildStew(root);
                 break;
-            case 1:
+            case PlayerGear.FoodFirst + 1:
                 BuildSoup(root);
                 break;
-            case 2:
+            case PlayerGear.FoodFirst + 2:
                 BuildTea(root);
                 break;
-            case 3:
+            case PlayerGear.FoodFirst + 3:
                 BuildGrilledFish(root);
                 break;
-            case 4:
+            case PlayerGear.FoodFirst + 4:
                 BuildPorridge(root);
-                break;
-            // Bought rather than cooked, so it sits before the dishes and lands here at -1.
-            default:
-                BuildPotion(root);
                 break;
         }
     }
@@ -417,26 +416,12 @@ public class GearPreview : MonoBehaviour
         Material liquid = Paint(new Color(0.86f, 0.20f, 0.26f));
         Material cork = Paint(new Color(0.58f, 0.42f, 0.24f));
 
-        Part(root, "Belly", new Vector3(0f, -0.08f, 0f), new Vector3(0.3f, 0.26f, 0.3f), glass);
-        Part(
-            root,
-            "BellyCut",
-            new Vector3(0f, -0.08f, 0f),
-            new Vector3(0.24f, 0.3f, 0.24f),
-            glass,
-            new Vector3(0f, 45f, 0f)
-        );
-        Part(root, "Liquid", new Vector3(0f, -0.11f, 0f), new Vector3(0.26f, 0.16f, 0.26f), liquid);
-        Part(
-            root,
-            "LiquidCut",
-            new Vector3(0f, -0.11f, 0f),
-            new Vector3(0.21f, 0.18f, 0.21f),
-            liquid,
-            new Vector3(0f, 45f, 0f)
-        );
-        Part(root, "Neck", new Vector3(0f, 0.1f, 0f), new Vector3(0.11f, 0.14f, 0.11f), glass);
-        Part(root, "Cork", new Vector3(0f, 0.2f, 0f), new Vector3(0.09f, 0.08f, 0.09f), cork);
+        Part(root, "Belly", V(0f, -0.08f, 0f), V(0.3f, 0.26f, 0.3f), glass);
+        Part(root, "BellyCut", V(0f, -0.08f, 0f), V(0.24f, 0.3f, 0.24f), glass, V(0f, 45f, 0f));
+        Part(root, "Liquid", V(0f, -0.11f, 0f), V(0.26f, 0.16f, 0.26f), liquid);
+        Part(root, "LiquidCut", V(0f, -0.11f, 0f), V(0.21f, 0.18f, 0.21f), liquid, V(0f, 45f, 0f));
+        Part(root, "Neck", V(0f, 0.1f, 0f), V(0.11f, 0.14f, 0.11f), glass);
+        Part(root, "Cork", V(0f, 0.2f, 0f), V(0.09f, 0.08f, 0.09f), cork);
     }
 
     /// <summary>The cooked one: a deep bowl of porridge with a spoon standing in it.</summary>
@@ -448,39 +433,12 @@ public class GearPreview : MonoBehaviour
         Material herb = Paint(new Color(0.36f, 0.66f, 0.34f));
         Material spoon = Paint(new Color(0.62f, 0.46f, 0.28f));
 
-        Part(root, "Bowl", new Vector3(0f, -0.15f, 0f), new Vector3(0.4f, 0.18f, 0.4f), bowl);
-        Part(root, "Rim", new Vector3(0f, -0.06f, 0f), new Vector3(0.44f, 0.04f, 0.44f), rim);
-        Part(
-            root,
-            "Porridge",
-            new Vector3(0f, -0.03f, 0f),
-            new Vector3(0.34f, 0.05f, 0.34f),
-            grain
-        );
-        Part(
-            root,
-            "HerbA",
-            new Vector3(-0.07f, 0.01f, 0.04f),
-            new Vector3(0.09f, 0.03f, 0.05f),
-            herb,
-            new Vector3(0f, 24f, 0f)
-        );
-        Part(
-            root,
-            "HerbB",
-            new Vector3(0.06f, 0.01f, -0.05f),
-            new Vector3(0.08f, 0.03f, 0.05f),
-            herb,
-            new Vector3(0f, -32f, 0f)
-        );
-        Part(
-            root,
-            "Spoon",
-            new Vector3(0.1f, 0.08f, -0.02f),
-            new Vector3(0.04f, 0.22f, 0.04f),
-            spoon,
-            new Vector3(0f, 0f, 18f)
-        );
+        Part(root, "Bowl", V(0f, -0.15f, 0f), V(0.4f, 0.18f, 0.4f), bowl);
+        Part(root, "Rim", V(0f, -0.06f, 0f), V(0.44f, 0.04f, 0.44f), rim);
+        Part(root, "Porridge", V(0f, -0.03f, 0f), V(0.34f, 0.05f, 0.34f), grain);
+        Part(root, "HerbA", V(-0.07f, 0.01f, 0.04f), V(0.09f, 0.03f, 0.05f), herb, V(0f, 24f, 0f));
+        Part(root, "HerbB", V(0.06f, 0.01f, -0.05f), V(0.08f, 0.03f, 0.05f), herb, V(0f, -32f, 0f));
+        Part(root, "Spoon", V(0.1f, 0.08f, -0.02f), V(0.04f, 0.22f, 0.04f), spoon, V(0f, 0f, 18f));
     }
 
     /// <summary>A bowl with chunks poking out of the broth.</summary>
@@ -491,24 +449,24 @@ public class GearPreview : MonoBehaviour
         Material broth = Paint(new Color(0.74f, 0.32f, 0.20f));
         Material chunk = Paint(new Color(0.86f, 0.62f, 0.30f));
 
-        Part(root, "Bowl", new Vector3(0f, -0.16f, 0f), new Vector3(0.42f, 0.14f, 0.42f), bowl);
-        Part(root, "Rim", new Vector3(0f, -0.09f, 0f), new Vector3(0.46f, 0.04f, 0.46f), rim);
-        Part(root, "Broth", new Vector3(0f, -0.05f, 0f), new Vector3(0.34f, 0.05f, 0.34f), broth);
+        Part(root, "Bowl", V(0f, -0.16f, 0f), V(0.42f, 0.14f, 0.42f), bowl);
+        Part(root, "Rim", V(0f, -0.09f, 0f), V(0.46f, 0.04f, 0.46f), rim);
+        Part(root, "Broth", V(0f, -0.05f, 0f), V(0.34f, 0.05f, 0.34f), broth);
         Part(
             root,
             "ChunkA",
-            new Vector3(-0.08f, -0.01f, 0.05f),
-            new Vector3(0.08f, 0.08f, 0.08f),
+            V(-0.08f, -0.01f, 0.05f),
+            V(0.08f, 0.08f, 0.08f),
             chunk,
-            new Vector3(0f, 20f, 0f)
+            V(0f, 20f, 0f)
         );
         Part(
             root,
             "ChunkB",
-            new Vector3(0.07f, -0.01f, -0.04f),
-            new Vector3(0.07f, 0.07f, 0.07f),
+            V(0.07f, -0.01f, -0.04f),
+            V(0.07f, 0.07f, 0.07f),
             chunk,
-            new Vector3(0f, -15f, 0f)
+            V(0f, -15f, 0f)
         );
     }
 
@@ -519,23 +477,11 @@ public class GearPreview : MonoBehaviour
         Material trim = Paint(new Color(0.5f, 0.5f, 0.54f));
         Material broth = Paint(new Color(0.30f, 0.46f, 0.62f));
 
-        Part(root, "Pot", new Vector3(0f, -0.14f, 0f), new Vector3(0.4f, 0.22f, 0.4f), pot);
-        Part(root, "Rim", new Vector3(0f, -0.03f, 0f), new Vector3(0.44f, 0.04f, 0.44f), trim);
-        Part(root, "Broth", new Vector3(0f, -0.01f, 0f), new Vector3(0.32f, 0.03f, 0.32f), broth);
-        Part(
-            root,
-            "HandleLeft",
-            new Vector3(-0.24f, -0.06f, 0f),
-            new Vector3(0.06f, 0.05f, 0.05f),
-            trim
-        );
-        Part(
-            root,
-            "HandleRight",
-            new Vector3(0.24f, -0.06f, 0f),
-            new Vector3(0.06f, 0.05f, 0.05f),
-            trim
-        );
+        Part(root, "Pot", V(0f, -0.14f, 0f), V(0.4f, 0.22f, 0.4f), pot);
+        Part(root, "Rim", V(0f, -0.03f, 0f), V(0.44f, 0.04f, 0.44f), trim);
+        Part(root, "Broth", V(0f, -0.01f, 0f), V(0.32f, 0.03f, 0.32f), broth);
+        Part(root, "HandleLeft", V(-0.24f, -0.06f, 0f), V(0.06f, 0.05f, 0.05f), trim);
+        Part(root, "HandleRight", V(0.24f, -0.06f, 0f), V(0.06f, 0.05f, 0.05f), trim);
     }
 
     /// <summary>A cup and saucer with a handle, daintier than the two bowls.</summary>
@@ -544,18 +490,11 @@ public class GearPreview : MonoBehaviour
         Material cup = Paint(new Color(0.90f, 0.88f, 0.82f));
         Material trim = Paint(new Color(0.52f, 0.72f, 0.40f));
 
-        Part(root, "Saucer", new Vector3(0f, -0.22f, 0f), new Vector3(0.36f, 0.03f, 0.36f), cup);
-        Part(root, "Cup", new Vector3(0f, -0.1f, 0f), new Vector3(0.26f, 0.22f, 0.26f), cup);
-        Part(root, "Rim", new Vector3(0f, 0.01f, 0f), new Vector3(0.28f, 0.03f, 0.28f), trim);
-        Part(root, "Tea", new Vector3(0f, -0.02f, 0f), new Vector3(0.2f, 0.03f, 0.2f), trim);
-        Part(
-            root,
-            "Handle",
-            new Vector3(0.17f, -0.08f, 0f),
-            new Vector3(0.05f, 0.1f, 0.03f),
-            trim,
-            new Vector3(0f, 0f, 90f)
-        );
+        Part(root, "Saucer", V(0f, -0.22f, 0f), V(0.36f, 0.03f, 0.36f), cup);
+        Part(root, "Cup", V(0f, -0.1f, 0f), V(0.26f, 0.22f, 0.26f), cup);
+        Part(root, "Rim", V(0f, 0.01f, 0f), V(0.28f, 0.03f, 0.28f), trim);
+        Part(root, "Tea", V(0f, -0.02f, 0f), V(0.2f, 0.03f, 0.2f), trim);
+        Part(root, "Handle", V(0.17f, -0.08f, 0f), V(0.05f, 0.1f, 0.03f), trim, V(0f, 0f, 90f));
     }
 
     /// <summary>A whole fish on a plate, charred stripes and all.</summary>
@@ -565,57 +504,24 @@ public class GearPreview : MonoBehaviour
         Material fish = Paint(new Color(0.74f, 0.58f, 0.34f));
         Material char_ = Paint(new Color(0.30f, 0.20f, 0.14f));
 
-        Part(root, "Plate", new Vector3(0f, -0.18f, 0f), new Vector3(0.46f, 0.05f, 0.46f), plate);
-        Part(root, "Body", new Vector3(0f, -0.1f, 0f), new Vector3(0.36f, 0.09f, 0.16f), fish);
-        Part(
-            root,
-            "Tail",
-            new Vector3(0f, -0.1f, -0.19f),
-            new Vector3(0.08f, 0.09f, 0.1f),
-            fish,
-            new Vector3(0f, 0f, 20f)
-        );
+        Part(root, "Plate", V(0f, -0.18f, 0f), V(0.46f, 0.05f, 0.46f), plate);
+        Part(root, "Body", V(0f, -0.1f, 0f), V(0.36f, 0.09f, 0.16f), fish);
+        Part(root, "Tail", V(0f, -0.1f, -0.19f), V(0.08f, 0.09f, 0.1f), fish, V(0f, 0f, 20f));
         Part(
             root,
             "CharStripeA",
-            new Vector3(-0.06f, -0.06f, 0f),
-            new Vector3(0.03f, 0.02f, 0.16f),
+            V(-0.06f, -0.06f, 0f),
+            V(0.03f, 0.02f, 0.16f),
             char_,
-            new Vector3(0f, 20f, 0f)
+            V(0f, 20f, 0f)
         );
         Part(
             root,
             "CharStripeB",
-            new Vector3(0.06f, -0.06f, 0f),
-            new Vector3(0.03f, 0.02f, 0.16f),
+            V(0.06f, -0.06f, 0f),
+            V(0.03f, 0.02f, 0.16f),
             char_,
-            new Vector3(0f, -20f, 0f)
-        );
-    }
-
-    /// <summary>A breastplate: chest, collar, belt, pauldrons and a centre ridge.</summary>
-    static void BuildArmor(Transform root)
-    {
-        Material plate = Paint(new Color(0.70f, 0.53f, 0.30f));
-        Material trim = Paint(new Color(0.88f, 0.74f, 0.38f));
-
-        Part(root, "Chest", new Vector3(0f, 0.02f, 0f), new Vector3(0.42f, 0.46f, 0.24f), plate);
-        Part(root, "Ridge", new Vector3(0f, 0.02f, 0.12f), new Vector3(0.07f, 0.44f, 0.03f), trim);
-        Part(root, "Collar", new Vector3(0f, 0.26f, 0f), new Vector3(0.3f, 0.07f, 0.26f), trim);
-        Part(root, "Belt", new Vector3(0f, -0.2f, 0f), new Vector3(0.44f, 0.07f, 0.26f), trim);
-        Part(
-            root,
-            "PauldronLeft",
-            new Vector3(-0.27f, 0.17f, 0f),
-            new Vector3(0.16f, 0.15f, 0.26f),
-            plate
-        );
-        Part(
-            root,
-            "PauldronRight",
-            new Vector3(0.27f, 0.17f, 0f),
-            new Vector3(0.16f, 0.15f, 0.26f),
-            plate
+            V(0f, -20f, 0f)
         );
     }
 
@@ -625,21 +531,14 @@ public class GearPreview : MonoBehaviour
         Material stone = Paint(new Color(0.45f, 0.46f, 0.50f));
         Material crystal = Paint(new Color(0.42f, 0.82f, 0.92f));
 
-        Part(
-            root,
-            "Rock",
-            new Vector3(0f, -0.08f, 0f),
-            new Vector3(0.42f, 0.3f, 0.4f),
-            stone,
-            new Vector3(0f, 24f, 8f)
-        );
+        Part(root, "Rock", V(0f, -0.08f, 0f), V(0.42f, 0.3f, 0.4f), stone, V(0f, 24f, 8f));
         Part(
             root,
             "RockChip",
-            new Vector3(0.16f, -0.16f, -0.1f),
-            new Vector3(0.22f, 0.18f, 0.2f),
+            V(0.16f, -0.16f, -0.1f),
+            V(0.22f, 0.18f, 0.2f),
             stone,
-            new Vector3(12f, -30f, 0f)
+            V(12f, -30f, 0f)
         );
 
         for (int i = 0; i < 3; i++)
@@ -647,10 +546,10 @@ public class GearPreview : MonoBehaviour
             Part(
                 root,
                 "Crystal" + i,
-                new Vector3((i - 1) * 0.14f, 0.1f + (i == 1 ? 0.08f : 0f), (i - 1) * 0.06f),
-                new Vector3(0.12f, 0.3f + (i == 1 ? 0.14f : 0f), 0.12f),
+                V((i - 1) * 0.14f, 0.1f + (i == 1 ? 0.08f : 0f), (i - 1) * 0.06f),
+                V(0.12f, 0.3f + (i == 1 ? 0.14f : 0f), 0.12f),
                 crystal,
-                new Vector3(0f, 45f, (i - 1) * 16f)
+                V(0f, 45f, (i - 1) * 16f)
             );
         }
     }
@@ -662,7 +561,7 @@ public class GearPreview : MonoBehaviour
         Material leaf = Paint(new Color(0.40f, 0.78f, 0.42f));
         Material flower = Paint(new Color(0.92f, 0.86f, 0.42f));
 
-        Part(root, "Stem", new Vector3(0f, -0.02f, 0f), new Vector3(0.05f, 0.5f, 0.05f), stem);
+        Part(root, "Stem", V(0f, -0.02f, 0f), V(0.05f, 0.5f, 0.05f), stem);
 
         for (int i = 0; i < 4; i++)
         {
@@ -670,21 +569,14 @@ public class GearPreview : MonoBehaviour
             Part(
                 root,
                 "Leaf" + i,
-                new Vector3(side * 0.14f, -0.14f + i * 0.1f, 0f),
-                new Vector3(0.26f, 0.05f, 0.14f),
+                V(side * 0.14f, -0.14f + i * 0.1f, 0f),
+                V(0.26f, 0.05f, 0.14f),
                 leaf,
-                new Vector3(0f, i * 24f, side * 22f)
+                V(0f, i * 24f, side * 22f)
             );
         }
 
-        Part(
-            root,
-            "Bud",
-            new Vector3(0f, 0.26f, 0f),
-            new Vector3(0.14f, 0.14f, 0.14f),
-            flower,
-            new Vector3(0f, 45f, 45f)
-        );
+        Part(root, "Bud", V(0f, 0.26f, 0f), V(0.14f, 0.14f, 0.14f), flower, V(0f, 45f, 45f));
     }
 
     /// <summary>A cut log: bark, pale end grain, and a smaller piece leaning on it.</summary>
@@ -693,43 +585,24 @@ public class GearPreview : MonoBehaviour
         Material bark = Paint(new Color(0.54f, 0.38f, 0.24f));
         Material grain = Paint(new Color(0.80f, 0.66f, 0.44f));
 
-        Part(
-            root,
-            "Log",
-            new Vector3(0f, -0.04f, 0f),
-            new Vector3(0.24f, 0.5f, 0.24f),
-            bark,
-            new Vector3(0f, 0f, 90f)
-        );
-        Part(
-            root,
-            "GrainLeft",
-            new Vector3(-0.25f, -0.04f, 0f),
-            new Vector3(0.02f, 0.2f, 0.2f),
-            grain
-        );
-        Part(
-            root,
-            "GrainRight",
-            new Vector3(0.25f, -0.04f, 0f),
-            new Vector3(0.02f, 0.2f, 0.2f),
-            grain
-        );
+        Part(root, "Log", V(0f, -0.04f, 0f), V(0.24f, 0.5f, 0.24f), bark, V(0f, 0f, 90f));
+        Part(root, "GrainLeft", V(-0.25f, -0.04f, 0f), V(0.02f, 0.2f, 0.2f), grain);
+        Part(root, "GrainRight", V(0.25f, -0.04f, 0f), V(0.02f, 0.2f, 0.2f), grain);
         Part(
             root,
             "Branch",
-            new Vector3(0.02f, 0.18f, -0.08f),
-            new Vector3(0.14f, 0.34f, 0.14f),
+            V(0.02f, 0.18f, -0.08f),
+            V(0.14f, 0.34f, 0.14f),
             bark,
-            new Vector3(0f, 20f, 62f)
+            V(0f, 20f, 62f)
         );
         Part(
             root,
             "BranchGrain",
-            new Vector3(0.17f, 0.25f, -0.08f),
-            new Vector3(0.02f, 0.12f, 0.12f),
+            V(0.17f, 0.25f, -0.08f),
+            V(0.02f, 0.12f, 0.12f),
             grain,
-            new Vector3(0f, 20f, 62f)
+            V(0f, 20f, 62f)
         );
     }
 
@@ -744,19 +617,8 @@ public class GearPreview : MonoBehaviour
         string name,
         Vector3 position,
         Vector3 scale,
-        Material material
-    )
-    {
-        Part(parent, name, position, scale, material, Vector3.zero);
-    }
-
-    static void Part(
-        Transform parent,
-        string name,
-        Vector3 position,
-        Vector3 scale,
         Material material,
-        Vector3 rotation
+        Vector3 rotation = default
     )
     {
         var part = GameObject.CreatePrimitive(PrimitiveType.Cube);

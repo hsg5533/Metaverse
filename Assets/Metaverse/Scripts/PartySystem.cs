@@ -129,10 +129,7 @@ public class PartySystem : NetworkBehaviour
         List<ulong> party = PartyOf(senderId);
         if (party != null && party.Count >= MaxMembers)
         {
-            NoticeRpc(
-                NetText.Trim512($"파티는 최대 {MaxMembers}명까지입니다."),
-                RpcTarget.Single(senderId, RpcTargetUse.Temp)
-            );
+            Notice($"파티는 최대 {MaxMembers}명까지입니다.", senderId);
             return;
         }
 
@@ -162,10 +159,7 @@ public class PartySystem : NetworkBehaviour
 
         if (best == null)
         {
-            NoticeRpc(
-                NetText.Trim512("근처에 초대할 사람이 없습니다."),
-                RpcTarget.Single(senderId, RpcTargetUse.Temp)
-            );
+            Notice("근처에 초대할 사람이 없습니다.", senderId);
             return;
         }
 
@@ -176,10 +170,7 @@ public class PartySystem : NetworkBehaviour
             senderId,
             RpcTarget.Single(targetId, RpcTargetUse.Temp)
         );
-        NoticeRpc(
-            NetText.Trim512($"{MetaverseUi.NameOf(targetId)}님을 파티에 초대했습니다."),
-            RpcTarget.Single(senderId, RpcTargetUse.Temp)
-        );
+        Notice($"{MetaverseUi.NameOf(targetId)}님을 파티에 초대했습니다.", senderId);
     }
 
     [Rpc(SendTo.Server)]
@@ -206,15 +197,12 @@ public class PartySystem : NetworkBehaviour
 
         if (party.Count >= MaxMembers)
         {
-            NoticeRpc(
-                NetText.Trim512("그 파티는 이미 가득 찼습니다."),
-                RpcTarget.Single(senderId, RpcTargetUse.Temp)
-            );
+            Notice("그 파티는 이미 가득 찼습니다.", senderId);
             return;
         }
 
         party.Add(senderId);
-        Announce(party, $"{MetaverseUi.NameOf(senderId)}님이 파티에 참가했습니다.");
+        Notice($"{MetaverseUi.NameOf(senderId)}님이 파티에 참가했습니다.", party.ToArray());
         PushRoster(party);
     }
 
@@ -234,15 +222,15 @@ public class PartySystem : NetworkBehaviour
         }
 
         party.Remove(clientId);
-        RosterRpc(new ulong[0], RpcTarget.Single(clientId, RpcTargetUse.Temp));
-        Announce(party, $"{MetaverseUi.NameOf(clientId)}{reason}");
+        RosterRpc(System.Array.Empty<ulong>(), RpcTarget.Single(clientId, RpcTargetUse.Temp));
+        Notice($"{MetaverseUi.NameOf(clientId)}{reason}", party.ToArray());
 
         // A party of one is not a party.
         if (party.Count <= 1)
         {
             foreach (ulong member in party)
             {
-                RosterRpc(new ulong[0], RpcTarget.Single(member, RpcTargetUse.Temp));
+                RosterRpc(System.Array.Empty<ulong>(), RpcTarget.Single(member, RpcTargetUse.Temp));
             }
 
             parties.Remove(party);
@@ -271,16 +259,6 @@ public class PartySystem : NetworkBehaviour
                 }
             }
         }
-    }
-
-    void Announce(List<ulong> party, string text)
-    {
-        if (party.Count == 0)
-        {
-            return;
-        }
-
-        NoticeRpc(NetText.Trim512(text), RpcTarget.Group(party.ToArray(), RpcTargetUse.Temp));
     }
 
     void PushRoster(List<ulong> party)
@@ -316,6 +294,15 @@ public class PartySystem : NetworkBehaviour
     void RosterRpc(ulong[] roster, RpcParams rpcParams)
     {
         members = roster ?? new ulong[0];
+    }
+
+    /// <summary>Server side: one line of notice to whoever is listed. Nobody listed, nothing sent.</summary>
+    void Notice(string text, params ulong[] clients)
+    {
+        if (clients.Length > 0)
+        {
+            NoticeRpc(NetText.Trim512(text), RpcTarget.Group(clients, RpcTargetUse.Temp));
+        }
     }
 
     [Rpc(SendTo.SpecifiedInParams)]
